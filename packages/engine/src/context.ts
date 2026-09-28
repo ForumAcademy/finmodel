@@ -72,12 +72,13 @@ export class CalcError extends Error {
 }
 
 /**
- * Значения region-параметров из data/regions.yaml. Параметр без поля в regions.yaml
- * (например, TAX.LAND_RATE — ставка по ОКТМО) вводится по проекту.
+ * Значения region-параметров из data/regions.yaml. Параметр без поля в regions.yaml вводится по проекту
+ * (например, TAX.LAND_RATE вне Москвы — ставка по ОКТМО).
  */
 const REGION_VALUES: Partial<Record<ParameterId, (r: SpecRegion) => unknown>> = {
   "TEP.PARKING_NORM": (r) => (r.parking_norm.values ? r.parking_norm : null),
   "TEP.PARKING_NORM_APART": (r) => (r.parking_norm_apart.values ? r.parking_norm_apart : null),
+  "TAX.LAND_RATE": (r) => r.land_tax_rate_housing?.value ?? null,
 };
 
 /** Что видит формула: только чтение параметров и других формул с записью в след. */

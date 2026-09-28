@@ -20,6 +20,8 @@ export {
   computeProject,
   DOUBLE_GROWTH,
   doubleCountChecks,
+  clarifyBeforeDecision,
+  type ClarifyItem,
   inMode,
   legacyProject,
   modePair,

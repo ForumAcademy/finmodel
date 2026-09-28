@@ -181,6 +181,19 @@ export const regionSchema = z
     tariff_authority: z.string().nullable(),
     land_tax_level: z.string().min(1),
     land_tax_source_ids: idList,
+    /**
+     * Ставка земельного налога для участков под жилищное строительство, если она одна на весь субъект (Москва,
+     * Санкт-Петербург, Севастополь — закон города). В остальных субъектах ставка — по ОКТМО, поля нет.
+     */
+    land_tax_rate_housing: z
+      .object({
+        value: z.number().nonnegative().nullable(),
+        source_ids: idList,
+        status: z.enum(["needs_verification", "verified"]),
+        note: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     land_rent_source_ids: idList,
     vri_fee: z
       .object({

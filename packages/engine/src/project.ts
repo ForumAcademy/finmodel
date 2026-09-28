@@ -3,11 +3,13 @@
  * пара режимов «расчёт сервиса / как в исходном Excel». Раньше жило в интерфейсе старого сервиса (lib/model.ts);
  * перенесено в ядро, чтобы экраны только показывали результат.
  */
+import Decimal from "decimal.js";
 import { getParameter, spec, type FormulaId, type ParameterId, type SpecAssumptionVersion as AssumptionVersion } from "@fm/spec";
 import { Engine, sinkFormulas } from "./context";
 import { legacyAssumptions, legacyCaseInput, type LegacyAssumption, type LegacyCase } from "./legacy";
 import { legacyChecks } from "./legacy-checks";
 import { dataQuestions, type DataQuestion } from "./legacy-questions";
+import { fmt } from "./lib/format";
 import { FORMULAS } from "./registry";
 import type { CalcMessage, ProjectInput, ResultSet } from "./types";
 
@@ -274,6 +276,61 @@ export function computeProject(project: CalcProject, versions: AssumptionVersion
   // Ошибки проверок модели (ключ CHECK.*) — расхождения, а не незаполненные значения
   const missing = new Set(result.messages.filter((m) => m.severity === "error" && m.parameterId && !m.key?.startsWith("CHECK.")).map((m) => m.parameterId as ParameterId));
   return { result, horizon, missing, versions, input };
+}
+
+/** Пункт «Уточнить перед решением»: что не подтверждено → чем мешает решению → поле, которое нужно заполнить. */
+export interface ClarifyItem {
+  param: ParameterId;
+  problem: string;
+  impact: string;
+  /** Сравнение вариантов: сумма за весь срок, null — «не учтено» (нет значения с источником). */
+  compare?: { label: string; amount: Decimal | null }[];
+}
+
+/** Затраты на землю за весь срок при заданной форме права; null — не посчитаны (нет значения с источником). */
+function landCost(model: ProjectModel, tenure: string): Decimal | null {
+  const input: ProjectInput = { ...model.input, values: { ...model.input.values, "LAND.TENURE": tenure } };
+  const run = new Engine(input, FORMULAS, model.horizon === null ? {} : { horizonMonths: model.horizon }).run(["F.LAND.TAX_OR_RENT"]);
+  const v = run.formulas["F.LAND.TAX_OR_RENT"]?.value as Decimal[] | undefined;
+  return v ? v.reduce((a, b) => a.add(b), new Decimal(0)) : null;
+}
+
+/**
+ * «Уточнить перед решением» (задание, раздел 6, Дашборд): значения расчёта сервиса, которые взяты из исходного файла
+ * и помечены «уточнить». Для формы права — затраты на землю при собственности и при аренде (решение 28.09.2026):
+ * арендная плата без договора или расчёта по методике не выдумывается — «не учтено».
+ */
+export function clarifyBeforeDecision(project: CalcProject, model: ProjectModel): ClarifyItem[] {
+  if (project.input.mode === "legacy") return [];
+  return (project.fromFile ?? [])
+    .filter((a) => a.status === "уточнить")
+    .map((a): ClarifyItem => {
+      if (a.param === "LAND.TENURE") {
+        const own = landCost(model, "собственность");
+        const lease = landCost(model, "аренда");
+        return {
+          param: a.param,
+          problem: `Форма права на участок не подтверждена: в расчёте — «${String(a.value)}» по исходному файлу (${a.derivation}).`,
+          impact:
+            own === null
+              ? "От формы права зависят затраты на землю: налог или арендная плата. Подтвердите форму права выпиской ЕГРН."
+              : `Затраты на землю при собственности — ${fmt(own.round())} руб. за весь срок${lease === null ? "; при аренде не учтены: нет договора аренды или расчёта по методике" : `, при аренде — ${fmt(lease.round())} руб.`}. Подтвердите форму права выпиской ЕГРН.`,
+          compare: [
+            { label: "собственность", amount: own },
+            { label: "аренда", amount: lease },
+          ],
+        };
+      }
+      if (a.param === "LAND.VRI_CHANGE") {
+        const fee = model.result.formulas["F.LAND.VRI_FEE"]?.value as Decimal | undefined;
+        return {
+          param: a.param,
+          problem: `Нужна ли смена ВРИ, не подтверждено: в расчёте — «нужна» по исходному файлу (${a.derivation}).`,
+          impact: `${fee === undefined ? "Плата за изменение ВРИ не посчитана: нет её расчёта по акту Москвы" : `Плата за изменение ВРИ — ${fmt(fee.round())} руб.`}; если смена не нужна, платы нет. Подтвердите ВРИ выпиской ЕГРН и ГПЗУ.`,
+        };
+      }
+      return { param: a.param, problem: `«${getParameter(a.param).name}» не подтверждено: в расчёте — значение из исходного файла (${a.derivation}).`, impact: a.note };
+    });
 }
 
 /** Тот же проект в режиме mode. */

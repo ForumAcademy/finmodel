@@ -143,7 +143,8 @@ export interface LegacyAssumption {
   /** Как значение получено из ячеек, словами. */
   derivation: string;
   label: "Экспертное значение" | "исходный файл";
-  status?: "не подтверждено";
+  /** «не подтверждено» — значение без обоснования; «уточнить» — факт проекта, который нужно подтвердить документом. */
+  status?: "не подтверждено" | "уточнить";
   note: string;
   /**
    * Параметры, рост которых уже входит в это значение: если такой параметр заполнен, а значение из файла не
@@ -207,9 +208,43 @@ function legacySmrDates(c: LegacyCase): LegacyAssumption[] {
   });
 }
 
+/**
+ * Права на участок из исходного файла (решение владельца продукта 28.09.2026): форма права неизвестна, исходник
+ * считает налог от кадастровой стоимости (CF1 строка 84) — собственность; в бюджете исходника есть плата за ВРИ
+ * (Бюджет, строка 22) — смена ВРИ нужна. Оба значения — «уточнить» до выписки ЕГРН.
+ */
+function legacyLandRights(c: LegacyCase): LegacyAssumption[] {
+  const out: LegacyAssumption[] = [];
+  const legacyRate = c.project_inputs["TAX.LAND_RATE_legacy"];
+  if (typeof legacyRate === "number") {
+    out.push({
+      param: "LAND.TENURE",
+      value: "собственность",
+      cells: "CF1!A84,D84",
+      derivation: "исходный файл считает налог от кадастровой стоимости участка — так платит собственник",
+      label: "исходный файл",
+      status: "уточнить",
+      note: "Форма права не подтверждена: подтвердите выпиской ЕГРН",
+    });
+  }
+  const vri = c.capex_legacy?.find((b) => b.item_id === "LAND_VRI");
+  if (vri && typeof vri.amount_F === "number" && vri.amount_F > 0) {
+    out.push({
+      param: "LAND.VRI_CHANGE",
+      value: true,
+      cells: `Бюджет!D${vri.budget_row}:F${vri.budget_row}`,
+      derivation: "в бюджете исходного файла есть плата за изменение ВРИ",
+      label: "исходный файл",
+      status: "уточнить",
+      note: "Нужна ли смена ВРИ, не подтверждено: подтвердите выпиской ЕГРН и ГПЗУ",
+    });
+  }
+  return out;
+}
+
 /** Значения расчёта сервиса, временно перенесённые из исходного файла (см. LegacyAssumption). */
 export function legacyAssumptions(c: LegacyCase): LegacyAssumption[] {
-  return [legacyMarketGrowth(c), ...legacySmrDates(c)].filter((x): x is LegacyAssumption => x !== null);
+  return [legacyMarketGrowth(c), ...legacySmrDates(c), ...legacyLandRights(c)].filter((x): x is LegacyAssumption => x !== null);
 }
 
 /**

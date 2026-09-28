@@ -65,6 +65,7 @@ export function checkSpec(spec: SpecData): SpecCheckResult {
     const owner = `регион ${r.code}`;
     checkSources(owner, r.ncs_k_per_source_ids);
     checkSources(owner, r.land_tax_source_ids);
+    if (r.land_tax_rate_housing) checkSources(owner, r.land_tax_rate_housing.source_ids);
     checkSources(owner, r.land_rent_source_ids);
     checkSources(owner, r.vri_fee.source_ids);
     checkSources(owner, r.parking_norm.source_ids);

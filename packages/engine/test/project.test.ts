@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
-import { aggregate, calculate, compatWarnings, computeProject, DOUBLE_GROWTH, inMode, legacyProject, periodKey, projectHorizon, STAGE_UPLIFT_NOT_COUNTED, type CalcProject } from "../src";
+import { aggregate, calculate, clarifyBeforeDecision, compatWarnings, computeProject, DOUBLE_GROWTH, inMode, legacyProject, periodKey, projectHorizon, STAGE_UPLIFT_NOT_COUNTED, type CalcProject } from "../src";
 import { loadCase } from "./support/cases";
 
 const demo = legacyProject(loadCase("derbenevskaya_legacy"), "Дербеневская (демо)");
@@ -24,7 +24,7 @@ describe("расчёт проекта целиком", () => {
   });
 
   it("незаполненные обязательные параметры видны", () => {
-    expect(m.missing.has("TAX.LAND_RATE")).toBe(true);
+    expect(m.missing.has("LAND.VRI_FEE")).toBe(true);
     expect(m.missing.has("LAND.AREA")).toBe(false);
   });
 
@@ -131,12 +131,37 @@ describe("расчёт сервиса без Excel: пробелы Дербен�
     expect(sum(cash.OTHER_SMR).gt(0)).toBe(true);
   });
 
-  it("земельные статьи в расчёте сервиса — по формулам: агентское 2% × цена участка, налог и плата за ВРИ ждут ставок", () => {
+  it("земельные статьи в расчёте сервиса — по формулам: агентское 2% × цена участка, налог 0,1% × 2/4, плата за ВРИ ждёт расчёта", () => {
     const items = m.result.formulas["F.CAPEX.ITEM_TOTAL"]?.value as Record<string, Decimal | null | undefined>;
-    expect(items.LAND_AGENT?.toNumber()).toBeCloseTo(26607117.96, 2); // 2% × 1 330 355 898 (цена участка), без НДС;
-    expect(items.LAND_TAX_OR_RENT ?? null).toBeNull();
+    expect(items.LAND_AGENT?.toNumber()).toBeCloseTo(26607117.96, 2); // 2% × 1 330 355 898 (цена участка), без НДС
     expect(items.LAND_VRI ?? null).toBeNull();
-    expect(m.result.messages.some((x) => /Земельный налог или арендная плата/.test(x.text) && /ВРИ/.test(x.text))).toBe(true);
+    // Налог за год при коэффициенте 2: 5 834 907 660 × 0,1% × 2 = 11 669 815,32 — как в исходном файле (0,2% × кадастровая, CF1 строка 84)
+    const tax = m.result.formulas["F.LAND.TAX_OR_RENT"]?.value as Decimal[];
+    const dates = m.result.formulas["F.TIME.DATE"]?.value as string[];
+    const year = (y: string) => tax.reduce((s, x, t) => (dates[t]!.startsWith(y) ? s.add(x) : s), new Decimal(0)).toNumber();
+    expect(year("2026")).toBeCloseTo(11669815.32, 2);
+    expect(year("2029")).toBeCloseTo(23339630.64, 2); // с 4-го года — коэффициент 4
+    expect(items.LAND_TAX_OR_RENT?.toNumber()).toBeCloseTo(94331007.17, 2);
+    expect(m.result.messages.map((x) => x.key)).toContain("LAND.HANDOVER_END_MISSING");
+  });
+
+  it("форма права и смена ВРИ — из исходного файла, «уточнить»; в «Уточнить перед решением» — земля при собственности и аренде", () => {
+    const land = demo.fromFile?.filter((a) => a.param === "LAND.TENURE" || a.param === "LAND.VRI_CHANGE") ?? [];
+    expect(land.map((a) => [a.param, a.value, a.label, a.status])).toEqual([
+      ["LAND.TENURE", "собственность", "исходный файл", "уточнить"],
+      ["LAND.VRI_CHANGE", true, "исходный файл", "уточнить"],
+    ]);
+    const items = clarifyBeforeDecision(normal, m);
+    const tenure = items.find((x) => x.param === "LAND.TENURE");
+    expect(tenure?.compare?.map((c) => [c.label, c.amount?.round().toNumber() ?? null])).toEqual([
+      ["собственность", 94331007],
+      ["аренда", null],
+    ]);
+    expect(tenure?.impact).toMatch(/при аренде не учтены/);
+    expect(items.find((x) => x.param === "LAND.VRI_CHANGE")?.impact).toMatch(/если смена не нужна, платы нет/);
+    expect(clarifyBeforeDecision(demo, computeProject(demo))).toEqual([]);
+    const noVri = computeProject({ ...normal, input: { ...normal.input, values: { ...normal.input.values, "LAND.VRI_CHANGE": false } } });
+    expect((noVri.result.formulas["F.LAND.VRI_FEE"]?.value as Decimal).toNumber()).toBe(0);
   });
 
   it("машино-места в расчёте сервиса — по нормативу Москвы (до 70 м² — 0,8; 70–100 м² — 1,2)", () => {
@@ -145,8 +170,8 @@ describe("расчёт сервиса без Excel: пробелы Дербен�
     expect(m.missing.has("TEP.PARKING_NORM")).toBe(false);
   });
 
-  it("без Excel не хватает только ставки земельного налога, платы за ВРИ, облагаемой доли содержания застройщика и безрисковой ставки", () => {
-    expect([...m.missing].sort()).toEqual(["LAND.VRI_FEE", "OPEX.OVERHEAD_VAT_SHARE", "TAX.LAND_RATE", "VAL.RISK_FREE"]);
+  it("без Excel не хватает только платы за ВРИ, облагаемой доли содержания застройщика и безрисковой ставки", () => {
+    expect([...m.missing].sort()).toEqual(["LAND.VRI_FEE", "OPEX.OVERHEAD_VAT_SHARE", "VAL.RISK_FREE"]);
   });
 
   it("цепочка до показателей: налоги в потребности в кредите, поток акционера, IRR, прибыль", () => {

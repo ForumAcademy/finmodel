@@ -192,6 +192,11 @@ for r in regions:
         for i in r.get(key) or []:
             if i not in S:
                 errors.append(f"регион {r['code']}: источник {i} не найден")
+    for i in (r.get("land_tax_rate_housing") or {}).get("source_ids") or []:
+        if i not in S:
+            errors.append(f"регион {r['code']}: источник ставки земельного налога {i} не найден")
+    if (r.get("land_tax_rate_housing") or {}).get("status") == "needs_verification":
+        warns.append(f"регион {r['code']}: ставка земельного налога {r['land_tax_rate_housing']['value']} — подтвердить у налогового консультанта")
 
 # справочник допущений компании
 def assumption_problem(p, v):

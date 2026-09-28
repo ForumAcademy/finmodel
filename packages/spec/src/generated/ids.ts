@@ -1,7 +1,7 @@
 // Файл сгенерирован packages/spec/scripts/build-spec.ts из data/*.yaml. Не редактировать вручную.
 
 /** Версия справочника: хеш содержимого data/*.yaml. Сохраняется в каждой версии расчёта. */
-export const SPEC_VERSION = "fb04009f9b7f";
+export const SPEC_VERSION = "a387bd3f5ac4";
 /** Дата актуализации справочника: самая поздняя дата проверки источника. */
 export const SPEC_ACTUALIZED_AT = "2026-09-28";
 
@@ -47,6 +47,8 @@ export const SOURCE_IDS = [
   "S_SP_42_2026",
   "S_SP_42_2016",
   "S_MSK_LANDTAX_74",
+  "S_MSK_LAW_34_2023",
+  "S_MSK_LAW_27_2025",
   "S_MSK_RENT_273PP",
   "S_MSK_VRI_593PP",
   "S_MSK_PARKING_2118PP",
@@ -103,6 +105,7 @@ export const PARAMETER_IDS = [
   "LAND.LEGAL_COSTS",
   "LAND.AGENT_FEE_RATE",
   "LAND.VRI_FEE",
+  "LAND.VRI_CHANGE",
   "LAND.RENT_ANNUAL",
   "LAND.RENT_PAYMENT_FREQ",
   "LAND.RENT_INDEXATION",

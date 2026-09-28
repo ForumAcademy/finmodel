@@ -69,6 +69,7 @@ export type SpecRegion = Omit<
   | "code"
   | "ncs_k_per_source_ids"
   | "land_tax_source_ids"
+  | "land_tax_rate_housing"
   | "land_rent_source_ids"
   | "vri_fee"
   | "parking_norm"
@@ -78,6 +79,7 @@ export type SpecRegion = Omit<
   code: RegionCode;
   ncs_k_per_source_ids: SourceId[];
   land_tax_source_ids: SourceId[];
+  land_tax_rate_housing?: Omit<NonNullable<Region["land_tax_rate_housing"]>, "source_ids"> & { source_ids: SourceId[] };
   land_rent_source_ids: SourceId[];
   vri_fee: Omit<Region["vri_fee"], "source_ids"> & { source_ids: SourceId[] };
   parking_norm: Omit<Region["parking_norm"], "source_ids"> & { source_ids: SourceId[] };
