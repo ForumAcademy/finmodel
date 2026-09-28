@@ -1,0 +1,687 @@
+sheet,row,row_label,range,cells,sample_formula,r1c1_pattern,target_id,verdict
+ТЭПы,20,Площадь жилой застройки,C20:C20,1,=210038+420,=210038+420,TEP.RES_GFA,keep
+ТЭПы,20,Площадь жилой застройки,D20:D20,1,=C20/C19,=R[0]C[-1]/R[-1]C[-1],TEP.RES_GFA,keep
+ТЭПы,21,Площадь нежилой застройки,D21:D21,1,=C21/C19,=R[0]C[-1]/R[-2]C[-1],TEP.NONRES_GFA,keep
+ТЭПы,22,Площадь Квартир (продаваемая?),D22:D22,1,=C22/C20,=R[0]C[-1]/R[-2]C[-1],TEP.APT_EFFICIENCY,keep
+ТЭПы,23,Площадь коммерции продаваемая,C23:C23,1,=10322,=10322,TEP.COMM_AREA,keep
+ТЭПы,26,МОП под отделку+ ресепшн,C26:C26,1,=51775+7719,=51775+7719,TEP.MOP_AREA,keep
+ТЭПы,26,МОП под отделку+ ресепшн,D26:D26,1,=C26/C19,=R[0]C[-1]/R[-7]C[-1],TEP.MOP_AREA,keep
+ТЭПы,27,Количество парковочных мест ЖК,D27:D27,1,=I44,=R[17]C[5],F.TEP.PARKING_COUNT,keep
+ТЭПы,28,Кол-во квартир,D28:D28,1,=C28/C27,=R[0]C[-1]/R[-1]C[-1],F.TEP.PARKING_COUNT,keep
+ТЭПы,29,Площадь благоустройства,C29:C29,1,=C15*D29,=R[-14]C[0]*R[0]C[1],F.TEP.LANDSCAPE_AREA,keep
+ТЭПы,30,Внутриквартальный проезд,C30:C30,1,=$C$29*D30,=R29C3*R[0]C[1],F.TEP.LANDSCAPE_AREA,keep
+ТЭПы,31,Озеленение,C31:C31,1,=$C$29*D31,=R29C3*R[0]C[1],F.TEP.LANDSCAPE_AREA,keep
+ТЭПы,32,Зона наземной парковки,C32:C32,1,=$C$29*D32,=R29C3*R[0]C[1],F.TEP.LANDSCAPE_AREA,keep
+ТЭПы,32,Зона наземной парковки,D32:D32,1,=D29-D30-D31,=R[-3]C[0]-R[-2]C[0]-R[-1]C[0],F.TEP.LANDSCAPE_AREA,keep
+ТЭПы,33,Площадь застройки,C33:C33,1,=C15-C29,=R[-18]C[0]-R[-4]C[0],F.TEP.LANDSCAPE_AREA,keep
+ТЭПы,33,Площадь застройки,D33:D33,1,=C33/C15,=R[0]C[-1]/R[-18]C[-1],F.TEP.LANDSCAPE_AREA,keep
+ТЭПы,34,Площадь подземной парковки,C34:C34,1,=E49,=R[15]C[2],F.TEP.GFA_BELOW_EST,keep
+ТЭПы,38,Квартирография - цены старта продаж,E38:F38,2,=E44+E51,=R[6]C[0]+R[13]C[0],F.TEP.SALEABLE_AREA,keep
+ТЭПы,41,Квартиры Тип 1,E41:E41,1,=D41*F41,=R[0]C[-1]*R[0]C[1],F.TEP.APT_TYPE_AREA,keep
+ТЭПы,41,Квартиры Тип 1,H41:J41,2,=G41*D41,=R[0]C[-1]*R[0]C[-4],F.SALES.WAVG_PRICE,keep
+ТЭПы,42,Квартиры Тип 2,E42:E42,1,=F42*D42,=R[0]C[1]*R[0]C[-1],F.TEP.APT_TYPE_AREA,keep
+ТЭПы,42,Квартиры Тип 2,H42:J42,2,=G42*D42,=R[0]C[-1]*R[0]C[-4],F.SALES.WAVG_PRICE,keep
+ТЭПы,43,Квартиры Тип 3,E43:E43,1,=F43*D43,=R[0]C[1]*R[0]C[-1],F.TEP.APT_TYPE_AREA,keep
+ТЭПы,43,Квартиры Тип 3,H43:J43,2,=G43*D43,=R[0]C[-1]*R[0]C[-4],F.SALES.WAVG_PRICE,keep
+ТЭПы,44,,D44:D44,1,=E44/F44,=R[0]C[1]/R[0]C[2],F.TEP.APT_TYPE_AREA,keep
+ТЭПы,44,,E44:E44,1,=SUM(E41:E43),=SUM(R[-3]C[0]:R[-1]C[0]),F.TEP.APT_TYPE_AREA,keep
+ТЭПы,44,,G44:I44,3,=AVERAGE(G41:G43),=AVERAGE(R[-3]C[0]:R[-1]C[0]),F.TEP.APT_TYPE_AREA,keep
+ТЭПы,48,ПСН,E48:E48,1,=C23,=R[-25]C[-2],F.TEP.SALEABLE_AREA,keep
+ТЭПы,48,ПСН,F48:F48,1,=E48/D48,=R[0]C[-1]/R[0]C[-2],F.TEP.SALEABLE_AREA,keep
+ТЭПы,48,ПСН,H48:H48,1,=G48*D48,=R[0]C[-1]*R[0]C[-4],F.TEP.SALEABLE_AREA,keep
+ТЭПы,49,Машиноместа,E49:E49,1,=D49*F49,=R[0]C[-1]*R[0]C[1],F.TEP.GFA_BELOW_EST,keep
+ТЭПы,49,Машиноместа,F49:F49,1,=J44,=R[-5]C[4],F.TEP.PARKING_COUNT,fix
+ТЭПы,49,Машиноместа,H49:H49,1,=G49*D49,=R[0]C[-1]*R[0]C[-4],SALES.PRODUCTS,fix
+ТЭПы,50,Прочие помещения,H50:H50,1,=G50*D50,=R[0]C[-1]*R[0]C[-4],F.TEP.SALEABLE_AREA,keep
+ТЭПы,51,,E51:F51,2,=SUM(E48:E50),=SUM(R[-3]C[0]:R[-1]C[0]),F.TEP.SALEABLE_AREA,keep
+ТЭПы,51,,G51:G51,1,=AVERAGE(G48:G50),=AVERAGE(R[-3]C[0]:R[-1]C[0]),F.TEP.SALEABLE_AREA,keep
+Бюджет,5,,C5:C5,1,='План продаж'!C27,='План продаж'!R[22]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,5,,D5:D5,1,='План продаж'!D31,='План продаж'!R[26]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,5,,E5:E5,1,='План продаж'!D29,='План продаж'!R[24]C[-1],F.SALES.REVENUE_TOTAL,fix
+Бюджет,5,,F5:F5,1,='План продаж'!D27,='План продаж'!R[22]C[-2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,5,,G5:G5,1,='План продаж'!I8,='План продаж'!R[3]C[2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,6,,C6:C6,1,='План продаж'!C32,='План продаж'!R[26]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,6,,D6:D6,1,='План продаж'!D36,='План продаж'!R[30]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,6,,E6:E6,1,='План продаж'!D34,='План продаж'!R[28]C[-1],F.SALES.REVENUE_TOTAL,fix
+Бюджет,6,,F6:F6,1,='План продаж'!D32,='План продаж'!R[26]C[-2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,6,,G6:G6,1,='План продаж'!I9,='План продаж'!R[3]C[2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,7,,C7:C7,1,='План продаж'!C37,='План продаж'!R[30]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,7,,D7:D7,1,='План продаж'!D41,='План продаж'!R[34]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,7,,E7:E7,1,='План продаж'!D39,='План продаж'!R[32]C[-1],F.SALES.REVENUE_TOTAL,fix
+Бюджет,7,,F7:F7,1,='План продаж'!D37,='План продаж'!R[30]C[-2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,7,,G7:G7,1,='План продаж'!I10,='План продаж'!R[3]C[2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,8,,C8:C8,1,='План продаж'!C42,='План продаж'!R[34]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,8,,D8:D8,1,='План продаж'!D46,='План продаж'!R[38]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,8,,E8:E8,1,='План продаж'!D44,='План продаж'!R[36]C[-1],F.SALES.REVENUE_TOTAL,fix
+Бюджет,8,,F8:F8,1,='План продаж'!D42,='План продаж'!R[34]C[-2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,8,,G8:G8,1,='План продаж'!I15,='План продаж'!R[7]C[2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,9,,C9:C9,1,='План продаж'!C47,='План продаж'!R[38]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,9,,D9:D9,1,='План продаж'!I16,='План продаж'!R[7]C[5],F.SALES.REVENUE_TOTAL,fix
+Бюджет,9,,E9:E9,1,='План продаж'!D48,='План продаж'!R[39]C[-1],F.SALES.REVENUE_TOTAL,fix
+Бюджет,9,,F9:F9,1,='План продаж'!D47,='План продаж'!R[38]C[-2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,9,,G9:G9,1,='План продаж'!I16,='План продаж'!R[7]C[2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,10,,C10:C10,1,='План продаж'!C52,='План продаж'!R[42]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,10,,D10:D10,1,='План продаж'!D56,='План продаж'!R[46]C[0],F.SALES.REVENUE_TOTAL,fix
+Бюджет,10,,E10:E10,1,='План продаж'!D54,='План продаж'!R[44]C[-1],F.SALES.REVENUE_TOTAL,fix
+Бюджет,10,,F10:F10,1,='План продаж'!D52,='План продаж'!R[42]C[-2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,10,,G10:G10,1,='План продаж'!I17,='План продаж'!R[7]C[2],F.SALES.REVENUE_TOTAL,fix
+Бюджет,12,ИТОГО,F12:F12,1,=SUM(F5:F11),=SUM(R[-7]C[0]:R[-1]C[0]),F.SALES.REVENUE_TOTAL,fix
+Бюджет,16,Правообладание,F16:F16,1,=SUM(F17:F19),=SUM(R[1]C[0]:R[3]C[0]),F.CAPEX.ITEM_TOTAL,replace
+Бюджет,16,Правообладание,G16:G16,1,=F16/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,17,,C17:C17,1,='CF1 '!A21,='R[-16]C[81] '!R[4]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,17,,D17:D17,1,=F17/E17,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,17,,E17:E17,1,=ТЭПы!C15,=ТЭПы!R[-2]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,17,,F17:F17,1,=2440190898-F22,=2440190898-R[5]C[0],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,17,,G17:G17,1,=F17/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,18,Юридические расходы на покупку,D18:D18,1,=F18/E18,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,18,Юридические расходы на покупку,E18:E18,1,=ТЭПы!C15,=ТЭПы!R[-3]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,18,Юридические расходы на покупку,G18:G18,1,=F18/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,19,Агентское вознаграждение,E19:E19,1,=F17,=R[-2]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,19,Агентское вознаграждение,G19:G19,1,=F19/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,20,,B20:B20,1,='CF1 '!A23,='R[-19]C[82] '!R[3]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,20,,F20:F20,1,=SUM(F21:F22),=SUM(R[1]C[0]:R[2]C[0]),F.CAPEX.ITEM_TOTAL,replace
+Бюджет,20,,G20:G20,1,=F20/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,21,,C21:C21,1,='CF1 '!A24,='R[-20]C[81] '!R[3]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,21,,D21:D21,1,=F21/E21,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,21,,E21:E21,1,=ТЭПы!C15,=ТЭПы!R[-6]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,21,,G21:G21,1,=F21/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,22,,C22:C22,1,='CF1 '!A25,='R[-21]C[81] '!R[3]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,22,,E22:E22,1,=ТЭПы!C19,=ТЭПы!R[-3]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,22,,F22:F22,1,=E22*D22,=R[0]C[-1]*R[0]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,22,,G22:G22,1,=F22/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,23,ПиР,F23:F23,1,=SUM(F24:F29),=SUM(R[1]C[0]:R[6]C[0]),F.CAPEX.ITEM_TOTAL,replace
+Бюджет,23,ПиР,G23:G23,1,=F23/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,24,,C24:C24,1,='CF1 '!A28,='R[-23]C[81] '!R[4]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,24,,D24:D24,1,=F24/E24,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,24,,E24:E24,1,=ТЭПы!C35,=ТЭПы!R[11]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,24,,G24:G24,1,=F24/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,25,,C25:C25,1,='CF1 '!A30,='R[-24]C[81] '!R[5]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,25,,F25:F25,1,=D25*E25,=R[0]C[-2]*R[0]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,25,,G25:G25,1,=F25/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,26,,C26:C26,1,='CF1 '!A32,='R[-25]C[81] '!R[6]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,26,,D26:D26,1,=F26/E26,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,26,,E26:E26,1,=ТЭПы!C35,=ТЭПы!R[9]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,26,,G26:G26,1,=F26/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,27,,C27:C27,1,='CF1 '!A34,='R[-26]C[81] '!R[7]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,27,,F27:F27,1,=D27*E27,=R[0]C[-2]*R[0]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,27,,G27:G27,1,=F27/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,28,,C28:C28,1,='CF1 '!A36,='R[-27]C[81] '!R[8]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,28,,F28:F28,1,=D28*E28,=R[0]C[-2]*R[0]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,28,,G28:G28,1,=F28/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,29,,C29:C29,1,='CF1 '!A38,='R[-28]C[81] '!R[9]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,29,,F29:F29,1,=D29*E29,=R[0]C[-2]*R[0]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,29,,G29:G29,1,=F29/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,30,СМР,F30:F30,1,=SUM(F31:F49),=SUM(R[1]C[0]:R[19]C[0]),F.CAPEX.ITEM_TOTAL,replace
+Бюджет,30,СМР,G30:G30,1,=F30/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,31,,C31:C31,1,='CF1 '!A41,='R[-30]C[81] '!R[10]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,31,,D31:D31,1,=F31/E31,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,31,,E31:E31,1,=ТЭПы!C15,=ТЭПы!R[-16]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,31,,G31:G31,1,=F31/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,32,,C32:C32,1,='CF1 '!A43,='R[-31]C[81] '!R[11]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,32,,D32:D32,1,=F32/E32,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,32,,E32:E32,1,=ТЭПы!C35,=ТЭПы!R[3]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,32,,G32:G32,1,=F32/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,33,,C33:C33,1,='CF1 '!A45,='R[-32]C[81] '!R[12]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,33,,D33:D33,1,=400000*0.22,=400000*0.22,F.CAPEX.ITEM_TOTAL,replace
+Бюджет,33,,F33:F33,1,=E33*D33,=R[0]C[-1]*R[0]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,33,,G33:G33,1,=F33/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,34,,C34:C34,1,='CF1 '!A47,='R[-33]C[81] '!R[13]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,34,,D34:D34,1,=400000*0.12,=400000*0.12,F.CAPEX.ITEM_TOTAL,replace
+Бюджет,34,,F34:F34,1,=E34*D34,=R[0]C[-1]*R[0]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,34,,G34:G34,1,=F34/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,35,,C35:C35,1,='CF1 '!A49,='R[-34]C[81] '!R[14]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,35,,D35:D35,1,=F35/E35,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,35,,E35:E35,1,=ТЭПы!C35,=ТЭПы!R[0]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,35,,F35:F35,1,=2295331433.88/2,=2295331433.88/2,F.CAPEX.ITEM_TOTAL,replace
+Бюджет,35,,G35:G35,1,=F35/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,36,,C36:C36,1,='CF1 '!A51,='R[-35]C[81] '!R[15]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,36,,D36:D36,1,=F36/E36,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,36,,E36:E36,1,=ТЭПы!C35,=ТЭПы!R[-1]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,36,,F36:F36,1,=F35,=R[-1]C[0],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,36,,G36:G36,1,=F36/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,37,,C37:C37,1,='CF1 '!A53,='R[-36]C[81] '!R[16]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,37,,D37:D37,1,=F37/E37,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,37,,E37:E37,1,=ТЭПы!C29,=ТЭПы!R[-8]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,37,,G37:G37,1,=F37/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,38,Устройство УДС,D38:D38,1,=F38/E38,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,38,Устройство УДС,E38:E38,1,=ТЭПы!C35,=ТЭПы!R[-3]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,39,,C39:C39,1,='CF1 '!A55,='R[-38]C[81] '!R[16]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,39,,D39:D39,1,=F39/E39,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,39,,E39:E39,1,=ТЭПы!C35,=ТЭПы!R[-4]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,39,,G39:G39,1,=F39/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,40,,C40:C40,1,='CF1 '!A57,='R[-39]C[81] '!R[17]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,40,,D40:D40,1,=F40/E40,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,40,,E40:E40,1,=ТЭПы!C35,=ТЭПы!R[-5]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,40,,G40:G40,1,=F40/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,41,,C41:C41,1,='CF1 '!A59,='R[-40]C[81] '!R[18]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,41,,E41:E41,1,=ТЭПы!C35,=ТЭПы!R[-6]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,41,,G41:G41,1,=F41/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,42,,C42:C42,1,='CF1 '!A61,='R[-41]C[81] '!R[19]C[-2],F.CAPEX.ITEM_TOTAL,fix
+Бюджет,42,,D42:D42,1,=(D32+D33+D34)*10%,=(R[-10]C[0]+R[-9]C[0]+R[-8]C[0])*10%,F.CAPEX.ITEM_TOTAL,fix
+Бюджет,42,,E42:E42,1,=ТЭПы!C22+ТЭПы!C23,=ТЭПы!R[-20]C[-2]+ТЭПы!R[-19]C[-2],F.CAPEX.ITEM_TOTAL,fix
+Бюджет,42,,F42:F42,1,=E42+D42,=R[0]C[-1]+R[0]C[-2],F.CAPEX.ITEM_TOTAL,fix
+Бюджет,42,,G42:G42,1,=F42/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,43,,C43:C43,1,='CF1 '!A63,='R[-42]C[81] '!R[20]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,43,,D43:D43,1,=F43/E43,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,43,,E43:E43,1,='План продаж'!D25,='План продаж'!R[-18]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,43,,G43:G43,1,=F43/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,44,,C44:C44,1,='CF1 '!A65,='R[-43]C[81] '!R[21]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,44,,F44:F44,1,=E44*D44,=R[0]C[-1]*R[0]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,44,,G44:G44,1,=F44/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,45,,C45:C45,1,='CF1 '!A67,='R[-44]C[81] '!R[22]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,45,,G45:G45,1,=F45/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,46,Тех Надзор,F46:F46,1,=E46*D46,=R[0]C[-1]*R[0]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,46,Тех Надзор,G46:G46,1,=F46/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,47,,C47:C47,1,='CF1 '!A71,='R[-46]C[81] '!R[24]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,47,,D47:D47,1,=F47/E47,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,47,,E47:E47,1,=ТЭПы!C35,=ТЭПы!R[-12]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,47,,G47:G47,1,=F47/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,48,,C48:C48,1,='CF1 '!A73,='R[-47]C[81] '!R[25]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,48,,E48:E48,1,='План продаж'!D25,='План продаж'!R[-23]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,48,,G48:G48,1,=F48/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,49,,C49:C49,1,='CF1 '!A75,='R[-48]C[81] '!R[26]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,49,,D49:D49,1,=F49/E49,=R[0]C[2]/R[0]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,49,,E49:E49,1,='План продаж'!D25,='План продаж'!R[-24]C[-1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,49,,G49:G49,1,=F49/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,50,Коммерческие расходы,F50:F50,1,=SUM(F51:F52),=SUM(R[1]C[0]:R[2]C[0]),F.CAPEX.ITEM_TOTAL,replace
+Бюджет,50,Коммерческие расходы,G50:G50,1,=F50/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,51,Маркетинг,E51:E51,1,=F12,=R[-39]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,51,Маркетинг,F51:F51,1,=8389618415.5/2,=8389618415.5/2,F.CAPEX.ITEM_TOTAL,replace
+Бюджет,51,Маркетинг,G51:G51,1,=F51/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,52,Продажи,E52:E52,1,=F12,=R[-40]C[1],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,52,Продажи,F52:F52,1,=E52*D52,=R[0]C[-1]*R[0]C[-2],F.CAPEX.ITEM_TOTAL,replace
+Бюджет,52,Продажи,G52:G52,1,=F52/$F$59,=R[0]C[-1]/R59C6,F.KPI.MARGIN,keep
+Бюджет,53,Налоги,F53:F53,1,=SUM(F54:F55),=SUM(R[1]C[0]:R[2]C[0]),F.TAX.PAYMENTS,replace
+Бюджет,54,НДС,E54:E54,1,=(F30+F23+F16)-'План продаж'!D60,=(R[-24]C[1]+R[-31]C[1]+R[-38]C[1])-'План продаж'!R[6]C[-1],F.TAX.VAT_PAYABLE,replace
+Бюджет,54,НДС,G54:G54,1,=F54/$F$59,=R[0]C[-1]/R59C6,F.TAX.VAT_PAYABLE,replace
+Бюджет,54,НДС,H54:H54,1,=F54/$F$12,=R[0]C[-2]/R12C6,F.TAX.VAT_PAYABLE,replace
+Бюджет,55,Налог на прибыль,F55:F55,1,=M55,=R[0]C[7],F.TAX.PROFIT_TAX,replace
+Бюджет,55,Налог на прибыль,G55:G55,1,=F55/$F$59,=R[0]C[-1]/R59C6,F.TAX.PROFIT_TAX,replace
+Бюджет,55,Налог на прибыль,H55:H55,1,=F55/$F$12,=R[0]C[-2]/R12C6,F.TAX.PROFIT_TAX,replace
+Бюджет,55,Налог на прибыль,J55:J55,1,=F12-F59-F65,=R[-43]C[-4]-R[4]C[-4]-R[10]C[-4],F.TAX.PROFIT_TAX,replace
+Бюджет,55,Налог на прибыль,K55:K55,1,=J55*D55,=R[0]C[-1]*R[0]C[-7],F.TAX.PROFIT_TAX,replace
+Бюджет,55,Налог на прибыль,M55:M55,1,=F12*5.7%,=R[-43]C[-7]*5.7%,F.TAX.PROFIT_TAX,replace
+Бюджет,56,ПФ,F56:F56,1,=SUM(F57:F58),=SUM(R[1]C[0]:R[2]C[0]),F.FIN.INTEREST,keep
+Бюджет,56,ПФ,G56:G56,1,=F56/$F$59,=R[0]C[-1]/R59C6,F.FIN.INTEREST,keep
+Бюджет,57,,C57:C57,1,='CF1 '!A107,='R[-56]C[81] '!R[50]C[-2],F.FIN.INTEREST,keep
+Бюджет,57,,F57:F57,1,=-'CF1 '!C107,=-'R[-56]C[78] '!R[50]C[-3],F.FIN.INTEREST,keep
+Бюджет,59,ИТОГО Расходы,F59:F59,1,=F16+F20+F23+F30+F50+F54+F55+F56,=R[-43]C[0]+R[-39]C[0]+R[-36]C[0]+R[-29]C[0]+R[-9]C[0]+R[-5]C[0]+R[-4]C[0]+R[-3]C[0],F.CAPEX.TOTAL,fix
+Бюджет,59,ИТОГО Расходы,G59:G59,1,=G16+G20+G23+G30+G50+G54,=R[-43]C[0]+R[-39]C[0]+R[-36]C[0]+R[-29]C[0]+R[-9]C[0]+R[-5]C[0],F.CAPEX.TOTAL,fix
+Бюджет,61,ФИНРЕЗ,F61:F61,1,=F12-F59,=R[-49]C[0]-R[-2]C[0],F.KPI.MARGIN,fix
+Бюджет,61,ФИНРЕЗ,G61:G61,1,=G16+G20+G23+G30+G50+G54+G55+G56,=R[-45]C[0]+R[-41]C[0]+R[-38]C[0]+R[-31]C[0]+R[-11]C[0]+R[-7]C[0]+R[-6]C[0]+R[-5]C[0],F.KPI.MARGIN,fix
+Бюджет,61,ФИНРЕЗ,H61:H61,1,=F61/F12,=R[0]C[-2]/R[-49]C[-2],F.KPI.MARGIN,fix
+Бюджет,63,NPV,F63:F63,1,=F61,=R[-2]C[0],F.KPI.NPV,replace
+Бюджет,64,IRR Рентабельность проекта,F64:F64,1,=F63/F59,=R[-1]C[0]/R[-5]C[0],F.KPI.IRR,replace
+Бюджет,65,Собственный капитал,F65:F65,1,=F59*D65,=R[-6]C[0]*R[0]C[-2],F.FIN.EQUITY_REQUIRED,fix
+Бюджет,66,Рентабельность собственного капитала,F66:F66,1,=F63/F65,=R[-3]C[0]/R[-1]C[0],F.KPI.IRR,replace
+Бюджет,67,Проектное финансирование,D67:D67,1,=F67/F59,=R[0]C[2]/R[-8]C[2],F.FIN.LIMIT,fix
+Бюджет,67,Проектное финансирование,F67:F67,1,=F30+F23+F17+F50+F53,=R[-37]C[0]+R[-44]C[0]+R[-50]C[0]+R[-17]C[0]+R[-14]C[0],F.FIN.LIMIT,fix
+Бюджет,68,Банковские расходы,F68:F68,1,=F67*D68,=R[-1]C[0]*R[0]C[-2],F.FIN.FEES,remove
+Бюджет,69,Себестоимость 1м2,F69:F69,1,=F59/E5,=R[-10]C[0]/R[-64]C[-1],F.KPI.COST_PER_M2,fix
+Бюджет,70,Средняя стоимость старта продаж,F70:F70,1,=D5,=R[-65]C[-2],F.SALES.WAVG_PRICE,fix
+Бюджет,71,Наценка,F71:F71,1,=(F70-F69)/F69,=(R[-1]C[0]-R[-2]C[0])/R[-2]C[0],F.KPI.COST_PER_M2,fix
+Бюджет,73,Непрогнозтруемая выручка,D73:D73,1,=E73/F12,=R[0]C[1]/R[-61]C[2],F.KPI.UNFORECASTED_REVENUE,replace
+Бюджет,73,Непрогнозтруемая выручка,E73:E73,1,=SUM('План продаж'!Q25:S25),=SUM('План продаж'!R[-48]C[12]:R[-48]C[14]),F.KPI.UNFORECASTED_REVENUE,replace
+Бюджет,74,Прогнозируемая выручка,D74:D74,1,=E74/F12,=R[0]C[1]/R[-62]C[2],F.KPI.UNFORECASTED_REVENUE,replace
+Бюджет,74,Прогнозируемая выручка,E74:E74,1,=F12-E73,=R[-62]C[1]-R[-1]C[0],F.KPI.UNFORECASTED_REVENUE,replace
+Бюджет,75,Дефицит чистой прибыли на момент РнВ,E75:E75,1,=F63-E73,=R[-12]C[1]-R[-2]C[0],F.KPI.UNFORECASTED_REVENUE,replace
+CF1,2,,F2:F2,1,"=EDATE(E2,3)","=EDATE(R[0]C[-1],3)",F.TIME.DATE,keep
+CF1,2,,G2:AS2,39,"=EOMONTH(F2,3)","=EOMONTH(R[0]C[-1],3)",F.TIME.DATE,keep
+CF1,3,Кол-во дней,F3:AS3,40,=F2-E2,=R[-1]C[0]-R[-1]C[-1],F.TIME.DATE,keep
+CF1,4,Начало стройки,D4:D4,1,=ТЭПы!C7,=ТЭПы!R[3]C[-1],F.TIME.FLAG_CONSTRUCTION,fix
+CF1,4,Начало стройки,F4:AS4,40,"=IF(F2=$D$4,1,0)","=IF(R[-2]C[0]=R4C4,1,0)",F.TIME.FLAG_CONSTRUCTION,fix
+CF1,5,Завершение стройки,D5:D5,1,=ТЭПы!C9,=ТЭПы!R[4]C[-1],F.TIME.FLAG_CONSTRUCTION,fix
+CF1,5,Завершение стройки,F5:AS5,40,"=IF(AND(F2>=$D$4,F2<=$D$5),1,0)","=IF(AND(R[-3]C[0]>=R4C4,R[-3]C[0]<=R5C4),1,0)",F.TIME.FLAG_CONSTRUCTION,fix
+CF1,6,Раскрытие Escrow,D6:D6,1,=ТЭПы!C12,=ТЭПы!R[6]C[-1],F.TIME.FLAG_ESCROW_RELEASE,fix
+CF1,6,Раскрытие Escrow,F6:AS6,35,"=IF(F2=$D$6,1,0)","=IF(R[-4]C[0]=R6C4,1,0)",F.TIME.FLAG_ESCROW_RELEASE,fix
+CF1,7,Год строительства,AD7:AS7,16,"=ROUNDUP(SUM($E$5:AD$5)/4,0)*AD5","=ROUNDUP(SUM(R5C5:R5C[0])/4,0)*R[-2]C[0]",F.TIME.FLAG_CONSTRUCTION,remove
+CF1,8,Продажи по escrow,F8:AA8,22,"=IF(F2<=$D$6,1,0)","=IF(R[-6]C[0]<=R6C4,1,0)",F.TIME.FLAG_PRESALE,fix
+CF1,9,Продажи по ДКП,F9:AS9,40,"=IF(F2>$D$6,1,0)","=IF(R[-7]C[0]>R6C4,1,0)",F.TIME.FLAG_PRESALE,fix
+CF1,10,"Площадь в ГНС, кв. м",D10:D10,1,=ТЭПы!C19,=ТЭПы!R[9]C[-1],F.TEP.SALEABLE_AREA,fix
+CF1,11,"Продаваемая площадь, кв. м",D11:D11,1,=ТЭПы!C22+ТЭПы!C23,=ТЭПы!R[11]C[-1]+ТЭПы!R[12]C[-1],F.TEP.SALEABLE_AREA,fix
+CF1,15,ДОХОДЫ,B15:B15,1,='Бюджет '!F12,='Бюджет '!R[-3]C[4],F.SALES.REVENUE_TOTAL,fix
+CF1,15,ДОХОДЫ,C15:C15,1,=SUM(F15:AS15),=SUM(R[0]C[3]:R[0]C[42]),F.SALES.REVENUE_TOTAL,fix
+CF1,15,ДОХОДЫ,F15:AH15,29,='План продаж'!E25,='План продаж'!R[10]C[-1],F.SALES.REVENUE_TOTAL,fix
+CF1,18,РАСХОДЫ,B18:B18,1,=+B20+B23+B27+B40+B77,=+R[2]C[0]+R[5]C[0]+R[9]C[0]+R[22]C[0]+R[59]C[0],F.CAPEX.TOTAL,fix
+CF1,18,РАСХОДЫ,C18:C18,1,=SUM(F18:AS18),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.TOTAL,fix
+CF1,18,РАСХОДЫ,D18:D18,1,=C18-D19+C81-C107,=R[0]C[-1]-R[1]C[0]+R[63]C[-1]-R[89]C[-1],F.CAPEX.TOTAL,fix
+CF1,18,РАСХОДЫ,F18:AS18,40,"=SUM(F20,F23,F27,F40,F77)","=SUM(R[2]C[0],R[5]C[0],R[9]C[0],R[22]C[0],R[59]C[0])",F.CAPEX.TOTAL,fix
+CF1,19,,D19:D19,1,=SUM(I18:N18),=SUM(R[-1]C[5]:R[-1]C[10]),F.CAPEX.TOTAL,fix
+CF1,20,Вход в проект,B20:AS20,41,=B21,=R[1]C[0],F.CAPEX.TOTAL,fix
+CF1,20,Вход в проект,C20:C20,1,=SUM(F20:AS20),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.TOTAL,fix
+CF1,21,"Покупка и формирование актива, агентские , diudill",B21:B21,1,='Бюджет '!F16,='Бюджет '!R[-5]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,21,"Покупка и формирование актива, агентские , diudill",C21:C21,1,=SUM(F21:AS21),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,21,"Покупка и формирование актива, агентские , diudill",F21:AS21,40,=F22*$B$21,=R[1]C[0]*R21C2,F.CAPEX.ITEM_CASH,replace
+CF1,22,"Проставить темп,%",C22:C22,1,=SUM(F22:AS22),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,23,Земельно-имущественные отношения,B23:B23,1,=B24+B25,=R[1]C[0]+R[2]C[0],F.CAPEX.TOTAL,fix
+CF1,23,Земельно-имущественные отношения,C23:C23,1,=SUM(F23:AS23),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.TOTAL,fix
+CF1,23,Земельно-имущественные отношения,F23:AS23,40,"=SUM(F24,F25)","=SUM(R[1]C[0],R[2]C[0])",F.CAPEX.TOTAL,fix
+CF1,24,Аренда/налог ЗУ,B24:B24,1,='Бюджет '!F21,='Бюджет '!R[-3]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,24,Аренда/налог ЗУ,C24:C24,1,=SUM(F24:AS24),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,24,Аренда/налог ЗУ,F24:AH24,29,=$B$24/ТЭПы!$C$5/4,=R24C2/ТЭПы!R5C3/4,F.CAPEX.ITEM_CASH,replace
+CF1,25,Плата за изменение ВРИ,B25:B25,1,='Бюджет '!F22,='Бюджет '!R[-3]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,25,Плата за изменение ВРИ,C25:C25,1,=SUM(F25:AS25),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,25,Плата за изменение ВРИ,F25:AS25,40,=F26*$B$25,=R[1]C[0]*R25C2,F.CAPEX.ITEM_CASH,replace
+CF1,26,"Проставить темп,%",C26:C26,1,=SUM(F26:AS26),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,27,ПИР и ИРД,B27:B27,1,=B28+B30+B32+B34+B36+B38,=R[1]C[0]+R[3]C[0]+R[5]C[0]+R[7]C[0]+R[9]C[0]+R[11]C[0],F.CAPEX.TOTAL,fix
+CF1,27,ПИР и ИРД,C27:C27,1,=SUM(F27:AS27),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.TOTAL,fix
+CF1,27,ПИР и ИРД,F27:AS27,40,"=SUM(F28,F30,F32,F34,F36,F38)","=SUM(R[1]C[0],R[3]C[0],R[5]C[0],R[7]C[0],R[9]C[0],R[11]C[0])",F.CAPEX.TOTAL,fix
+CF1,28,Компенсация городу,B28:B28,1,='Бюджет '!F24,='Бюджет '!R[-4]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,28,Компенсация городу,C28:C28,1,=SUM(F28:AS28),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,28,Компенсация городу,F28:AS28,40,=F29*$B$28,=R[1]C[0]*R28C2,F.CAPEX.ITEM_CASH,replace
+CF1,29,"Проставить темп,%",C29:C29,1,=SUM(F29:AS29),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,30,"Получение ИРД (ППТ,ГПЗУ)",B30:B30,1,='Бюджет '!F25,='Бюджет '!R[-5]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,30,"Получение ИРД (ППТ,ГПЗУ)",C30:C30,1,=SUM(F30:AS30),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,30,"Получение ИРД (ППТ,ГПЗУ)",F30:AS30,40,=F31*$B$30,=R[1]C[0]*R30C2,F.CAPEX.ITEM_CASH,replace
+CF1,31,"Проставить темп,%",C31:C31,1,=SUM(F31:AS31),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,31,"Проставить темп,%",M31:M31,1,=1/8,=1/8,F.CAPEX.ITEM_CASH,replace
+CF1,32,Проектирование объектов стадия П,B32:B32,1,='Бюджет '!F26,='Бюджет '!R[-6]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,32,Проектирование объектов стадия П,C32:C32,1,=SUM(F32:AS32),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,32,Проектирование объектов стадия П,F32:AS32,40,=F33*$B$32,=R[1]C[0]*R32C2,F.CAPEX.ITEM_CASH,replace
+CF1,33,"Проставить темп,%",C33:C33,1,=SUM(F33:AS33),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,34,Проектирование объектов стадия РД,B34:B34,1,='Бюджет '!F27,='Бюджет '!R[-7]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,34,Проектирование объектов стадия РД,C34:C34,1,=SUM(F34:AS34),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,34,Проектирование объектов стадия РД,F34:AS34,40,=F35*$B$34,=R[1]C[0]*R34C2,F.CAPEX.ITEM_CASH,replace
+CF1,35,"Проставить темп,%",C35:C35,1,=SUM(F35:AS35),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,36,Инженерные изыскания (опер деятельность),B36:B36,1,='Бюджет '!F28,='Бюджет '!R[-8]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,36,Инженерные изыскания (опер деятельность),C36:C36,1,=SUM(F36:AS36),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,36,Инженерные изыскания (опер деятельность),F36:AS36,40,=F37*$B$36,=R[1]C[0]*R36C2,F.CAPEX.ITEM_CASH,replace
+CF1,37,"Проставить темп,%",C37:C37,1,=SUM(F37:AS37),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,38,Предпроектные проработки,B38:B38,1,='Бюджет '!F29,='Бюджет '!R[-9]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,38,Предпроектные проработки,C38:C38,1,=SUM(F38:AS38),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,38,Предпроектные проработки,F38:AS38,40,=F39*$B$38,=R[1]C[0]*R38C2,F.CAPEX.ITEM_CASH,replace
+CF1,39,"Проставить темп,%",C39:C39,1,=SUM(F39:AS39),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,40,САРЕХ,B40:B40,1,=B41+B43+B45+B47+B49+B51+B53+B57+B55+B59+B61+B63+B65+B67+B69+B71+B73+B75,=R[1]C[0]+R[3]C[0]+R[5]C[0]+R[7]C[0]+R[9]C[0]+R[11]C[0]+R[13]C[0]+R[17]C[0]+R[15]C[0]+R[19]C[0]+R[21]C[0]+R[23]C[0]+R[25]C[0]+R[27]C[0]+R[29]C[0]+R[31]C[0]+R[33]C[0]+R[35]C[0],F.CAPEX.TOTAL,fix
+CF1,40,САРЕХ,C40:C40,1,=SUM(F40:AS40),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.TOTAL,fix
+CF1,40,САРЕХ,F40:AS40,40,"=SUM(F41,F43,F45,F47,F49,F51,F53,F55,F57,F59,F61,F63,F65,F67,F69,F71,F73,F75)","=SUM(R[1]C[0],R[3]C[0],R[5]C[0],R[7]C[0],R[9]C[0],R[11]C[0],R[13]C[0],R[15]C[0],R[17]C[0],R[19]C[0],R[21]C[0],R[23]C[0],R[25]C[0],R[27]C[0],R[29]C[0],R[31]C[0],R[33]C[0],R[35]C[0])",F.CAPEX.TOTAL,fix
+CF1,41,Подготовка площадки (включая снос),B41:B41,1,='Бюджет '!F31,='Бюджет '!R[-10]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,41,Подготовка площадки (включая снос),C41:C41,1,=SUM(F41:AS41),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,41,Подготовка площадки (включая снос),F41:AS41,40,=F42*$B$41,=R[1]C[0]*R41C2,F.CAPEX.ITEM_CASH,replace
+CF1,42,"Проставить темп,%",C42:C42,1,=SUM(F42:AS42),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,43,СМР надземной части (в т.ч. стилобат),B43:B43,1,='Бюджет '!F32,='Бюджет '!R[-11]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,43,СМР надземной части (в т.ч. стилобат),C43:C43,1,=SUM(F43:AS43),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,43,СМР надземной части (в т.ч. стилобат),F43:AS43,40,=F44*$B$43,=R[1]C[0]*R43C2,F.CAPEX.ITEM_CASH,replace
+CF1,44,"Проставить темп,%",C44:C44,1,=SUM(F44:AS44),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,45,СМР подземной части,B45:B45,1,='Бюджет '!F33,='Бюджет '!R[-12]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,45,СМР подземной части,C45:C45,1,=SUM(F45:AS45),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,45,СМР подземной части,F45:AS45,40,=F46*$B$45,=R[1]C[0]*R45C2,F.CAPEX.ITEM_CASH,replace
+CF1,46,"Проставить темп,%",C46:C46,1,=SUM(F46:AS46),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,47,Отделка МОП,B47:B47,1,='Бюджет '!F34,='Бюджет '!R[-13]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,47,Отделка МОП,C47:C47,1,=SUM(F47:AS47),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,47,Отделка МОП,F47:AS47,40,=F48*$B$47,=R[1]C[0]*R47C2,F.CAPEX.ITEM_CASH,replace
+CF1,48,"Проставить темп,%",C48:C48,1,=SUM(F48:AS48),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,49,ТУ и плата за тех. присоединение,B49:B49,1,='Бюджет '!F35,='Бюджет '!R[-14]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,49,ТУ и плата за тех. присоединение,C49:C49,1,=SUM(F49:AS49),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,49,ТУ и плата за тех. присоединение,F49:AS49,40,=F50*$B$49,=R[1]C[0]*R49C2,F.CAPEX.ITEM_CASH,replace
+CF1,50,"Проставить темп,%",C50:C50,1,=SUM(F50:AS50),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,51,Наружные сети и сооружения,B51:B51,1,='Бюджет '!F36,='Бюджет '!R[-15]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,51,Наружные сети и сооружения,C51:C51,1,=SUM(F51:AS51),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,51,Наружные сети и сооружения,F51:AS51,40,=F52*$B$51,=R[1]C[0]*R51C2,F.CAPEX.ITEM_CASH,replace
+CF1,52,"Проставить темп,%",C52:C52,1,=SUM(F52:AS52),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,53,"Благоустройство, объекты транспортного хозяйства",B53:B53,1,='Бюджет '!F37,='Бюджет '!R[-16]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,53,"Благоустройство, объекты транспортного хозяйства",C53:C53,1,=SUM(F53:AS53),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,53,"Благоустройство, объекты транспортного хозяйства",F53:AS53,40,=F54*$B$53,=R[1]C[0]*R53C2,F.CAPEX.ITEM_CASH,replace
+CF1,54,"Проставить темп,%",C54:C54,1,=SUM(F54:AS54),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,55,Прочие СМР,B55:B55,1,='Бюджет '!F39,='Бюджет '!R[-16]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,55,Прочие СМР,C55:C55,1,=SUM(F55:AS55),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,55,Прочие СМР,F55:AS55,40,=F56*$B$55,=R[1]C[0]*R55C2,F.CAPEX.ITEM_CASH,replace
+CF1,56,"Проставить темп,%",C56:C56,1,=SUM(F56:AS56),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,57,"Иные расходы на проекты (охрана, содержание площадки)",B57:B57,1,='Бюджет '!F40,='Бюджет '!R[-17]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,57,"Иные расходы на проекты (охрана, содержание площадки)",C57:C57,1,=SUM(F57:AS57),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,57,"Иные расходы на проекты (охрана, содержание площадки)",F57:AS57,40,=F58*$B$57,=R[1]C[0]*R57C2,F.CAPEX.ITEM_CASH,replace
+CF1,58,"Проставить темп,%",C58:C58,1,=SUM(F58:AS58),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,59,Расходы по вводу в эксплуатацию,B59:B59,1,='Бюджет '!F41,='Бюджет '!R[-18]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,59,Расходы по вводу в эксплуатацию,C59:C59,1,=SUM(F59:AS59),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,59,Расходы по вводу в эксплуатацию,F59:AS59,40,=F60*$B$59,=R[1]C[0]*R59C2,F.CAPEX.ITEM_CASH,replace
+CF1,60,"Проставить темп,%",C60:C60,1,=SUM(F60:AS60),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,61,Непредвиденные расходы,B61:B61,1,='Бюджет '!F42,='Бюджет '!R[-19]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,61,Непредвиденные расходы,C61:C61,1,=SUM(F61:AS61),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,61,Непредвиденные расходы,F61:AS61,40,=F62*$B$61,=R[1]C[0]*R61C2,F.CAPEX.ITEM_CASH,replace
+CF1,62,"Проставить темп,%",C62:C62,1,=SUM(F62:AS62),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,62,"Проставить темп,%",F62:AS62,28,=F44,=R[-18]C[0],F.CAPEX.ITEM_CASH,replace
+CF1,63,Услуги технического заказчика,B63:B63,1,='Бюджет '!F43,='Бюджет '!R[-20]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,63,Услуги технического заказчика,C63:C63,1,=SUM(F63:AS63),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,63,Услуги технического заказчика,F63:AS63,40,=F64*$B$63,=R[1]C[0]*R63C2,F.CAPEX.ITEM_CASH,replace
+CF1,64,"Проставить темп,%",C64:C64,1,=SUM(F64:AS64),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,64,"Проставить темп,%",AA64:AS64,19,=AA44,=R[-20]C[0],F.CAPEX.ITEM_CASH,replace
+CF1,65,Авторский надзор,B65:B65,1,='Бюджет '!F44,='Бюджет '!R[-21]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,65,Авторский надзор,C65:C65,1,=SUM(F65:AS65),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,65,Авторский надзор,F65:AS65,40,=F66*$B$65,=R[1]C[0]*R65C2,F.CAPEX.ITEM_CASH,replace
+CF1,66,"Проставить темп,%",C66:C66,1,=SUM(F66:AS66),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,67,Мониторинг окружающей застройки,B67:B67,1,='Бюджет '!F45,='Бюджет '!R[-22]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,67,Мониторинг окружающей застройки,C67:C67,1,=SUM(F67:AS67),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,67,Мониторинг окружающей застройки,F67:AS67,40,=F68*$B$67,=R[1]C[0]*R67C2,F.CAPEX.ITEM_CASH,replace
+CF1,68,"Проставить темп,%",C68:C68,1,=SUM(F68:AS68),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,69,Технический надзор,B69:B69,1,='Бюджет '!F46,='Бюджет '!R[-23]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,69,Технический надзор,C69:C69,1,=SUM(F69:AS69),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,69,Технический надзор,F69:AS69,40,=F70*$B$69,=R[1]C[0]*R69C2,F.CAPEX.ITEM_CASH,replace
+CF1,70,"Проставить темп,%",C70:C70,1,=SUM(F70:AS70),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,71,Социальные объекты (отдельно возводимые),B71:B71,1,='Бюджет '!F47,='Бюджет '!R[-24]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,71,Социальные объекты (отдельно возводимые),C71:C71,1,=SUM(F71:AS71),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,71,Социальные объекты (отдельно возводимые),F71:AS71,40,=F72*$B$71,=R[1]C[0]*R71C2,F.CAPEX.ITEM_CASH,replace
+CF1,72,"Проставить темп,%",C72:C72,1,=SUM(F72:AS72),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,73,Вознаграждение за управление проектом,B73:B73,1,='Бюджет '!F48,='Бюджет '!R[-25]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,73,Вознаграждение за управление проектом,C73:C73,1,=SUM(F73:AS73),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,73,Вознаграждение за управление проектом,F73:AS73,40,=F74*$B$73,=R[1]C[0]*R73C2,F.CAPEX.ITEM_CASH,replace
+CF1,74,"Проставить темп,%",C74:C74,1,=SUM(F74:AS74),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,74,"Проставить темп,%",F74:AS74,40,=F44,=R[-30]C[0],F.CAPEX.ITEM_CASH,replace
+CF1,75,Содержание застройщика,B75:B75,1,='Бюджет '!F49,='Бюджет '!R[-26]C[4],F.CAPEX.ITEM_CASH,replace
+CF1,75,Содержание застройщика,C75:C75,1,=SUM(F75:AS75),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,75,Содержание застройщика,F75:AS75,40,=F76*$B$75,=R[1]C[0]*R75C2,F.CAPEX.ITEM_CASH,replace
+CF1,76,"Проставить темп,%",C76:C76,1,=SUM(F76:AS76),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.ITEM_CASH,replace
+CF1,77,ОРЕХ,B77:C77,2,=SUM(E77:AR77),=SUM(R[0]C[3]:R[0]C[42]),F.CAPEX.TOTAL,fix
+CF1,77,ОРЕХ,F77:AS77,40,=SUM(F78:F79),=SUM(R[1]C[0]:R[2]C[0]),F.CAPEX.TOTAL,fix
+CF1,78,Брокеридж,B78:B78,1,='Бюджет '!F52,='Бюджет '!R[-26]C[4],F.CAPEX.ITEM_CASH,fix
+CF1,78,Брокеридж,C78:C78,1,=SUM(G78:AS78),=SUM(R[0]C[4]:R[0]C[42]),F.CAPEX.ITEM_CASH,fix
+CF1,78,Брокеридж,M78:AA78,15,='План продаж'!E25*'Бюджет '!$D$52,='План продаж'!R[-53]C[-8]*'Бюджет '!R52C4,F.CAPEX.ITEM_CASH,fix
+CF1,78,Брокеридж,AB78:AS78,18,='План продаж'!AA25*'Бюджет '!$D$52,='План продаж'!R[-53]C[-1]*'Бюджет '!R52C4,F.CAPEX.ITEM_CASH,fix
+CF1,79,Реклама,B79:B79,1,='Бюджет '!F51,='Бюджет '!R[-28]C[4],F.CAPEX.ITEM_CASH,fix
+CF1,79,Реклама,C79:C79,1,=SUM(G79:AS79),=SUM(R[0]C[4]:R[0]C[42]),F.CAPEX.ITEM_CASH,fix
+CF1,79,Реклама,M79:AS79,33,='Бюджет '!$D$51*'План продаж'!E25,='Бюджет '!R51C4*'План продаж'!R[-54]C[-8],F.CAPEX.ITEM_CASH,fix
+CF1,81,НАЛОГИ,B81:AS81,40,=B84+B85+B86,=R[3]C[0]+R[4]C[0]+R[5]C[0],F.TAX.PAYMENTS,replace
+CF1,81,НАЛОГИ,AA81:AB81,2,=AA84+AB85+AB86,=R[3]C[0]+R[4]C[1]+R[5]C[1],F.TAX.PAYMENTS,replace
+CF1,84,Налог на имущество,B84:B84,1,=D84*ТЭПы!C13,=R[0]C[2]*ТЭПы!R[-71]C[1],F.TAX.PAYMENTS,replace
+CF1,84,Налог на имущество,C84:C84,1,=SUM(E84:AS84),=SUM(R[0]C[2]:R[0]C[42]),F.TAX.PAYMENTS,replace
+CF1,84,Налог на имущество,F84:AH84,29,=$B$84/7.25/4,=R84C2/7.25/4,F.TAX.PAYMENTS,replace
+CF1,85,НДС,B85:B85,1,='Бюджет '!F54,='Бюджет '!R[-31]C[4],F.TAX.PAYMENTS,replace
+CF1,85,НДС,C85:C85,1,=SUM(F85:AS85),=SUM(R[0]C[3]:R[0]C[42]),F.TAX.PAYMENTS,replace
+CF1,85,НДС,AB85:AB85,1,=B85-SUM(F85:AA85),=R[0]C[-26]-SUM(R[0]C[-22]:R[0]C[-1]),F.TAX.PAYMENTS,replace
+CF1,86,Налог на прибыль,B86:B86,1,='Бюджет '!F55,='Бюджет '!R[-31]C[4],F.TAX.PAYMENTS,replace
+CF1,86,Налог на прибыль,C86:C86,1,=SUM(F86:AS86),=SUM(R[0]C[3]:R[0]C[42]),F.TAX.PAYMENTS,replace
+CF1,86,Налог на прибыль,AB86:AB86,1,=B86,=R[0]C[-26],F.TAX.PAYMENTS,replace
+CF1,90,Поступления,C90:C90,1,=SUM(F90:AS90),=SUM(R[0]C[3]:R[0]C[42]),F.ESC.BALANCE,fix
+CF1,90,Поступления,F90:AS90,40,=-F93+F95,=-R[3]C[0]+R[5]C[0],F.ESC.BALANCE,fix
+CF1,91,Остаток на эскроу BoP,C91:C91,1,=MAX(F91:AS91),=MAX(R[0]C[3]:R[0]C[42]),F.ESC.BALANCE,fix
+CF1,91,Остаток на эскроу BoP,F91:AS91,40,=E94,=R[3]C[-1],F.ESC.BALANCE,fix
+CF1,92,Пополнение эскроу за вычетом ФОР,C92:C92,1,=SUM(F92:AS92),=SUM(R[0]C[3]:R[0]C[42]),F.ESC.BALANCE,fix
+CF1,92,Пополнение эскроу за вычетом ФОР,F92:AS92,40,=F15*(1-$D$92)*F$8,=R[-77]C[0]*(1-R92C4)*R8C[0],F.ESC.BALANCE,fix
+CF1,93,Раскрытие эскроу,C93:C93,1,=SUM(F93:AS93),=SUM(R[0]C[3]:R[0]C[42]),F.ESC.BALANCE,fix
+CF1,93,Раскрытие эскроу,F93:AS93,40,"=-F6*SUM(F91,F92)","=-R[-87]C[0]*SUM(R[-2]C[0],R[-1]C[0])",F.ESC.BALANCE,fix
+CF1,94,Остаток на эскроу EoP,C94:C94,1,=MAX(F94:AS94),=MAX(R[0]C[3]:R[0]C[42]),F.ESC.BALANCE,fix
+CF1,94,Остаток на эскроу EoP,F94:AS94,40,=SUM(F91:F93),=SUM(R[-3]C[0]:R[-1]C[0]),F.ESC.BALANCE,fix
+CF1,95,Продажи по ДКП,C95:C95,1,=SUM(F95:AS95),=SUM(R[0]C[3]:R[0]C[42]),F.ESC.BALANCE,fix
+CF1,95,Продажи по ДКП,F95:AS95,40,=F15*F9,=R[-80]C[0]*R[-86]C[0],F.ESC.BALANCE,fix
+CF1,97,Total Debt (BoP),C97:C97,1,=MAX(F97:AS97),=MAX(R[0]C[3]:R[0]C[42]),F.FIN.DRAW,fix
+CF1,97,Total Debt (BoP),G97:AS97,39,=F106,=R[9]C[-1],F.FIN.DRAW,fix
+CF1,98,Выборка,C98:C98,1,=SUM(F98:AS98),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.DRAW,fix
+CF1,98,Выборка,F98:AS98,40,"=-SUM(F18,F132)*F8","=-SUM(R[-80]C[0],R[34]C[0])*R[-90]C[0]",F.FIN.DRAW,fix
+CF1,99,Погашение,C99:C99,1,=SUM(F99:AS99),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.REPAYMENT,fix
+CF1,99,Погашение,F99:AS99,40,"=SUM(F100,F101)","=SUM(R[1]C[0],R[2]C[0])",F.FIN.REPAYMENT,fix
+CF1,100,в т.ч. за счёт эскроу,C100:C100,1,=SUM(F100:AS100),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.REPAYMENT,fix
+CF1,100,в т.ч. за счёт эскроу,F100:AS100,40,"=MAX(F93/(1-$D$92)+F108,-F97-F98)","=MAX(R[-7]C[0]/(1-R92C4)+R[8]C[0],-R[-3]C[0]-R[-2]C[0])",F.FIN.REPAYMENT,fix
+CF1,101,в т.ч. за счёт ДКП,C101:C101,1,=SUM(F101:AS101),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.REPAYMENT,fix
+CF1,101,в т.ч. за счёт ДКП,F101:AS101,40,=M105,=R[4]C[7],F.FIN.REPAYMENT,fix
+CF1,102,Определение залоговой стоимости квартир,K102:AT102,36,='План продаж'!E58*(1-$D$102),='План продаж'!R[-44]C[-6]*(1-R102C4),F.FIN.REPAYMENT,fix
+CF1,103,Задолженность после раскрытия escrow,F103:AS103,40,=E$106*E$8*F$9,=R106C[-1]*R8C[-1]*R9C[0],F.FIN.REPAYMENT,fix
+CF1,104,Остаток площадей после раскрытия escrow,I104:AS104,37,=H$8*I$9*SUM('План продаж'!A59:AI59),=R8C[-1]*R9C[0]*SUM('План продаж'!R[-45]C[-8]:R[-45]C[26]),F.FIN.REPAYMENT,fix
+CF1,105,Погашение по залог. стоимости (квартиры),M105:AS105,33,=-MIN('План продаж'!E59:S59)*F9,=-MIN('План продаж'!R[-46]C[-8]:R[-46]C[6])*R[-96]C[-7],F.FIN.REPAYMENT,fix
+CF1,106,Total Debt (EoP),F106:AS106,40,=F97+F98+F99,=R[-9]C[0]+R[-8]C[0]+R[-7]C[0],F.FIN.REPAYMENT,fix
+CF1,107,Проценты начисленные,C107:C107,1,=SUM(F107:AS107),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.INTEREST,keep
+CF1,107,Проценты начисленные,F107:AS107,40,"=(AVERAGE(F97,F97+F98)+E107)*F125*F3/365","=(AVERAGE(R[-10]C[0],R[-10]C[0]+R[-9]C[0])+R[0]C[-1])*R[18]C[0]*R[-104]C[0]/365",F.FIN.INTEREST,keep
+CF1,108,"Проценты (PIK), оплата при раскрытии escrow",C108:C108,1,=SUM(F108:AS108),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.INTEREST,keep
+CF1,108,"Проценты (PIK), оплата при раскрытии escrow",F108:AS108,40,"=SUM($F$107:F107)*IF(F93<0,1,0)","=SUM(R107C6:R[-1]C[0])*IF(R[-15]C[0]<0,1,0)",F.FIN.INTEREST,keep
+CF1,109,"Проценты (PIK), оплата из ДКП",C109:C109,1,=SUM(F109:AS109),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.INTEREST,keep
+CF1,109,"Проценты (PIK), оплата из ДКП",F109:AS109,38,"=MIN(MAX(-F93*(1+$D$92)+F95+F18+F84+F85,0),(SUM($E$107:F107)-SUM($E$108:F108)-SUM($E$109:E109)))*F9","=MIN(MAX(-R[-16]C[0]*(1+R92C4)+R[-14]C[0]+R[-91]C[0]+R[-25]C[0]+R[-24]C[0],0),(SUM(R107C5:R[-2]C[0])-SUM(R108C5:R[-1]C[0])-SUM(R109C5:R[0]C[-1])))*R[-100]C[0]",F.FIN.INTEREST,keep
+CF1,109,"Проценты (PIK), оплата из ДКП",AA109:AB109,2,"=MIN(MAX(-AA93*(1+$D$92)+AA95+AA18+AA84+AB85,0),(SUM($E$107:AA107)-SUM($E$108:AA108)-SUM($E$109:Z109)))*AA9","=MIN(MAX(-R[-16]C[0]*(1+R92C4)+R[-14]C[0]+R[-91]C[0]+R[-25]C[0]+R[-24]C[1],0),(SUM(R107C5:R[-2]C[0])-SUM(R108C5:R[-1]C[0])-SUM(R109C5:R[0]C[-1])))*R[-100]C[0]",F.FIN.INTEREST,keep
+CF1,110,НеупПр  (EoP),C110:C110,1,=MAX(F110:AS110),=MAX(R[0]C[3]:R[0]C[42]),F.FIN.INTEREST,keep
+CF1,110,НеупПр  (EoP),F110:AS110,40,=E110+F107-F108-F109,=R[0]C[-1]+R[-3]C[0]-R[-2]C[0]-R[-1]C[0],F.FIN.INTEREST,keep
+CF1,111,Комиссия за выдачу,C111:C111,1,=SUM(F111:AS111),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.FEES,fix
+CF1,111,Комиссия за выдачу,F111:F111,1,=D111*'Бюджет '!F67,=R[0]C[-2]*'Бюджет '!R[-44]C[0],F.FIN.FEES,fix
+CF1,112,Комиссия за обязательство,C112:C112,1,=SUM(F112:AS112),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.FEES,fix
+CF1,113,Поток по кредиту,F113:AS113,40,=F98+F99-F108-F109,=R[-15]C[0]+R[-14]C[0]-R[-5]C[0]-R[-4]C[0],F.FIN.REPAYMENT,keep
+CF1,115,Ключевая ставка,F115:AS115,40,=$D$115,=R115C4,F.FIN.RATE,fix
+CF1,116,Льготная ставка кредитования,F116:AS116,40,=$D$116,=R116C4,F.FIN.RATE,fix
+CF1,117,Базовая ставка кредитования,F117:AS117,40,=$D$117,=R117C4,F.FIN.RATE,fix
+CF1,118,Ставка скидки,F118:AS118,40,=F115+$D$118,=R[-3]C[0]+R118C4,F.FIN.RATE,fix
+CF1,119,Минимальная ставка,F119:AS119,40,=$D$119,=R119C4,F.FIN.RATE,fix
+CF1,120,Сэср * (1 - ФОР) (Средства на эскроу - обязат. резервирование),F120:AS120,40,=AVERAGE(E94:F94),=AVERAGE(R[-26]C[-1]:R[-26]C[0]),F.FIN.RATE,fix
+CF1,121,Остаток ссудной задолженности,F121:AS121,40,=AVERAGE(E106:F106),=AVERAGE(R[-15]C[-1]:R[-15]C[0]),F.FIN.RATE,fix
+CF1,122,К1,F122:AS122,40,"=IF(E121+E110=0,0,MIN(E120/(E110+E121),1))","=IF(R[-1]C[-1]+R[-12]C[-1]=0,0,MIN(R[-2]C[-1]/(R[-12]C[-1]+R[-1]C[-1]),1))",F.FIN.RATE,fix
+CF1,123,К2,F123:AS123,40,=1-F122,=1-R[-1]C[0],F.FIN.RATE,fix
+CF1,124,СкP,F124:AS124,40,"=IF(E121+E110=0,0,MAX((E120-(E121+E110))*E118/(E121+E110),0))","=IF(R[-3]C[-1]+R[-14]C[-1]=0,0,MAX((R[-4]C[-1]-(R[-3]C[-1]+R[-14]C[-1]))*R[-6]C[-1]/(R[-3]C[-1]+R[-14]C[-1]),0))",F.FIN.RATE,fix
+CF1,125,ТСт  (Текущая Ставка Кредитования),F125:AS125,40,"=MAX(F116*F122+F117*F123-F124,F119)","=MAX(R[-9]C[0]*R[-3]C[0]+R[-8]C[0]*R[-2]C[0]-R[-1]C[0],R[-6]C[0])",F.FIN.RATE,fix
+CF1,127,Поток по кредиту для банка,F127:AS127,40,=-F113,=-R[-14]C[0],F.FIN.EFFECTIVE_RATE,fix
+CF1,128,Эффективная ставка по кредиту,D128:D128,1,"=(1+IRR(F127:AS127,5%))^4-1","=(1+IRR(R[-1]C[2]:R[-1]C[41],5%))^4-1",F.FIN.EFFECTIVE_RATE,fix
+CF1,132,Upfront equity (собственный капитал),C132:C132,1,=SUM(F132:AS132),=SUM(R[0]C[3]:R[0]C[42]),F.FIN.EQUITY_IN,replace
+CF1,132,Upfront equity (собственный капитал),F132:F132,1,=F111,=R[-21]C[0],F.FIN.EQUITY_IN,replace
+CF1,132,Upfront equity (собственный капитал),G132:AS132,39,=G18*$D$132,=R[-114]C[0]*R132C4,F.FIN.EQUITY_IN,replace
+CF1,133,CFADS (до финансирования),C133:C133,1,=SUM(F133:AS133),=SUM(R[0]C[3]:R[0]C[42]),F.CF.CFADS,fix
+CF1,133,CFADS (до финансирования),F133:AS133,40,=F15-F18-F81,=R[-118]C[0]-R[-115]C[0]-R[-52]C[0],F.CF.CFADS,fix
+CF1,134,Cash gap,F134:AS134,40,=(F97+F98++F100+F101)*F6,=(R[-37]C[0]+R[-36]C[0]++R[-34]C[0]+R[-33]C[0])*R[-128]C[0],F.CF.CASH_BALANCE,fix
+CF1,135,Cash BoP,F135:AS135,40,=E137,=R[2]C[-1],F.CF.CASH_BALANCE,fix
+CF1,136,Cash balance,C136:C136,1,=SUM(F136:AS136),=SUM(R[0]C[3]:R[0]C[42]),F.CF.CASH_BALANCE,fix
+CF1,136,Cash balance,F136:AT136,41,=F133+F132+F134+F113+F112,=R[-3]C[0]+R[-4]C[0]+R[-2]C[0]+R[-23]C[0]+R[-24]C[0],F.CF.CASH_BALANCE,fix
+CF1,137,Cash EoP,F137:AS137,40,=F136+F135,=R[-1]C[0]+R[-2]C[0],F.CF.CASH_BALANCE,fix
+CF1,138,FCFE,C138:C138,1,=SUM(F138:AS138),=SUM(R[0]C[3]:R[0]C[42]),F.CF.FCFE,replace
+CF1,138,FCFE,F138:AS138,40,=F137-E137-F132,=R[-1]C[0]-R[-1]C[-1]-R[-6]C[0],F.CF.FCFE,replace
+CF1,139,Cost of Eqity,F139:AS139,40,=$D$139,=R139C4,F.KPI.NPV,replace
+CF1,140,Valuation at cost of equity =,E140:AS140,41,=(F140+F138)/((1+F139)^(E3/365)),=(R[0]C[1]+R[-2]C[1])/((1+R[-1]C[1])^(R[-137]C[0]/365)),F.KPI.NPV,replace
+CF1,141,+free cash = Equity,E141:AS141,41,=E140+E137,=R[-1]C[0]+R[-4]C[0],F.KPI.NPV,replace
+CF1,142,+Debt = Market Value of Asset,E142:AS142,41,=E141+E106,=R[-1]C[0]+R[-36]C[0],F.KPI.NPV,replace
+CF1,143,IRR до финансирования,C143:C143,1,=C138/(C81+C18),=R[-5]C[0]/(R[-62]C[0]+R[-125]C[0]),F.KPI.IRR,replace
+CF1,144,LTV,F144:AS144,40,"=IFERROR((F106+F110)/F142,0)","=IFERROR((R[-38]C[0]+R[-34]C[0])/R[-2]C[0],0)",F.KPI.LTC_LTV,replace
+CF1,145,LTC,F145:AS145,40,"=IFERROR((F106+F107)/-SUM($E$18:F18),0)","=IFERROR((R[-39]C[0]+R[-38]C[0])/-SUM(R18C5:R[-127]C[0]),0)",F.KPI.LTC_LTV,replace
+CF1,148,NPV - чистый накопленный денежный поток,D148:D148,1,=C138,=R[-10]C[-1],F.KPI.LLCR,replace
+CF1,149,Debt - Чистый долг в периоде (выборка +% - пополнение эскроу),D149:D149,1,=-C107,=-R[-42]C[-1],F.KPI.LLCR,replace
+CF1,150,LLCR,D150:D150,1,=D148/D149,=R[-2]C[0]/R[-1]C[0],F.KPI.LLCR,replace
+CF1,153,Выручка минус налоги,D153:D153,1,=C15+C81,=R[-138]C[-1]+R[-72]C[-1],F.KPI.LLCR,replace
+CF1,154,Общий долг (выборка + %),D154:D154,1,=-C98+C107,=-R[-56]C[-1]+R[-47]C[-1],F.KPI.LLCR,replace
+CF1,155,Коэффициент покрытие долговых обязательств LLCR,D155:D155,1,=D153/D154,=R[-2]C[0]/R[-1]C[0],F.KPI.LLCR,replace
+План продаж,1,,D1:D1,1,=SUM(E1:AG1),=SUM(R[0]C[1]:R[0]C[29]),SALES.PACE,remove
+План продаж,1,,I1:Z1,7,=I22*$D$8,=R[21]C[0]*R8C4,SALES.PACE,remove
+План продаж,2,,D2:D2,1,=SUM(E2:AG2),=SUM(R[0]C[1]:R[0]C[29]),SALES.PACE,remove
+План продаж,2,,I2:L2,2,=I22*$D$9,=R[20]C[0]*R9C4,SALES.PACE,remove
+План продаж,3,,D3:D3,1,=SUM(E3:AG3),=SUM(R[0]C[1]:R[0]C[29]),SALES.PACE,remove
+План продаж,3,,I3:L3,2,=I22*$D$10,=R[19]C[0]*R10C4,SALES.PACE,remove
+План продаж,4,,D4:D4,1,=SUM(E4:AG4),=SUM(R[0]C[1]:R[0]C[29]),SALES.PACE,remove
+План продаж,4,,E4:AG4,29,=E1+E2+E3,=R[-3]C[0]+R[-2]C[0]+R[-1]C[0],SALES.PACE,remove
+План продаж,5,,C5:C5,1,=ТЭПы!B38,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,7,,B7:K7,10,=ТЭПы!A40,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,8,,B8:K8,10,=ТЭПы!A41,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,8,,L8:L8,1,=G8*E8,=R[0]C[-5]*R[0]C[-7],SALES.PRODUCTS,keep
+План продаж,9,,B9:K9,10,=ТЭПы!A42,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,10,,B10:K10,10,=ТЭПы!A43,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,11,,B11:K11,10,=ТЭПы!A44,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,14,,B14:K14,10,=ТЭПы!A47,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,15,,B15:K15,10,=ТЭПы!A48,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,16,,B16:K16,10,=ТЭПы!A49,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,17,,B17:K17,10,=ТЭПы!A50,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,18,,B18:K18,10,=ТЭПы!A51,=ТЭПы!R[33]C[-1],SALES.PRODUCTS,keep
+План продаж,21,,D21:D21,1,=SUM(E21:AG21),=SUM(R[0]C[1]:R[0]C[29]),SALES.PACE,remove
+План продаж,22,,B22:B22,1,=B28+B33+B38,=R[6]C[0]+R[11]C[0]+R[16]C[0],SALES.PACE,remove
+План продаж,22,,D22:D22,1,=SUM(E22:AG22),=SUM(R[0]C[1]:R[0]C[29]),SALES.PACE,remove
+План продаж,25,ИТОГО сделки с индекс,D25:AM25,36,=D27+D32+D37+D42+D52+D47,=R[2]C[0]+R[7]C[0]+R[12]C[0]+R[17]C[0]+R[27]C[0]+R[22]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,26,ИТОГО ПЛОЩАДЬ,D26:D26,1,=D29+D34+D39+D44,=R[3]C[0]+R[8]C[0]+R[13]C[0]+R[18]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,26,ИТОГО ПЛОЩАДЬ,E26:AM26,35,=E29+E34+E39+E44+E54+E49,=R[3]C[0]+R[8]C[0]+R[13]C[0]+R[18]C[0]+R[28]C[0]+R[23]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,27,,B27:B27,1,=E8,=R[-19]C[3],F.SALES.CONTRACT_VALUE,keep
+План продаж,27,,C27:C27,1,=C8,=R[-19]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,27,,D27:D27,1,=SUM(E27:AU27),=SUM(R[0]C[1]:R[0]C[43]),F.SALES.CONTRACT_VALUE,keep
+План продаж,27,,E27:AM27,35,=E31*E29,=R[4]C[0]*R[2]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,28,"Темп продаж, шт",B28:B28,1,=G8,=R[-20]C[5],SALES.PACE,keep
+План продаж,28,"Темп продаж, шт",D28:D28,1,=SUM(E28:AU28),=SUM(R[0]C[1]:R[0]C[43]),SALES.PACE,keep
+План продаж,29,"Темп продаж, кв. м",B29:B29,1,=F8,=R[-21]C[4],F.SALES.SOLD_AREA,fix
+План продаж,29,"Темп продаж, кв. м",D29:D29,1,=SUM(E29:AM29),=SUM(R[0]C[1]:R[0]C[35]),F.SALES.SOLD_AREA,fix
+План продаж,29,"Темп продаж, кв. м",E29:AM29,35,=E28*$B$27,=R[-1]C[0]*R27C2,F.SALES.SOLD_AREA,fix
+План продаж,30,"Рост цен (от стадии проекта),%",D30:D30,1,=SUM(E30:T30),=SUM(R[0]C[1]:R[0]C[16]),SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,30,"Рост цен (от стадии проекта),%",F30:AM30,34,=E30,=R[0]C[-1],SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,31,"Цена продаж, тыс.руб./кв.м",B31:B31,1,=H8,=R[-23]C[6],F.SALES.PRICE,replace
+План продаж,31,"Цена продаж, тыс.руб./кв.м",D31:D31,1,=AVERAGE(E31:S31),=AVERAGE(R[0]C[1]:R[0]C[15]),F.SALES.PRICE,replace
+План продаж,31,"Цена продаж, тыс.руб./кв.м",E31:E31,1,=B31,=R[0]C[-3],F.SALES.PRICE,replace
+План продаж,31,"Цена продаж, тыс.руб./кв.м",F31:AM31,34,=E31+E31*E30,=R[0]C[-1]+R[0]C[-1]*R[-1]C[-1],F.SALES.PRICE,replace
+План продаж,32,,B32:B32,1,=E9,=R[-23]C[3],F.SALES.CONTRACT_VALUE,keep
+План продаж,32,,C32:C32,1,=C9,=R[-23]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,32,,D32:D32,1,=SUM(E32:AU32),=SUM(R[0]C[1]:R[0]C[43]),F.SALES.CONTRACT_VALUE,keep
+План продаж,32,,E32:AM32,35,=E36*E34,=R[4]C[0]*R[2]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,33,"Темп продаж, шт",B33:B33,1,=G9,=R[-24]C[5],SALES.PACE,keep
+План продаж,33,"Темп продаж, шт",D33:D33,1,=SUM(E33:AU33),=SUM(R[0]C[1]:R[0]C[43]),SALES.PACE,keep
+План продаж,34,"Темп продаж, кв. м",B34:B34,1,=F9,=R[-25]C[4],F.SALES.SOLD_AREA,fix
+План продаж,34,"Темп продаж, кв. м",D34:D34,1,=SUM(E34:Z34),=SUM(R[0]C[1]:R[0]C[22]),F.SALES.SOLD_AREA,fix
+План продаж,34,"Темп продаж, кв. м",E34:AM34,35,=E33*$B$32,=R[-1]C[0]*R32C2,F.SALES.SOLD_AREA,fix
+План продаж,35,"Рост цен (от стадии проекта),%",D35:D35,1,=SUM(E35:T35),=SUM(R[0]C[1]:R[0]C[16]),SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,35,"Рост цен (от стадии проекта),%",F35:AM35,34,=E35,=R[0]C[-1],SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,36,"Цена продаж, тыс.руб./кв.м",B36:B36,1,=H9,=R[-27]C[6],F.SALES.PRICE,replace
+План продаж,36,"Цена продаж, тыс.руб./кв.м",D36:D36,1,=AVERAGE(E36:S36),=AVERAGE(R[0]C[1]:R[0]C[15]),F.SALES.PRICE,replace
+План продаж,36,"Цена продаж, тыс.руб./кв.м",E36:E36,1,=B36,=R[0]C[-3],F.SALES.PRICE,replace
+План продаж,36,"Цена продаж, тыс.руб./кв.м",F36:AM36,34,=E36+E36*E35,=R[0]C[-1]+R[0]C[-1]*R[-1]C[-1],F.SALES.PRICE,replace
+План продаж,37,,B37:B37,1,=E10,=R[-27]C[3],F.SALES.CONTRACT_VALUE,keep
+План продаж,37,,C37:C37,1,=C10,=R[-27]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,37,,D37:D37,1,=SUM(E37:AU37),=SUM(R[0]C[1]:R[0]C[43]),F.SALES.CONTRACT_VALUE,keep
+План продаж,37,,E37:AM37,35,=E41*E39,=R[4]C[0]*R[2]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,38,"Темп продаж, шт",B38:B38,1,=G10,=R[-28]C[5],SALES.PACE,keep
+План продаж,38,"Темп продаж, шт",D38:D38,1,=SUM(E38:AU38),=SUM(R[0]C[1]:R[0]C[43]),SALES.PACE,keep
+План продаж,39,"Темп продаж, кв. м",B39:B39,1,=F10,=R[-29]C[4],F.SALES.SOLD_AREA,fix
+План продаж,39,"Темп продаж, кв. м",D39:D39,1,=SUM(E39:S39),=SUM(R[0]C[1]:R[0]C[15]),F.SALES.SOLD_AREA,fix
+План продаж,39,"Темп продаж, кв. м",E39:AM39,35,=E38*$B$37,=R[-1]C[0]*R37C2,F.SALES.SOLD_AREA,fix
+План продаж,40,"Рост цен (от стадии проекта),%",D40:D40,1,=SUM(E40:T40),=SUM(R[0]C[1]:R[0]C[16]),SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,40,"Рост цен (от стадии проекта),%",F40:AM40,34,=E40,=R[0]C[-1],SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,41,"Цена продаж, тыс.руб./кв.м",B41:B41,1,=H10,=R[-31]C[6],F.SALES.PRICE,replace
+План продаж,41,"Цена продаж, тыс.руб./кв.м",D41:D41,1,=AVERAGE(E41:S41),=AVERAGE(R[0]C[1]:R[0]C[15]),F.SALES.PRICE,replace
+План продаж,41,"Цена продаж, тыс.руб./кв.м",E41:E41,1,=B41,=R[0]C[-3],F.SALES.PRICE,replace
+План продаж,41,"Цена продаж, тыс.руб./кв.м",F41:AM41,34,=E41+E41*E40,=R[0]C[-1]+R[0]C[-1]*R[-1]C[-1],F.SALES.PRICE,replace
+План продаж,42,,B42:B42,1,=E15,=R[-27]C[3],F.SALES.CONTRACT_VALUE,keep
+План продаж,42,,C42:C42,1,=C15,=R[-27]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,42,,D42:D42,1,=SUM(E42:AU42),=SUM(R[0]C[1]:R[0]C[43]),F.SALES.CONTRACT_VALUE,keep
+План продаж,42,,E42:AM42,35,=E46*E44,=R[4]C[0]*R[2]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,43,"Темп продаж, шт",B43:B43,1,=G15,=R[-28]C[5],SALES.PACE,keep
+План продаж,43,"Темп продаж, шт",D43:D43,1,=SUM(E43:AU43),=SUM(R[0]C[1]:R[0]C[43]),SALES.PACE,keep
+План продаж,44,"Темп продаж, кв. м",B44:B44,1,=F15,=R[-29]C[4],F.SALES.SOLD_AREA,fix
+План продаж,44,"Темп продаж, кв. м",D44:D44,1,=SUM(E44:AU44),=SUM(R[0]C[1]:R[0]C[43]),F.SALES.SOLD_AREA,fix
+План продаж,44,"Темп продаж, кв. м",E44:AM44,35,=E43*$B$42,=R[-1]C[0]*R42C2,F.SALES.SOLD_AREA,fix
+План продаж,45,"Рост цен (от стадии проекта),%",D45:D45,1,=SUM(E45:T45),=SUM(R[0]C[1]:R[0]C[16]),SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,45,"Рост цен (от стадии проекта),%",F45:AM45,34,=E45,=R[0]C[-1],SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,46,"Цена продаж, тыс.руб./кв.м",B46:B46,1,=H15,=R[-31]C[6],F.SALES.PRICE,replace
+План продаж,46,"Цена продаж, тыс.руб./кв.м",D46:D46,1,=AVERAGE(E46:S46),=AVERAGE(R[0]C[1]:R[0]C[15]),F.SALES.PRICE,replace
+План продаж,46,"Цена продаж, тыс.руб./кв.м",E46:E46,1,=B46,=R[0]C[-3],F.SALES.PRICE,replace
+План продаж,46,"Цена продаж, тыс.руб./кв.м",F46:AJ46,31,=E46+E46*E45,=R[0]C[-1]+R[0]C[-1]*R[-1]C[-1],F.SALES.PRICE,replace
+План продаж,47,Машиноместа,B47:B47,1,=E16,=R[-31]C[3],F.SALES.CONTRACT_VALUE,keep
+План продаж,47,Машиноместа,D47:D47,1,=SUM(E47:AU47),=SUM(R[0]C[1]:R[0]C[43]),F.SALES.CONTRACT_VALUE,keep
+План продаж,47,Машиноместа,E47:AM47,35,=E51*E49,=R[4]C[0]*R[2]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,48,"Темп продаж, шт",B48:B48,1,=G16,=R[-32]C[5],SALES.PACE,keep
+План продаж,48,"Темп продаж, шт",D48:D48,1,=SUM(E48:AU48),=SUM(R[0]C[1]:R[0]C[43]),SALES.PACE,keep
+План продаж,49,"Темп продаж , кв м",B49:B49,1,=F16,=R[-33]C[4],F.SALES.SOLD_AREA,fix
+План продаж,49,"Темп продаж , кв м",D49:D49,1,=SUM(E49:S49),=SUM(R[0]C[1]:R[0]C[15]),F.SALES.SOLD_AREA,fix
+План продаж,49,"Темп продаж , кв м",E49:AM49,35,=E48*$B$47,=R[-1]C[0]*R47C2,F.SALES.SOLD_AREA,fix
+План продаж,50,"Рост цен (от стадии проекта),%",D50:D50,1,=SUM(E50:T50),=SUM(R[0]C[1]:R[0]C[16]),SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,50,"Рост цен (от стадии проекта),%",F50:AM50,34,=E50,=R[0]C[-1],SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,51,"Цена продаж, тыс.руб./шт.",B51:B51,1,=H16,=R[-35]C[6],F.SALES.PRICE,replace
+План продаж,51,"Цена продаж, тыс.руб./шт.",D51:D51,1,=AVERAGE(E51:S51),=AVERAGE(R[0]C[1]:R[0]C[15]),F.SALES.PRICE,replace
+План продаж,51,"Цена продаж, тыс.руб./шт.",E51:E51,1,=B51,=R[0]C[-3],F.SALES.PRICE,replace
+План продаж,51,"Цена продаж, тыс.руб./шт.",F51:AG51,28,=E51+E51*E50,=R[0]C[-1]+R[0]C[-1]*R[-1]C[-1],F.SALES.PRICE,replace
+План продаж,52,,C52:C52,1,=C17,=R[-35]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,52,,D52:D52,1,=SUM(E52:AU52),=SUM(R[0]C[1]:R[0]C[43]),F.SALES.CONTRACT_VALUE,keep
+План продаж,52,,E52:AM52,35,=E56*E54,=R[4]C[0]*R[2]C[0],F.SALES.CONTRACT_VALUE,keep
+План продаж,53,"Темп продаж, шт",B53:B53,1,=G17,=R[-36]C[5],SALES.PACE,keep
+План продаж,53,"Темп продаж, шт",D53:D53,1,=SUM(E53:AU53),=SUM(R[0]C[1]:R[0]C[43]),SALES.PACE,keep
+План продаж,54,"Темп продаж , кв м",B54:B54,1,=F17,=R[-37]C[4],F.SALES.SOLD_AREA,fix
+План продаж,54,"Темп продаж , кв м",D54:D54,1,=SUM(E54:S54),=SUM(R[0]C[1]:R[0]C[15]),F.SALES.SOLD_AREA,fix
+План продаж,55,"Рост цен (от стадии проекта),%",D55:D55,1,=SUM(E55:T55),=SUM(R[0]C[1]:R[0]C[16]),SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,55,"Рост цен (от стадии проекта),%",F55:T55,15,=E55,=R[0]C[-1],SALES.PRICE_STAGE_UPLIFT,replace
+План продаж,56,"Цена продаж, тыс.руб./шт.",B56:B56,1,=H17,=R[-39]C[6],F.SALES.PRICE,replace
+План продаж,56,"Цена продаж, тыс.руб./шт.",D56:D56,1,=AVERAGE(E56:S56),=AVERAGE(R[0]C[1]:R[0]C[15]),F.SALES.PRICE,replace
+План продаж,56,"Цена продаж, тыс.руб./шт.",E56:E56,1,=B56,=R[0]C[-3],F.SALES.PRICE,replace
+План продаж,58,Средняя стоимость квартир,E58:AM58,35,"=AVERAGE(E31,E36,E41)","=AVERAGE(R[-27]C[0],R[-22]C[0],R[-17]C[0])",F.SALES.WAVG_PRICE,replace
+План продаж,59,Темп продаж квартир,B59:AO59,38,=B29+B34+B39,=R[-30]C[0]+R[-25]C[0]+R[-20]C[0],F.SALES.SOLD_AREA,keep
+План продаж,60,Стоимость Пмоещений с НДС,D60:D60,1,=SUM(E60:AO60),=SUM(R[0]C[1]:R[0]C[37]),F.TAX.OUTPUT_VAT,fix
+План продаж,60,Стоимость Пмоещений с НДС,E60:AO60,37,=E47+E52+E42,=R[-13]C[0]+R[-8]C[0]+R[-18]C[0],F.TAX.OUTPUT_VAT,fix
+План продаж,61,НДС,D61:D61,1,=D60*C62,=R[-1]C[0]*R[1]C[-1],F.TAX.OUTPUT_VAT,fix
+План продаж,61,НДС,E61:AM61,35,=E60*$C$62,=R[-1]C[0]*R62C3,F.TAX.OUTPUT_VAT,fix
+План продаж,65,Средняя в конце продаж,D65:D65,1,"=AVERAGE(S31,S36,S41)","=AVERAGE(R[-34]C[15],R[-29]C[15],R[-24]C[15])",F.SALES.END_PRICE,replace
+План продаж,66,Средневзвешенная Квартир,D66:D66,1,"=AVERAGE(D31,D36,D41)","=AVERAGE(R[-35]C[0],R[-30]C[0],R[-25]C[0])",F.SALES.WAVG_PRICE,replace
+План продаж,67,Средние темпы реализации квартир,D67:D67,1,=AVERAGE(E59:S59),=AVERAGE(R[-8]C[1]:R[-8]C[15]),F.SALES.SOLD_AREA,keep
+План продаж,70,,D70:D70,1,=SUM(E70:AV70),=SUM(R[0]C[1]:R[0]C[44]),—,remove
+План продаж,71,,D71:AM71,36,=D70/$E$15,=R[-1]C[0]/R15C5,—,remove
+Эскроу,1,,I1:I1,1,='План продаж'!#REF!,='План продаж'!#REF!,—,remove
+Эскроу,1,,U1:U1,1,='План продаж'!P23,='План продаж'!R[22]C[-5],—,remove
+Эскроу,1,,V1:W1,2,='План продаж'!R23,='План продаж'!R[22]C[-4],—,remove
+Эскроу,2,,I2:AB2,20,='План продаж'!E24,='План продаж'!R[22]C[-4],—,remove
+Эскроу,4,Сделки итого :,I4:AK4,29,='План продаж'!E25,='План продаж'!R[21]C[-4],F.SALES.CASH_IN,replace
+Эскроу,4,Сделки итого :,AL4:AL4,1,=SUM(D4:AK4),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,5,Сделки с рассрочкой,D5:AK5,34,=$C$5*D4,=R5C3*R[-1]C[0],F.SALES.CASH_IN,replace
+Эскроу,5,Сделки с рассрочкой,AL5:AL5,1,=SUM(D5:AK5),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,6,Сделки с ипотекой,D6:AK6,34,=$C$6*D4,=R6C3*R[-2]C[0],F.SALES.CASH_IN,replace
+Эскроу,6,Сделки с ипотекой,AL6:AL6,1,=SUM(D6:AK6),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,7,Сделки со 100% оплатой,D7:AK7,34,=$C$7*D4,=R7C3*R[-3]C[0],F.SALES.CASH_IN,replace
+Эскроу,7,Сделки со 100% оплатой,AL7:AL7,1,=SUM(D7:AK7),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,8,ПВ,I8:AK8,29,=I4*$C$8,=R[-4]C[0]*R8C3,F.SALES.CASH_IN,replace
+Эскроу,8,ПВ,AL8:AL8,1,=SUM(D8:AK8),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,9,1 кв,AL9:AL9,1,=SUM(D9:AK9),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,10,2кв,AL10:AL10,1,=SUM(D10:AK10),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,11,3кв,AL11:AL11,1,=SUM(D11:AK11),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,12,4кв,AL12:AL12,1,=SUM(D12:AK12),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,13,5кв,AL13:AL13,1,=SUM(D13:AK13),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,14,6кв,AL14:AL14,1,=SUM(D14:AK14),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,15,7кв,AL15:AL15,1,=SUM(D15:AK15),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,16,8кв,AL16:AL16,1,=SUM(D16:AK16),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,17,9кв,AL17:AL17,1,=SUM(D17:AK17),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,18,10кв,AL18:AL18,1,=SUM(D18:AK18),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,19,11кв,AL19:AL19,1,=SUM(D19:AK19),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,20,12кв,AL20:AL20,1,=SUM(D20:AK20),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,21,13кв,AL21:AL21,1,=SUM(D21:AK21),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,22,14кв,AL22:AL22,1,=SUM(D22:AK22),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,23,15кв,AL23:AL23,1,=SUM(D23:AK23),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,24,16кв,AL24:AL24,1,=SUM(D24:AK24),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,25,17кв,AL25:AL25,1,=SUM(D25:AK25),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,26,18кв,AL26:AL26,1,=SUM(D26:AK26),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,27,19кв,AL27:AL27,1,=SUM(D27:AK27),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,28,20кв,AL28:AL28,1,=SUM(D28:AK28),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,29,21 кв,AL29:AL29,1,=SUM(D29:AK29),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,30,22кв,AL30:AL30,1,=SUM(D30:AK30),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,31,23 кв,AL31:AL31,1,=SUM(D31:AK31),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,32,24 кв,AL32:AL32,1,=SUM(D32:AK32),=SUM(R[0]C[-34]:R[0]C[-1]),F.SALES.CASH_IN,replace
+Эскроу,33,Итого гашение:,D33:H33,5,=SUM(D6:D28),=SUM(R[-27]C[0]:R[-5]C[0]),F.SALES.CASH_IN,replace
+Эскроу,33,Итого гашение:,I33:AL33,30,=SUM(I6:I32),=SUM(R[-27]C[0]:R[-1]C[0]),F.SALES.CASH_IN,replace
+Dashboard,2,Название проекта,C2:C2,1,=ТЭПы!C2,=ТЭПы!R[0]C[0],F.TEP.SALEABLE_AREA,fix
+Dashboard,3,Площадь участка,C3:C3,1,=ТЭПы!C15,=ТЭПы!R[12]C[0],F.TEP.SALEABLE_AREA,fix
+Dashboard,5,Планируемый класс жилья,C5:C5,1,=ТЭПы!C4,=ТЭПы!R[-1]C[0],F.TEP.SALEABLE_AREA,fix
+Dashboard,6,Дата покупки проекта,C6:C6,1,=ТЭПы!C6,=ТЭПы!R[0]C[0],F.TEP.SALEABLE_AREA,fix
+Dashboard,7,Сроки строительства,B7:B7,1,=ТЭПы!C7,=ТЭПы!R[0]C[1],F.TEP.SALEABLE_AREA,fix
+Dashboard,7,Сроки строительства,C7:C7,1,=ТЭПы!C10,=ТЭПы!R[3]C[0],F.TEP.SALEABLE_AREA,fix
+Dashboard,11,кв. м,C11:C11,1,=ТЭПы!C19,=ТЭПы!R[8]C[0],F.TEP.SALEABLE_AREA,fix
+Dashboard,13,кв. м,C13:C13,1,=ТЭПы!E38,=ТЭПы!R[25]C[2],F.TEP.SALEABLE_AREA,fix
+Dashboard,14,кв. м,C14:C14,1,=ТЭПы!C22,=ТЭПы!R[8]C[0],F.TEP.SALEABLE_AREA,fix
+Dashboard,15,кв. м,C15:C15,1,=ТЭПы!E48,=ТЭПы!R[33]C[2],F.TEP.SALEABLE_AREA,fix
+Dashboard,16,шт.,C16:C16,1,=ТЭПы!E50,=ТЭПы!R[34]C[2],F.TEP.SALEABLE_AREA,fix
+Dashboard,17,шт.,C17:C17,1,=ТЭПы!F49,=ТЭПы!R[32]C[3],F.TEP.SALEABLE_AREA,fix
+Dashboard,19,тыс. руб.,C19:C19,1,='CF1 '!C15,='R[-18]C[81] '!R[-4]C[0],F.SALES.REVENUE_TOTAL,fix
+Dashboard,21,тыс. руб./кв. м,C21:C21,1,=ТЭПы!G44,=ТЭПы!R[23]C[4],F.SALES.PRICE,keep
+Dashboard,23,тыс. руб./кв. м,C23:C23,1,='План продаж'!D65,='План продаж'!R[42]C[1],F.SALES.END_PRICE,replace
+Dashboard,24,тыс. руб./кв. м,C24:C24,1,='План продаж'!D66,='План продаж'!R[42]C[1],F.SALES.WAVG_PRICE,replace
+Dashboard,25,кв. м,C25:C25,1,='План продаж'!D67,='План продаж'!R[42]C[1],F.SALES.SOLD_AREA,keep
+Dashboard,26,квартал,C26:C26,1,"=COUNTIF('План продаж'!E26:AM26,"">0"")","=COUNTIF('План продаж'!R[0]C[2]:R[0]C[36],"">0"")",F.SALES.SOLD_AREA,keep
+Dashboard,27,тыс. руб.,C27:C27,1,=SUM(C28:C32),=SUM(R[1]C[0]:R[5]C[0]),F.CAPEX.TOTAL,keep
+Dashboard,28,тыс. руб.,A28:A28,1,='CF1 '!A20,='R[-27]C[83] '!R[-8]C[0],F.CAPEX.TOTAL,keep
+Dashboard,28,тыс. руб.,C28:C28,1,='CF1 '!C20,='R[-27]C[81] '!R[-8]C[0],F.CAPEX.TOTAL,keep
+Dashboard,29,тыс. руб./кв. м ПП,A29:A29,1,='CF1 '!A23,='R[-28]C[83] '!R[-6]C[0],F.CAPEX.TOTAL,keep
+Dashboard,29,тыс. руб./кв. м ПП,C29:C29,1,='CF1 '!C23,='R[-28]C[81] '!R[-6]C[0],F.CAPEX.TOTAL,keep
+Dashboard,30,тыс. руб.,A30:A30,1,='CF1 '!A27,='R[-29]C[83] '!R[-3]C[0],F.CAPEX.TOTAL,keep
+Dashboard,30,тыс. руб.,C30:C30,1,='CF1 '!C27,='R[-29]C[81] '!R[-3]C[0],F.CAPEX.TOTAL,keep
+Dashboard,31,тыс. руб.,A31:A31,1,='CF1 '!A40,='R[-30]C[83] '!R[9]C[0],F.CAPEX.TOTAL,keep
+Dashboard,31,тыс. руб.,C31:C31,1,='CF1 '!C40,='R[-30]C[81] '!R[9]C[0],F.CAPEX.TOTAL,keep
+Dashboard,32,тыс. руб.,A32:A32,1,='CF1 '!A77,='R[-31]C[83] '!R[45]C[0],F.CAPEX.TOTAL,keep
+Dashboard,32,тыс. руб.,C32:C32,1,='CF1 '!C77,='R[-31]C[81] '!R[45]C[0],F.CAPEX.TOTAL,keep
+Dashboard,33,тыс. руб.,C33:C33,1,=C19-C27,=R[-14]C[0]-R[-6]C[0],F.KPI.MARGIN,keep
+Dashboard,34,%,C34:C34,1,=C33/C19,=R[-1]C[0]/R[-15]C[0],F.KPI.MARGIN,keep
+Dashboard,35,тыс. руб.,C35:C35,1,='CF1 '!C81,='R[-34]C[81] '!R[46]C[0],F.TAX.PAYMENTS,fix
+Dashboard,36,тыс. руб.,C36:C36,1,='CF1 '!C98,='R[-35]C[81] '!R[62]C[0],F.FIN.LIMIT,fix
+Dashboard,37,тыс. руб.,C37:C37,1,=-'CF1 '!C107,=-'R[-36]C[81] '!R[70]C[0],F.FIN.INTEREST,keep
+Dashboard,38,квартал,C38:C38,1,"=COUNTIF('CF1 '!F98:AS98,"">0"")","=COUNTIF('R[-37]C[81] '!R[60]C[3]:R[60]C[42],"">0"")",F.FIN.DRAW,fix
+Dashboard,39,тыс. руб.,C39:C39,1,='CF1 '!C132,='R[-38]C[81] '!R[93]C[0],F.FIN.EQUITY_IN,fix
+Dashboard,40,Итоги по проекту,C40:C40,1,=C33-(C35+C37),=R[-7]C[0]-(R[-5]C[0]+R[-3]C[0]),F.KPI.MARGIN,fix
+Dashboard,41,тыс. руб.,C41:C41,1,='CF1 '!C138,='R[-40]C[81] '!R[97]C[0],F.CF.CFADS,fix
+Dashboard,42,Фин рез,C42:C42,1,=C19-C27-C35-C37,=R[-23]C[0]-R[-15]C[0]-R[-7]C[0]-R[-5]C[0],F.KPI.MARGIN,fix
+Dashboard,43,%,C43:C43,1,=C40/C19,=R[-3]C[0]/R[-24]C[0],F.KPI.MARGIN,replace
+Dashboard,44,IRR Проекта,C44:C44,1,=C40/(C27+C35+C37),=R[-4]C[0]/(R[-17]C[0]+R[-9]C[0]+R[-7]C[0]),F.KPI.IRR,replace
+Dashboard,45,%,C45:C45,1,=C39/C41,=R[-6]C[0]/R[-4]C[0],F.KPI.IRR,replace
+Dashboard,46,%,C46:C46,1,=MAX('CF1 '!F144:AS144),=MAX('R[-45]C[81] '!R[98]C[3]:R[98]C[42]),F.KPI.LTC_LTV,replace
+Dashboard,50,,C50:C50,1,=(C27+C35+C37)/C13,=(R[-23]C[0]+R[-15]C[0]+R[-13]C[0])/R[-37]C[0],F.KPI.COST_PER_M2,fix
+Dashboard,51,,C51:C51,1,=('CF1 '!C138+'CF1 '!C98-'CF1 '!C107)/('CF1 '!C98-'CF1 '!C107),=('R[-50]C[81] '!R[87]C[0]+'R[-50]C[81] '!R[47]C[0]-'R[-50]C[81] '!R[56]C[0])/('R[-50]C[81] '!R[47]C[0]-'R[-50]C[81] '!R[56]C[0]),F.KPI.LLCR,replace
+Dashboard,52,LLCR,C52:C52,1,=('CF1 '!C138+'CF1 '!C98-'CF1 '!C107)/('CF1 '!C98-'CF1 '!C107),=('R[-51]C[81] '!R[86]C[0]+'R[-51]C[81] '!R[46]C[0]-'R[-51]C[81] '!R[55]C[0])/('R[-51]C[81] '!R[46]C[0]-'R[-51]C[81] '!R[55]C[0]),F.KPI.LLCR,replace
+Dashboard,57,NPV,C57:C57,1,='CF1 '!D148,='R[-56]C[81] '!R[91]C[1],F.KPI.NPV,replace
+Dashboard,58,LLCR средний за весь проект,C58:C58,1,='CF1 '!D150,='R[-57]C[81] '!R[92]C[1],F.KPI.LLCR,replace
+Dashboard,61,,A61:A61,1,='CF1 '!A152,='R[-60]C[83] '!R[91]C[0],F.KPI.LLCR,replace
+Dashboard,62,,A62:A62,1,='CF1 '!A153,='R[-61]C[83] '!R[91]C[0],F.KPI.LLCR,replace
+Dashboard,62,,C62:C62,1,='CF1 '!D153,='R[-61]C[81] '!R[91]C[1],F.KPI.LLCR,replace
+Dashboard,63,,A63:A63,1,='CF1 '!A154,='R[-62]C[83] '!R[91]C[0],F.KPI.LLCR,replace
+Dashboard,63,,C63:C63,1,='CF1 '!D154,='R[-62]C[81] '!R[91]C[1],F.KPI.LLCR,replace
+Dashboard,64,,A64:A64,1,='CF1 '!A155,='R[-63]C[83] '!R[91]C[0],F.KPI.LLCR,replace
+Dashboard,64,,C64:C64,1,='CF1 '!D155,='R[-63]C[81] '!R[91]C[1],F.KPI.LLCR,replace

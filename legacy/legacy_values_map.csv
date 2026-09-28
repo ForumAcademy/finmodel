@@ -1,0 +1,738 @@
+sheet,cell,row_label,value,target_id,verdict,note
+ТЭПы,C5,Срок реализации проекта / мес,7.25,TIME.MILESTONES,remove,срок проекта вычисляется из вех
+ТЭПы,C13,Кадастровая стоимость ЗУ,5834907660,LAND.CADASTRAL_VALUE,keep,
+ТЭПы,I13,Кадастровая стоимость ЗУ,5834907660,LAND.CADASTRAL_VALUE,remove,дубль
+ТЭПы,C15,Площадь ЗУ / м2,96572,LAND.AREA,keep,
+ТЭПы,I15,Площадь ЗУ / м2,96572,LAND.AREA,remove,дубль
+ТЭПы,C17,Количество очередей,3,GEN.PHASES_COUNT,fix,очереди должны считаться раздельно
+ТЭПы,C19,Площадь проекта -  СПП (ГНС),221967,TEP.GFA_ABOVE,keep,
+ТЭПы,C21,Площадь нежилой застройки,19009,TEP.NONRES_GFA,keep,
+ТЭПы,C22,Площадь Квартир (продаваемая?),143560,TEP.APT_AREA,keep,
+ТЭПы,D23,Площадь коммерции продаваемая,0.8,TEP.COMM_AREA,remove,"коэффициент 0,8 без назначения"
+ТЭПы,C27,Количество парковочных мест ЖК,862,TEP.PARKING_COUNT_OVERRIDE,fix,ниже норматива 2118-ПП
+ТЭПы,C28,Кол-во квартир,2401,TEP.APT_MIX,remove,дубль количества квартир
+ТЭПы,D29,Площадь благоустройства,0.3,TEP.LANDSCAPE_SHARE,keep,нужна ссылка на ППТ/НГП
+ТЭПы,D30,Внутриквартальный проезд,0.1,TEP.ROAD_SHARE,keep,нужна ссылка на ППТ
+ТЭПы,D31,Озеленение,0.1,TEP.GREEN_SHARE,keep,нужна ссылка на ППТ/НГП
+ТЭПы,C35,Продаваемая площадь,149281,CAPEX.ITEMS,replace,база только для расчёта «как в исходном Excel»: перевод вбитых сумм бюджета в ставки на м²; продаваемая площадь — F.TEP.SALEABLE_AREA
+ТЭПы,C41,Квартиры Тип 1,0.4,TEP.APT_MIX,remove,доля вводилась вручную — теперь F.TEP.APT_SHARE
+ТЭПы,D41,Квартиры Тип 1,35.108,TEP.APT_MIX,keep,avg_area
+ТЭПы,F41,Квартиры Тип 1,961,TEP.APT_MIX,keep,count
+ТЭПы,G41,Квартиры Тип 1,497703,SALES.PRODUCTS,keep,"start_price, источник не указан"
+ТЭПы,I41,Квартиры Тип 1,0.8,TEP.PARKING_NORM,keep,совпадает с ПП Москвы 2118-ПП
+ТЭПы,C42,Квартиры Тип 2,0.3,TEP.APT_MIX,remove,доля вводилась вручную — теперь F.TEP.APT_SHARE
+ТЭПы,D42,Квартиры Тип 2,60.53,TEP.APT_MIX,keep,avg_area
+ТЭПы,F42,Квартиры Тип 2,720,TEP.APT_MIX,keep,count
+ТЭПы,G42,Квартиры Тип 2,497703,SALES.PRODUCTS,keep,"start_price, источник не указан"
+ТЭПы,I42,Квартиры Тип 2,1.2,TEP.PARKING_NORM,keep,совпадает с ПП Москвы 2118-ПП
+ТЭПы,C43,Квартиры Тип 3,0.3,TEP.APT_MIX,remove,доля вводилась вручную — теперь F.TEP.APT_SHARE
+ТЭПы,D43,Квартиры Тип 3,92,TEP.APT_MIX,keep,avg_area
+ТЭПы,F43,Квартиры Тип 3,720,TEP.APT_MIX,keep,count
+ТЭПы,G43,Квартиры Тип 3,497703,SALES.PRODUCTS,keep,"start_price, источник не указан"
+ТЭПы,I43,Квартиры Тип 3,1.6,TEP.PARKING_NORM,keep,совпадает с ПП Москвы 2118-ПП
+ТЭПы,F44,,2401,TEP.APT_MIX,fix,итог вбит числом
+ТЭПы,J44,,862,TEP.PARKING_COUNT_OVERRIDE,fix,итог вбит числом
+ТЭПы,C48,ПСН,10332,TEP.COMM_AREA,clarify,"ТЭПы!C49 = 5 200 и C48 = 10 332 не соответствуют текущим ТЭПам. C49 — ровно 127 м/м × 40,945 м², при этом в файле 862 машино-места (ТЭПы!C27). C48 на 10 м² больше площади ПСН в C23 (10 322). C49 в расчётах не участвует (только План продаж!D16). Вероятно, значения из модели Финляндского ЖК, не обновлённые под этот участок. Вопрос автору: откуда 5 200 и 10 332 и нужны ли они."
+ТЭПы,D48,ПСН,80,SALES.PRODUCTS,keep,средняя площадь лота ПСН
+ТЭПы,G48,ПСН,600000,SALES.PRODUCTS,keep,цена ПСН руб/м²
+ТЭПы,C49,Машиноместа,5200,TEP.PARKING_AREA_PER_SPACE,clarify,"ТЭПы!C49 = 5 200 и C48 = 10 332 не соответствуют текущим ТЭПам. C49 — ровно 127 м/м × 40,945 м², при этом в файле 862 машино-места (ТЭПы!C27). C48 на 10 м² больше площади ПСН в C23 (10 322). C49 в расчётах не участвует (только План продаж!D16). Вероятно, значения из модели Финляндского ЖК, не обновлённые под этот участок. Вопрос автору: откуда 5 200 и 10 332 и нужны ли они."
+ТЭПы,D49,Машиноместа,40.945,TEP.PARKING_AREA_PER_SPACE,keep,
+ТЭПы,G49,Машиноместа,270000,SALES.PRODUCTS,fix,"цена м/м в руб/м² × 40,945"
+ТЭПы,D50,Прочие помещения,0,TEP.STORAGE_COUNT,keep,прочие помещения = 0
+ТЭПы,E50,Прочие помещения,0,TEP.STORAGE_COUNT,keep,прочие помещения = 0
+ТЭПы,F50,Прочие помещения,0,TEP.STORAGE_COUNT,keep,прочие помещения = 0
+Бюджет,F18,Юридические расходы на покупку,0,CAPEX.ITEMS[LAND_LEGAL],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,D19,Агентское вознаграждение,0.02,LAND.AGENT_FEE_RATE,fix,ставка не участвует в сумме
+Бюджет,F19,Агентское вознаграждение,0,CAPEX.ITEMS[LAND_AGENT],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F21,,825124525.273,LAND.RENT_ANNUAL,replace,"итог без расчёта; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,D22,,5000,LAND.VRI_FEE,replace,5 000 руб/м² без источника
+Бюджет,F24,,1260033986.66,LAND.CITY_CASH_COMPENSATION,fix,"«Компенсация городу» → денежная компенсация в правообладании (НДС 0); уточнить у авторов, нет ли внутри суммы строительства объектов; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F26,,751140673,CAPEX.ITEMS[DESIGN_P],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,D29,,2000000,CAPEX.ITEMS[PREDESIGN],replace,сумма/ставка вбита числом → ставка × база
+Бюджет,E29,,1,CAPEX.ITEMS[PREDESIGN],replace,сумма/ставка вбита числом → ставка × база
+Бюджет,F31,,141554585,CAPEX.ITEMS[SITE_PREP],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F32,,52782616084,CAPEX.ITEMS[SMR_ABOVE],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,E33,,0,CAPEX.ITEMS[SMR_BELOW],replace,сумма/ставка вбита числом → ставка × база
+Бюджет,E34,,0,CAPEX.ITEMS[MOP_FINISH],replace,сумма/ставка вбита числом → ставка × база
+Бюджет,F37,,1355940,CAPEX.ITEMS[LANDSCAPING],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F38,Устройство УДС,535620851,CAPEX.ITEMS[ROADS_UDS],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F39,,16904952.57,CAPEX.ITEMS[OTHER_SMR],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F40,,56837555.65,CAPEX.ITEMS[SITE_SECURITY],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,D41,,1000,CAPEX.ITEMS[COMMISSIONING],replace,сумма/ставка вбита числом → ставка × база
+Бюджет,F41,,0,CAPEX.ITEMS[COMMISSIONING],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F43,,2383139493,CAPEX.ITEMS[TECH_CUSTOMER],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F45,,88670039,CAPEX.ITEMS[MONITORING],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F47,,5128070146.9,CAPEX.ITEMS[SOCIAL_OBJECTS],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,D48,,0.02,OPEX.DEV_FEE_RATE,fix,сумма F48 вбита отдельно
+Бюджет,F48,,1850054797,CAPEX.ITEMS[DEV_FEE],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,F49,,14454850.84,CAPEX.ITEMS[DEVELOPER_OVERHEAD],replace,"сумма/ставка вбита числом → ставка × база; допущение (S_EXPERT): сумма с НДС — в исходнике не указано; принято, т.к. бюджеты девелопера ведутся с НДС (экспертное допущение)"
+Бюджет,D51,Маркетинг,0.035,OPEX.MARKETING_RATE,keep,
+Бюджет,D52,Продажи,0.035,OPEX.BROKERAGE_RATE,keep,
+Бюджет,D54,НДС,0.22,TAX.VAT_RATE,keep,
+Бюджет,D55,Налог на прибыль,0.25,TAX.PROFIT_RATE,keep,
+Бюджет,D65,Собственный капитал,0.1,FIN.EQUITY_SHARE,remove,дубль CF1!D132
+Бюджет,D68,Банковские расходы,0.15,F.FIN.FEES,remove,«банковские расходы 15%» дублируют проценты
+CF1,E2,,2025-12-31 00:00:00,GEN.MODEL_START_DATE,keep,
+CF1,AB6,Раскрытие Escrow,1,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AC6,Раскрытие Escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AD6,Раскрытие Escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AE6,Раскрытие Escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AF6,Раскрытие Escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,F7,Год строительства,1,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,G7,Год строительства,1,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,H7,Год строительства,1,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,I7,Год строительства,1,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,J7,Год строительства,2,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,K7,Год строительства,2,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,L7,Год строительства,2,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,M7,Год строительства,2,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,N7,Год строительства,3,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,O7,Год строительства,3,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,P7,Год строительства,3,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,Q7,Год строительства,3,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,R7,Год строительства,4,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,S7,Год строительства,4,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,T7,Год строительства,4,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,U7,Год строительства,4,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,V7,Год строительства,5,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,W7,Год строительства,5,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,X7,Год строительства,5,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,Y7,Год строительства,5,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,Z7,Год строительства,6,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AA7,Год строительства,6,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AB7,Год строительства,6,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AC7,Год строительства,6,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AB8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AC8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AD8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AE8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AF8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AG8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AH8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AI8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AJ8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AK8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AL8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AM8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AN8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AO8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AP8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AQ8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AR8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,AS8,Продажи по escrow,0,TIME.MILESTONES,remove,флаги/номера проставлены вручную
+CF1,F22,"Проставить темп,%",1,CAPEX.ITEMS[LAND_PURCHASE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,G22,"Проставить темп,%",0,CAPEX.ITEMS[LAND_PURCHASE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,I22,"Проставить темп,%",0,CAPEX.ITEMS[LAND_PURCHASE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,J22,"Проставить темп,%",0,CAPEX.ITEMS[LAND_PURCHASE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O22,"Проставить темп,%",0,CAPEX.ITEMS[LAND_PURCHASE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Q22,"Проставить темп,%",0,CAPEX.ITEMS[LAND_PURCHASE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K26,"Проставить темп,%",1,CAPEX.ITEMS[LAND_VRI].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N26,"Проставить темп,%",0,CAPEX.ITEMS[LAND_VRI].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O26,"Проставить темп,%",0,CAPEX.ITEMS[LAND_VRI].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M29,"Проставить темп,%",0.5,CAPEX.ITEMS[CITY_CASH_COMPENSATION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N29,"Проставить темп,%",0.5,CAPEX.ITEMS[CITY_CASH_COMPENSATION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,I31,"Проставить темп,%",0,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,J31,"Проставить темп,%",0,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K31,"Проставить темп,%",0,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,L31,"Проставить темп,%",0,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N31,"Проставить темп,%",0.125,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O31,"Проставить темп,%",0.125,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P31,"Проставить темп,%",0.125,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T31,"Проставить темп,%",0,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,U31,"Проставить темп,%",0,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V31,"Проставить темп,%",0,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X31,"Проставить темп,%",0.25,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y31,"Проставить темп,%",0.25,CAPEX.ITEMS[IRD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,F33,"Проставить темп,%",0.5,CAPEX.ITEMS[DESIGN_P].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,G33,"Проставить темп,%",0.5,CAPEX.ITEMS[DESIGN_P].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,F39,"Проставить темп,%",1,CAPEX.ITEMS[PREDESIGN].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,G39,"Проставить темп,%",0,CAPEX.ITEMS[PREDESIGN].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,H39,"Проставить темп,%",0,CAPEX.ITEMS[PREDESIGN].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,I42,"Проставить темп,%",0.2,CAPEX.ITEMS[SITE_PREP].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,J42,"Проставить темп,%",0.2,CAPEX.ITEMS[SITE_PREP].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K42,"Проставить темп,%",0.2,CAPEX.ITEMS[SITE_PREP].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,L42,"Проставить темп,%",0.2,CAPEX.ITEMS[SITE_PREP].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M42,"Проставить темп,%",0.2,CAPEX.ITEMS[SITE_PREP].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N42,"Проставить темп,%",0,CAPEX.ITEMS[SITE_PREP].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O42,"Проставить темп,%",0,CAPEX.ITEMS[SITE_PREP].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,F44,"Проставить темп,%",0.005,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,G44,"Проставить темп,%",0.005,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,H44,"Проставить темп,%",0.03,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,I44,"Проставить темп,%",0.03,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,J44,"Проставить темп,%",0.03,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K44,"Проставить темп,%",0.03,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,L44,"Проставить темп,%",0.04,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M44,"Проставить темп,%",0.04,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N44,"Проставить темп,%",0.04,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O44,"Проставить темп,%",0.04,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P44,"Проставить темп,%",0.05,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Q44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,R44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,S44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,U44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X44,"Проставить темп,%",0.07,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y44,"Проставить темп,%",0.05,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z44,"Проставить темп,%",0.05,CAPEX.ITEMS[SMR_ABOVE].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M46,"Проставить темп,%",0.3,CAPEX.ITEMS[SMR_BELOW].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N46,"Проставить темп,%",0.3,CAPEX.ITEMS[SMR_BELOW].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O46,"Проставить темп,%",0.3,CAPEX.ITEMS[SMR_BELOW].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P46,"Проставить темп,%",0.1,CAPEX.ITEMS[SMR_BELOW].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z48,"Проставить темп,%",0.5,CAPEX.ITEMS[MOP_FINISH].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AA48,"Проставить темп,%",0.5,CAPEX.ITEMS[MOP_FINISH].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K50,"Проставить темп,%",0.25,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O50,"Проставить темп,%",0,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P50,"Проставить темп,%",0,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,S50,"Проставить темп,%",0.25,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T50,"Проставить темп,%",0.25,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y50,"Проставить темп,%",0.25,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z50,"Проставить темп,%",0,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AF50,"Проставить темп,%",0,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AG50,"Проставить темп,%",0,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AH50,"Проставить темп,%",0,CAPEX.ITEMS[UTILITY_CONNECTION].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M52,"Проставить темп,%",0.3,CAPEX.ITEMS[EXTERNAL_NETWORKS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N52,"Проставить темп,%",0.3,CAPEX.ITEMS[EXTERNAL_NETWORKS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V52,"Проставить темп,%",0.3,CAPEX.ITEMS[EXTERNAL_NETWORKS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W52,"Проставить темп,%",0.1,CAPEX.ITEMS[EXTERNAL_NETWORKS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W54,"Проставить темп,%",0.25,CAPEX.ITEMS[LANDSCAPING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X54,"Проставить темп,%",0.25,CAPEX.ITEMS[LANDSCAPING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y54,"Проставить темп,%",0.25,CAPEX.ITEMS[LANDSCAPING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z54,"Проставить темп,%",0.25,CAPEX.ITEMS[LANDSCAPING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,I58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,J58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,L58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Q58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,R58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,S58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,U58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AA58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AB58,"Проставить темп,%",0.05,CAPEX.ITEMS[SITE_SECURITY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V60,"Проставить темп,%",0.2,CAPEX.ITEMS[COMMISSIONING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W60,"Проставить темп,%",0.2,CAPEX.ITEMS[COMMISSIONING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X60,"Проставить темп,%",0.2,CAPEX.ITEMS[COMMISSIONING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y60,"Проставить темп,%",0.2,CAPEX.ITEMS[COMMISSIONING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z60,"Проставить темп,%",0.2,CAPEX.ITEMS[COMMISSIONING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Q62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,R62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,S62,"Проставить темп,%",0.141,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T62,"Проставить темп,%",0.141,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,U62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z62,"Проставить темп,%",0.0714,CAPEX.ITEMS[CONTINGENCY].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,F64,"Проставить темп,%",0.005,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,G64,"Проставить темп,%",0.005,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,H64,"Проставить темп,%",0.03,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,I64,"Проставить темп,%",0.03,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,J64,"Проставить темп,%",0.03,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K64,"Проставить темп,%",0.03,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,L64,"Проставить темп,%",0.04,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M64,"Проставить темп,%",0.04,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N64,"Проставить темп,%",0.04,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O64,"Проставить темп,%",0.04,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P64,"Проставить темп,%",0.05,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Q64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,R64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,S64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,U64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X64,"Проставить темп,%",0.07,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y64,"Проставить темп,%",0.05,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z64,"Проставить темп,%",0.05,CAPEX.ITEMS[TECH_CUSTOMER].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y68,"Проставить темп,%",0.25,CAPEX.ITEMS[MONITORING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z68,"Проставить темп,%",0.25,CAPEX.ITEMS[MONITORING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AA68,"Проставить темп,%",0.25,CAPEX.ITEMS[MONITORING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AB68,"Проставить темп,%",0.25,CAPEX.ITEMS[MONITORING].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V72,"Проставить темп,%",0,CAPEX.ITEMS[SOCIAL_OBJECTS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W72,"Проставить темп,%",0.25,CAPEX.ITEMS[SOCIAL_OBJECTS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X72,"Проставить темп,%",0.25,CAPEX.ITEMS[SOCIAL_OBJECTS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y72,"Проставить темп,%",0.25,CAPEX.ITEMS[SOCIAL_OBJECTS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z72,"Проставить темп,%",0.25,CAPEX.ITEMS[SOCIAL_OBJECTS].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,F76,"Проставить темп,%",0.005,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,G76,"Проставить темп,%",0.005,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,H76,"Проставить темп,%",0.03,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,I76,"Проставить темп,%",0.03,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,J76,"Проставить темп,%",0.03,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,K76,"Проставить темп,%",0.03,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,L76,"Проставить темп,%",0.04,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M76,"Проставить темп,%",0.04,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N76,"Проставить темп,%",0.04,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O76,"Проставить темп,%",0.04,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P76,"Проставить темп,%",0.05,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Q76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,R76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,S76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,U76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X76,"Проставить темп,%",0.07,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y76,"Проставить темп,%",0.05,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z76,"Проставить темп,%",0.05,CAPEX.ITEMS[DEVELOPER_OVERHEAD].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,D84,Налог на имущество,0.002,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,D85,НДС,0.22,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,M85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,N85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,O85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,P85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Q85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,R85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,S85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,T85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,U85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,V85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,W85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,X85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Y85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,Z85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,AA85,НДС,5000000,CAPEX.ITEMS[LAND_TAX_OR_RENT].schedule,replace,ручной % распределения → правило графика; ряд сохранён в кейсе как manual
+CF1,D86,Налог на прибыль,0.25,TAX.PROFIT_RATE,remove,дубль
+CF1,D92,Пополнение эскроу за вычетом ФОР,0,FIN.ESCROW_RESERVE_RATE,keep,
+CF1,D102,Определение залоговой стоимости квартир,0.15,FIN.COLLATERAL_DISCOUNT,keep,
+CF1,D111,Комиссия за выдачу,0.01,FIN.FEE_ARRANGEMENT,keep,
+CF1,D115,Ключевая ставка,0.1425,FIN.KEY_RATE_PATH,replace,"14,25% устарело: 14,00% на 11.09.2026"
+CF1,D116,Льготная ставка кредитования,0.05,FIN.RATE_PREFERENTIAL,keep,
+CF1,D117,Базовая ставка кредитования,0.2,FIN.RATE_BASE_SPREAD,fix,база 20% → ключевая + спред
+CF1,D118,Ставка скидки,-0.02,FIN.RATE_DISCOUNT_COEF,keep,
+CF1,D119,Минимальная ставка,0.001,FIN.RATE_MIN,keep,
+CF1,D132,Upfront equity (собственный капитал),0.1,FIN.EQUITY_SHARE,fix,"взнос вперёд, а не % от расходов периода"
+CF1,D139,Cost of Eqity,0.25,VAL.EQUITY_PREMIUM,fix,разложить на безрисковую + премию
+План продаж,E1,,57,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,F1,,18,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,G1,,11,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,H1,,14,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,J1,,30,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,K1,,36,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,N1,,35,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,O1,,41,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,P1,,45,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,Q1,,46,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,R1,,47,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,S1,,47,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,V1,,44,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,W1,,43,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,X1,,41,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AA1,,30,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AB1,,27,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AC1,,27,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AD1,,27,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AE1,,19,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AF1,,17,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AG1,,5,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,E2,,42,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,F2,,13,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,G2,,9,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,H2,,11,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,J2,,23,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,K2,,26,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,M2,,32,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,N2,,26,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,O2,,31,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,P2,,35,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,Q2,,35,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,R2,,35,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,S2,,33,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,T2,,34,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,U2,,34,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,V2,,33,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,W2,,33,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,X2,,31,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,Y2,,25,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,Z2,,25,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AA2,,22,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AB2,,21,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AC2,,21,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AD2,,21,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AE2,,14,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AF2,,12,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AG2,,4,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,E3,,42,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,F3,,13,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,G3,,9,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,H3,,11,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,J3,,23,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,K3,,27,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,M3,,31,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,N3,,27,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,O3,,31,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,P3,,31,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,Q3,,34,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,R3,,36,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,S3,,33,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,T3,,35,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,U3,,35,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,V3,,34,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,W3,,33,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,X3,,31,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,Y3,,25,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,Z3,,25,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AA3,,22,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AB3,,21,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AC3,,21,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AD3,,21,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AE3,,14,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AF3,,12,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,AG3,,4,SALES.PACE,remove,дубль рядов 28/33/38
+План продаж,E21,,9314.2,SALES.PACE,remove,итоги вбиты числами
+План продаж,F21,,2888.2,SALES.PACE,remove,итоги вбиты числами
+План продаж,G21,,1900,SALES.PACE,remove,итоги вбиты числами
+План продаж,H21,,2400,SALES.PACE,remove,итоги вбиты числами
+План продаж,I21,,1970.6585600000021,SALES.PACE,remove,итоги вбиты числами
+План продаж,J21,,4635.331773,SALES.PACE,remove,итоги вбиты числами
+План продаж,K21,,5297.155485,SALES.PACE,remove,итоги вбиты числами
+План продаж,L21,,5958.979197,SALES.PACE,remove,итоги вбиты числами
+План продаж,M21,,6199.642365,SALES.PACE,remove,итоги вбиты числами
+План продаж,N21,,5297.155485,SALES.PACE,remove,итоги вбиты числами
+План продаж,O21,,6197.1186210000005,SALES.PACE,remove,итоги вбиты числами
+План продаж,P21,,6737.0965026,SALES.PACE,remove,итоги вбиты числами
+План продаж,Q21,,6977.0866722,SALES.PACE,remove,итоги вбиты числами
+План продаж,R21,,7097.081757,SALES.PACE,remove,итоги вбиты числами
+План продаж,S21,,6610.208850000001,SALES.PACE,remove,итоги вбиты числами
+План продаж,T21,,6910.196562,SALES.PACE,remove,итоги вбиты числами
+План продаж,U21,,6910.196562,SALES.PACE,remove,итоги вбиты числами
+План продаж,V21,,6529.374751999964,SALES.PACE,remove,итоги вбиты числами
+План продаж,W21,,6308.215872,SALES.PACE,remove,итоги вбиты числами
+План продаж,X21,,5994.085877000033,SALES.PACE,remove,итоги вбиты числами
+План продаж,Y21,,4808.215872,SALES.PACE,remove,итоги вбиты числами
+План продаж,Z21,,4808.215872,SALES.PACE,remove,итоги вбиты числами
+План продаж,AA21,,4206.557952,SALES.PACE,remove,итоги вбиты числами
+План продаж,AB21,,3906.57024,SALES.PACE,remove,итоги вбиты числами
+План продаж,AC21,,3906.57024,SALES.PACE,remove,итоги вбиты числами
+План продаж,AD21,,3906.57024,SALES.PACE,remove,итоги вбиты числами
+План продаж,AE21,,2703.2543999999375,SALES.PACE,remove,итоги вбиты числами
+План продаж,AF21,,2402.425440000055,SALES.PACE,remove,итоги вбиты числами
+План продаж,AG21,,779.9680512000014,SALES.PACE,remove,итоги вбиты числами
+План продаж,E22,,141,SALES.PACE,remove,итоги вбиты числами
+План продаж,F22,,44,SALES.PACE,remove,итоги вбиты числами
+План продаж,G22,,29,SALES.PACE,remove,итоги вбиты числами
+План продаж,H22,,36,SALES.PACE,remove,итоги вбиты числами
+План продаж,I22,,30,SALES.PACE,remove,итоги вбиты числами
+План продаж,J22,,76,SALES.PACE,remove,итоги вбиты числами
+План продаж,K22,,88,SALES.PACE,remove,итоги вбиты числами
+План продаж,L22,,100,SALES.PACE,remove,итоги вбиты числами
+План продаж,M22,,105,SALES.PACE,remove,итоги вбиты числами
+План продаж,N22,,88,SALES.PACE,remove,итоги вбиты числами
+План продаж,O22,,103,SALES.PACE,remove,итоги вбиты числами
+План продаж,P22,,112,SALES.PACE,remove,итоги вбиты числами
+План продаж,Q22,,116,SALES.PACE,remove,итоги вбиты числами
+План продаж,R22,,118,SALES.PACE,remove,итоги вбиты числами
+План продаж,S22,,111,SALES.PACE,remove,итоги вбиты числами
+План продаж,T22,,115,SALES.PACE,remove,итоги вбиты числами
+План продаж,U22,,115,SALES.PACE,remove,итоги вбиты числами
+План продаж,V22,,111,SALES.PACE,remove,итоги вбиты числами
+План продаж,W22,,108,SALES.PACE,remove,итоги вбиты числами
+План продаж,X22,,103,SALES.PACE,remove,итоги вбиты числами
+План продаж,Y22,,85,SALES.PACE,remove,итоги вбиты числами
+План продаж,Z22,,85,SALES.PACE,remove,итоги вбиты числами
+План продаж,AA22,,74,SALES.PACE,remove,итоги вбиты числами
+План продаж,AB22,,69,SALES.PACE,remove,итоги вбиты числами
+План продаж,AC22,,69,SALES.PACE,remove,итоги вбиты числами
+План продаж,AD22,,69,SALES.PACE,remove,итоги вбиты числами
+План продаж,AE22,,47,SALES.PACE,remove,итоги вбиты числами
+План продаж,AF22,,41,SALES.PACE,remove,итоги вбиты числами
+План продаж,AG22,,13,SALES.PACE,remove,итоги вбиты числами
+План продаж,E28,"Темп продаж, шт",57,SALES.PACE,keep,шт/квартал
+План продаж,F28,"Темп продаж, шт",18,SALES.PACE,keep,шт/квартал
+План продаж,G28,"Темп продаж, шт",11,SALES.PACE,keep,шт/квартал
+План продаж,H28,"Темп продаж, шт",14,SALES.PACE,keep,шт/квартал
+План продаж,I28,"Темп продаж, шт",12,SALES.PACE,keep,шт/квартал
+План продаж,J28,"Темп продаж, шт",30,SALES.PACE,keep,шт/квартал
+План продаж,K28,"Темп продаж, шт",36,SALES.PACE,keep,шт/квартал
+План продаж,L28,"Темп продаж, шт",40,SALES.PACE,keep,шт/квартал
+План продаж,M28,"Темп продаж, шт",42,SALES.PACE,keep,шт/квартал
+План продаж,N28,"Темп продаж, шт",35,SALES.PACE,keep,шт/квартал
+План продаж,O28,"Темп продаж, шт",41,SALES.PACE,keep,шт/квартал
+План продаж,P28,"Темп продаж, шт",45,SALES.PACE,keep,шт/квартал
+План продаж,Q28,"Темп продаж, шт",46,SALES.PACE,keep,шт/квартал
+План продаж,R28,"Темп продаж, шт",47,SALES.PACE,keep,шт/квартал
+План продаж,S28,"Темп продаж, шт",47,SALES.PACE,keep,шт/квартал
+План продаж,T28,"Темп продаж, шт",46,SALES.PACE,keep,шт/квартал
+План продаж,U28,"Темп продаж, шт",46,SALES.PACE,keep,шт/квартал
+План продаж,V28,"Темп продаж, шт",44,SALES.PACE,keep,шт/квартал
+План продаж,W28,"Темп продаж, шт",43,SALES.PACE,keep,шт/квартал
+План продаж,X28,"Темп продаж, шт",41,SALES.PACE,keep,шт/квартал
+План продаж,Y28,"Темп продаж, шт",34,SALES.PACE,keep,шт/квартал
+План продаж,Z28,"Темп продаж, шт",34,SALES.PACE,keep,шт/квартал
+План продаж,AA28,"Темп продаж, шт",30,SALES.PACE,keep,шт/квартал
+План продаж,AB28,"Темп продаж, шт",27,SALES.PACE,keep,шт/квартал
+План продаж,AC28,"Темп продаж, шт",27,SALES.PACE,keep,шт/квартал
+План продаж,AD28,"Темп продаж, шт",27,SALES.PACE,keep,шт/квартал
+План продаж,AE28,"Темп продаж, шт",19,SALES.PACE,keep,шт/квартал
+План продаж,AF28,"Темп продаж, шт",17,SALES.PACE,keep,шт/квартал
+План продаж,AG28,"Темп продаж, шт",5,SALES.PACE,keep,шт/квартал
+План продаж,E30,"Рост цен (от стадии проекта),%",0.02,SALES.PRICE_STAGE_UPLIFT,replace,2%/кв → рынок + стадия
+План продаж,E33,"Темп продаж, шт",42,SALES.PACE,keep,шт/квартал
+План продаж,F33,"Темп продаж, шт",13,SALES.PACE,keep,шт/квартал
+План продаж,G33,"Темп продаж, шт",9,SALES.PACE,keep,шт/квартал
+План продаж,H33,"Темп продаж, шт",11,SALES.PACE,keep,шт/квартал
+План продаж,I33,"Темп продаж, шт",9,SALES.PACE,keep,шт/квартал
+План продаж,J33,"Темп продаж, шт",23,SALES.PACE,keep,шт/квартал
+План продаж,K33,"Темп продаж, шт",26,SALES.PACE,keep,шт/квартал
+План продаж,L33,"Темп продаж, шт",30,SALES.PACE,keep,шт/квартал
+План продаж,M33,"Темп продаж, шт",32,SALES.PACE,keep,шт/квартал
+План продаж,N33,"Темп продаж, шт",26,SALES.PACE,keep,шт/квартал
+План продаж,O33,"Темп продаж, шт",31,SALES.PACE,keep,шт/квартал
+План продаж,P33,"Темп продаж, шт",35,SALES.PACE,keep,шт/квартал
+План продаж,Q33,"Темп продаж, шт",35,SALES.PACE,keep,шт/квартал
+План продаж,R33,"Темп продаж, шт",35,SALES.PACE,keep,шт/квартал
+План продаж,S33,"Темп продаж, шт",33,SALES.PACE,keep,шт/квартал
+План продаж,T33,"Темп продаж, шт",34,SALES.PACE,keep,шт/квартал
+План продаж,U33,"Темп продаж, шт",34,SALES.PACE,keep,шт/квартал
+План продаж,V33,"Темп продаж, шт",33,SALES.PACE,keep,шт/квартал
+План продаж,W33,"Темп продаж, шт",33,SALES.PACE,keep,шт/квартал
+План продаж,X33,"Темп продаж, шт",31,SALES.PACE,keep,шт/квартал
+План продаж,Y33,"Темп продаж, шт",25,SALES.PACE,keep,шт/квартал
+План продаж,Z33,"Темп продаж, шт",25,SALES.PACE,keep,шт/квартал
+План продаж,AA33,"Темп продаж, шт",22,SALES.PACE,keep,шт/квартал
+План продаж,AB33,"Темп продаж, шт",21,SALES.PACE,keep,шт/квартал
+План продаж,AC33,"Темп продаж, шт",21,SALES.PACE,keep,шт/квартал
+План продаж,AD33,"Темп продаж, шт",21,SALES.PACE,keep,шт/квартал
+План продаж,AE33,"Темп продаж, шт",14,SALES.PACE,keep,шт/квартал
+План продаж,AF33,"Темп продаж, шт",12,SALES.PACE,keep,шт/квартал
+План продаж,AG33,"Темп продаж, шт",4,SALES.PACE,keep,шт/квартал
+План продаж,E35,"Рост цен (от стадии проекта),%",0.02,SALES.PRICE_STAGE_UPLIFT,replace,2%/кв → рынок + стадия
+План продаж,E38,"Темп продаж, шт",42,SALES.PACE,keep,шт/квартал
+План продаж,F38,"Темп продаж, шт",13,SALES.PACE,keep,шт/квартал
+План продаж,G38,"Темп продаж, шт",9,SALES.PACE,keep,шт/квартал
+План продаж,H38,"Темп продаж, шт",11,SALES.PACE,keep,шт/квартал
+План продаж,I38,"Темп продаж, шт",9,SALES.PACE,keep,шт/квартал
+План продаж,J38,"Темп продаж, шт",23,SALES.PACE,keep,шт/квартал
+План продаж,K38,"Темп продаж, шт",27,SALES.PACE,keep,шт/квартал
+План продаж,L38,"Темп продаж, шт",30,SALES.PACE,keep,шт/квартал
+План продаж,M38,"Темп продаж, шт",31,SALES.PACE,keep,шт/квартал
+План продаж,N38,"Темп продаж, шт",27,SALES.PACE,keep,шт/квартал
+План продаж,O38,"Темп продаж, шт",31,SALES.PACE,keep,шт/квартал
+План продаж,P38,"Темп продаж, шт",31,SALES.PACE,keep,шт/квартал
+План продаж,Q38,"Темп продаж, шт",34,SALES.PACE,keep,шт/квартал
+План продаж,R38,"Темп продаж, шт",36,SALES.PACE,keep,шт/квартал
+План продаж,S38,"Темп продаж, шт",33,SALES.PACE,keep,шт/квартал
+План продаж,T38,"Темп продаж, шт",35,SALES.PACE,keep,шт/квартал
+План продаж,U38,"Темп продаж, шт",35,SALES.PACE,keep,шт/квартал
+План продаж,V38,"Темп продаж, шт",34,SALES.PACE,keep,шт/квартал
+План продаж,W38,"Темп продаж, шт",33,SALES.PACE,keep,шт/квартал
+План продаж,X38,"Темп продаж, шт",31,SALES.PACE,keep,шт/квартал
+План продаж,Y38,"Темп продаж, шт",25,SALES.PACE,keep,шт/квартал
+План продаж,Z38,"Темп продаж, шт",25,SALES.PACE,keep,шт/квартал
+План продаж,AA38,"Темп продаж, шт",22,SALES.PACE,keep,шт/квартал
+План продаж,AB38,"Темп продаж, шт",21,SALES.PACE,keep,шт/квартал
+План продаж,AC38,"Темп продаж, шт",21,SALES.PACE,keep,шт/квартал
+План продаж,AD38,"Темп продаж, шт",21,SALES.PACE,keep,шт/квартал
+План продаж,AE38,"Темп продаж, шт",14,SALES.PACE,keep,шт/квартал
+План продаж,AF38,"Темп продаж, шт",12,SALES.PACE,keep,шт/квартал
+План продаж,AG38,"Темп продаж, шт",4,SALES.PACE,keep,шт/квартал
+План продаж,E40,"Рост цен (от стадии проекта),%",0.02,SALES.PRICE_STAGE_UPLIFT,replace,2%/кв → рынок + стадия
+План продаж,E43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,F43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,G43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,H43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,I43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,J43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,K43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,L43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,M43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,N43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,O43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,P43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,Q43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,R43,"Темп продаж, шт",2.2125,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,S43,"Темп продаж, шт",2.2125,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,T43,"Темп продаж, шт",2.6525,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,U43,"Темп продаж, шт",5,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,V43,"Темп продаж, шт",5,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,W43,"Темп продаж, шт",5,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,X43,"Темп продаж, шт",7.6775,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,Y43,"Темп продаж, шт",11.142500000000002,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,Z43,"Темп продаж, шт",8.62875,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AA43,"Темп продаж, шт",16.55375,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AB43,"Темп продаж, шт",13.6775,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AC43,"Темп продаж, шт",13.6775,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AD43,"Темп продаж, шт",15.89,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AE43,"Темп продаж, шт",9.527600000000021,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AF43,"Темп продаж, шт",7.965000000000001,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AG43,"Темп продаж, шт",2.2125,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AH43,"Темп продаж, шт",2.2125,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AI43,"Темп продаж, шт",2.2125,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AJ43,"Темп продаж, шт",2.6524999999999976,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AK43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AL43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,AM43,"Темп продаж, шт",0,SALES.PACE,fix,"ПСН: дробные лоты, продано 10 888 м² > запас 10 322 м²"
+План продаж,E45,"Рост цен (от стадии проекта),%",0.02,SALES.PRICE_STAGE_UPLIFT,replace,2%/кв → рынок + стадия
+План продаж,E48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,F48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,G48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,H48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,I48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,J48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,K48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,L48,"Темп продаж, шт",16,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,M48,"Темп продаж, шт",18,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,N48,"Темп продаж, шт",19,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,O48,"Темп продаж, шт",21,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,P48,"Темп продаж, шт",37,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,Q48,"Темп продаж, шт",40,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,R48,"Темп продаж, шт",44,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,S48,"Темп продаж, шт",47,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,T48,"Темп продаж, шт",56,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,U48,"Темп продаж, шт",60,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,V48,"Темп продаж, шт",64,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,W48,"Темп продаж, шт",69,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,X48,"Темп продаж, шт",78,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,Y48,"Темп продаж, шт",45,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,Z48,"Темп продаж, шт",30,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AA48,"Темп продаж, шт",41,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AB48,"Темп продаж, шт",34,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AC48,"Темп продаж, шт",36,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AD48,"Темп продаж, шт",38,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AE48,"Темп продаж, шт",39,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AF48,"Темп продаж, шт",19,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AG48,"Темп продаж, шт",11,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AH48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AI48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AJ48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AK48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AL48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AM48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AN48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AO48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AP48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AQ48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AR48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AS48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AT48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AU48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AV48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AW48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AX48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AY48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,AZ48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,BA48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,BB48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,BC48,"Темп продаж, шт",0,SALES.PACE,keep,"машино-места, шт/квартал"
+План продаж,E50,"Рост цен (от стадии проекта),%",0.02,SALES.PRICE_STAGE_UPLIFT,replace,2%/кв → рынок + стадия
+План продаж,E55,"Рост цен (от стадии проекта),%",0.02,SALES.PRICE_STAGE_UPLIFT,replace,2%/кв → рынок + стадия
+План продаж,U55,"Рост цен (от стадии проекта),%",2.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,V55,"Рост цен (от стадии проекта),%",3.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,W55,"Рост цен (от стадии проекта),%",4.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,X55,"Рост цен (от стадии проекта),%",5.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,Y55,"Рост цен (от стадии проекта),%",6.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,Z55,"Рост цен (от стадии проекта),%",7.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AA55,"Рост цен (от стадии проекта),%",8.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AB55,"Рост цен (от стадии проекта),%",9.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AC55,"Рост цен (от стадии проекта),%",10.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AD55,"Рост цен (от стадии проекта),%",11.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AE55,"Рост цен (от стадии проекта),%",12.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AF55,"Рост цен (от стадии проекта),%",13.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AG55,"Рост цен (от стадии проекта),%",14.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AH55,"Рост цен (от стадии проекта),%",15.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AI55,"Рост цен (от стадии проекта),%",16.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AJ55,"Рост цен (от стадии проекта),%",17.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AK55,"Рост цен (от стадии проекта),%",18.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AL55,"Рост цен (от стадии проекта),%",19.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,AM55,"Рост цен (от стадии проекта),%",20.02,SALES.PRICE_STAGE_UPLIFT,remove,ошибка ввода 2.02…20.02
+План продаж,C62,,0.22,TAX.VAT_RATE,remove,дубль
+План продаж,E70,,0,—,remove,пустой ряд без подписи
+План продаж,F70,,0,—,remove,пустой ряд без подписи
+План продаж,G70,,0,—,remove,пустой ряд без подписи
+План продаж,H70,,0,—,remove,пустой ряд без подписи
+План продаж,I70,,0,—,remove,пустой ряд без подписи
+План продаж,J70,,0,—,remove,пустой ряд без подписи
+План продаж,K70,,0,—,remove,пустой ряд без подписи
+План продаж,L70,,0,—,remove,пустой ряд без подписи
+План продаж,M70,,0,—,remove,пустой ряд без подписи
+План продаж,N70,,0,—,remove,пустой ряд без подписи
+План продаж,O70,,0,—,remove,пустой ряд без подписи
+План продаж,P70,,0,—,remove,пустой ряд без подписи
+План продаж,Q70,,0,—,remove,пустой ряд без подписи
+План продаж,R70,,0,—,remove,пустой ряд без подписи
+План продаж,S70,,0,—,remove,пустой ряд без подписи
+План продаж,T70,,0,—,remove,пустой ряд без подписи
+План продаж,U70,,400,—,remove,пустой ряд без подписи
+План продаж,V70,,400,—,remove,пустой ряд без подписи
+План продаж,W70,,400,—,remove,пустой ряд без подписи
+План продаж,X70,,614.2,—,remove,пустой ряд без подписи
+План продаж,Y70,,891.4000000000001,—,remove,пустой ряд без подписи
+План продаж,Z70,,690.3,—,remove,пустой ряд без подписи
+План продаж,AA70,,1324.3,—,remove,пустой ряд без подписи
+План продаж,AB70,,1094.2,—,remove,пустой ряд без подписи
+План продаж,AC70,,1094.2,—,remove,пустой ряд без подписи
+План продаж,AD70,,1271.2,—,remove,пустой ряд без подписи
+План продаж,AE70,,762.2080000000017,—,remove,пустой ряд без подписи
+План продаж,AF70,,637.2,—,remove,пустой ряд без подписи
+План продаж,AG70,,177,—,remove,пустой ряд без подписи
+План продаж,AH70,,177,—,remove,пустой ряд без подписи
+План продаж,AI70,,177,—,remove,пустой ряд без подписи
+План продаж,AJ70,,212.19999999999982,—,remove,пустой ряд без подписи
+План продаж,AK70,,0,—,remove,пустой ряд без подписи
+План продаж,AL70,,0,—,remove,пустой ряд без подписи
+План продаж,AM70,,0,—,remove,пустой ряд без подписи
+План продаж,AN70,,0,—,remove,пустой ряд без подписи
+План продаж,AO70,,0,—,remove,пустой ряд без подписи
+План продаж,AP70,,0,—,remove,пустой ряд без подписи
+План продаж,AQ70,,0,—,remove,пустой ряд без подписи
+План продаж,AR70,,0,—,remove,пустой ряд без подписи
+План продаж,AS70,,0,—,remove,пустой ряд без подписи
+План продаж,AT70,,0,—,remove,пустой ряд без подписи
+План продаж,AU70,,0,—,remove,пустой ряд без подписи
+План продаж,AV70,,0,—,remove,пустой ряд без подписи
+План продаж,AW70,,0,—,remove,пустой ряд без подписи
+План продаж,AX70,,0,—,remove,пустой ряд без подписи
+План продаж,AY70,,0,—,remove,пустой ряд без подписи
+План продаж,AZ70,,0,—,remove,пустой ряд без подписи
+План продаж,BA70,,0,—,remove,пустой ряд без подписи
+План продаж,BB70,,0,—,remove,пустой ряд без подписи
+План продаж,BC70,,0,—,remove,пустой ряд без подписи
+Эскроу,D3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,E3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,F3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,G3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,H3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,I3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,J3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,K3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,L3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,M3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,N3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,O3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,P3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,Q3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,R3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,S3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,T3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,U3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,V3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,W3,"Рассрочка, кв",6,SALES.PAYMENT_MIX,keep,
+Эскроу,AE3,"Рассрочка, кв",4,SALES.PAYMENT_MIX,keep,
+Эскроу,AF3,"Рассрочка, кв",4,SALES.PAYMENT_MIX,keep,
+Эскроу,AG3,"Рассрочка, кв",4,SALES.PAYMENT_MIX,keep,
+Эскроу,AH3,"Рассрочка, кв",4,SALES.PAYMENT_MIX,keep,
+Эскроу,AI3,"Рассрочка, кв",0,SALES.PAYMENT_MIX,keep,
+Эскроу,AJ3,"Рассрочка, кв",0,SALES.PAYMENT_MIX,keep,
+Эскроу,AK3,"Рассрочка, кв",0,SALES.PAYMENT_MIX,keep,
+Эскроу,C5,Сделки с рассрочкой,0,SALES.PAYMENT_MIX,keep,
+Эскроу,C6,Сделки с ипотекой,0.7,SALES.PAYMENT_MIX,keep,
+Эскроу,C7,Сделки со 100% оплатой,0.1,SALES.PAYMENT_MIX,fix,
+Эскроу,C8,ПВ,0.2,SALES.PAYMENT_MIX,fix,
+Эскроу,D8,ПВ,0,SALES.PAYMENT_MIX,fix,
+Эскроу,E8,ПВ,0,SALES.PAYMENT_MIX,fix,
+Эскроу,F8,ПВ,0,SALES.PAYMENT_MIX,fix,
+Эскроу,G8,ПВ,0,SALES.PAYMENT_MIX,fix,
+Эскроу,H8,ПВ,0,SALES.PAYMENT_MIX,fix,
