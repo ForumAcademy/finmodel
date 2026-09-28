@@ -131,6 +131,14 @@ describe("расчёт сервиса без Excel: пробелы Дербен�
     expect(sum(cash.OTHER_SMR).gt(0)).toBe(true);
   });
 
+  it("земельные статьи в расчёте сервиса — по формулам: агентское 2% × цена участка, налог и плата за ВРИ ждут ставок", () => {
+    const items = m.result.formulas["F.CAPEX.ITEM_TOTAL"]?.value as Record<string, Decimal | null | undefined>;
+    expect(items.LAND_AGENT?.toNumber()).toBeCloseTo(26607117.96, 2); // 2% × 1 330 355 898 (цена участка), без НДС;
+    expect(items.LAND_TAX_OR_RENT ?? null).toBeNull();
+    expect(items.LAND_VRI ?? null).toBeNull();
+    expect(m.result.messages.some((x) => /Земельный налог или арендная плата/.test(x.text) && /ВРИ/.test(x.text))).toBe(true);
+  });
+
   it("машино-места в расчёте сервиса — по нормативу Москвы (до 70 м² — 0,8; 70–100 м² — 1,2)", () => {
     // 961 × 0,8 (35,1 м²) + 720 × 0,8 (60,5 м²) + 720 × 1,2 (92 м²) = 2 208,8 → 2 209
     expect((m.result.formulas["F.TEP.PARKING_REQUIRED"]?.value as Decimal).toNumber()).toBe(2209);
