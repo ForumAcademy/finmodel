@@ -9,6 +9,7 @@ import type { CalcOptions, ProjectInput, ResultSet } from "./types";
 
 export { Engine, CalcError, MissingInputError, sinkFormulas, stepwise, stepGroups, type FormulaContext, type FormulaFn, type StepFormulaFn } from "./context";
 export { FORMULAS, IMPLEMENTED_MODULES } from "./registry";
+export { STAGE_UPLIFT_NOT_COUNTED } from "./modules/sales";
 export { legacyAssumptions, legacyCaseInput, type LegacyAssumption, type LegacyCase, type LegacyChecks } from "./legacy";
 export { legacyChecks } from "./legacy-checks";
 export { fmtRub } from "./lib/format";
@@ -17,6 +18,8 @@ export {
   assumptionParams,
   compatWarnings,
   computeProject,
+  DOUBLE_GROWTH,
+  doubleCountChecks,
   inMode,
   legacyProject,
   modePair,

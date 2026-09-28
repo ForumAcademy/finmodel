@@ -224,6 +224,9 @@ interface LegacyGrowth {
   step_months: number;
 }
 
+/** Ключ отметки «рост по стадиям не учтён». */
+export const STAGE_UPLIFT_NOT_COUNTED = "SALES.STAGE_UPLIFT_NOT_COUNTED";
+
 export function F_SALES_PRICE(ctx: FormulaContext): RowSeries {
   const date = ctx.formula<IsoDate[]>("F.TIME.DATE");
   const list = products(ctx);
@@ -262,7 +265,11 @@ export function F_SALES_PRICE(ctx: FormulaContext): RowSeries {
     if (!gMonth.has(y)) gMonth.set(y, ONE.add(market(y)).pow(ONE.div(MONTHS_PER_YEAR)));
     return gMonth.get(y) as Decimal;
   };
-  const uplift = ctx.require<UpliftRow[]>("SALES.PRICE_STAGE_UPLIFT");
+  // Пустая надбавка — «не учтено»: цена растёт только по рынку, в сообщениях отметка (решение владельца продукта 28.09.2026)
+  const uplift = ctx.param<UpliftRow[]>("SALES.PRICE_STAGE_UPLIFT") ?? [];
+  if (ctx.param("SALES.PRICE_STAGE_UPLIFT") === null) {
+    ctx.message("warning", "Рост цены по стадиям готовности не учтён: надбавка не заполнена, цена растёт только по рынку. Заполните надбавку по стадиям.", "SALES.PRICE_STAGE_UPLIFT", STAGE_UPLIFT_NOT_COUNTED);
+  }
   if (!Array.isArray(uplift)) throw new CalcError("Рост цены по стадиям: нужен список строк", "SALES.PRICE_STAGE_UPLIFT");
   const stages = uplift
     .map((r) => ({ test: stageTest(r.stage), k: ONE.add(r.uplift ?? 0) }))

@@ -61,16 +61,66 @@ function excelAssumptionValues(c: LegacyCase, versions: AssumptionVersion[]): Pa
  */
 const SERVICE_BY_RATE = ["CONTINGENCY"];
 
+/**
+ * Статьи, у которых в расчёте сервиса сумма — из бюджета исходника, а график — по справочнику статей: ряды CF1
+ * исходника дают не 100% суммы (прочие СМР — 0%, УДС — строки в CF1 нет, маркетинг — 98,56%, брокеридж — 66,11%),
+ * это расхождения исходника, а не срок расчёта. Если график статьи изменили в проекте, остаётся он.
+ */
+const SERVICE_SCHEDULE_BY_REFERENCE = ["OTHER_SMR", "ROADS_UDS", "MARKETING", "BROKERAGE"];
+
+type CapexRow = { item_id?: string; base?: string; rate?: number; schedule_rule?: string; schedule_manual?: unknown };
+
 function serviceCapex(values: ProjectInput["values"], c: LegacyCase): ProjectInput["values"] {
   const rows = values["CAPEX.ITEMS"];
   if (!Array.isArray(rows)) return values;
   const excel = new Map((c.capex_legacy ?? []).map((x) => [x.item_id, x.amount_F]));
+  const excelRows = new Map(((legacyCaseInput(c).values["CAPEX.ITEMS"] as CapexRow[] | undefined) ?? []).map((r) => [r.item_id, r]));
   const next = rows.map((r) => {
-    const row = r as { item_id?: string; base?: string; rate?: number };
+    const row = r as CapexRow;
     const byExcel = row.item_id && SERVICE_BY_RATE.includes(row.item_id) && row.base === "фикс" && row.rate === excel.get(row.item_id);
-    return byExcel ? { item_id: row.item_id } : r;
+    if (byExcel) return { item_id: row.item_id };
+    const schedule = excelRows.get(row.item_id);
+    const excelSchedule =
+      row.item_id && SERVICE_SCHEDULE_BY_REFERENCE.includes(row.item_id) && row.schedule_rule === schedule?.schedule_rule && JSON.stringify(row.schedule_manual) === JSON.stringify(schedule?.schedule_manual);
+    if (excelSchedule) {
+      const rest: CapexRow = { ...row };
+      delete rest.schedule_rule;
+      delete rest.schedule_manual;
+      return rest;
+    }
+    return r;
   });
   return { ...values, "CAPEX.ITEMS": next };
+}
+
+/**
+ * Нормы машино-мест исходника заданы по типам квартир — это допускается только в расчёте «как в исходном Excel». В
+ * расчёте сервиса действует норматив региона (regions.yaml), если в проекте норму не меняли.
+ */
+function serviceParking(values: ProjectInput["values"], c: LegacyCase): ProjectInput["values"] {
+  const excel = legacyCaseInput(c).values["TEP.PARKING_NORM"];
+  if (JSON.stringify(values["TEP.PARKING_NORM"]) !== JSON.stringify(excel)) return values;
+  const rest = { ...values };
+  delete rest["TEP.PARKING_NORM"];
+  return rest;
+}
+
+/** Вехи из исходного файла (метка «исходный файл»): заполняют только пустые ячейки таблицы вех. */
+function serviceMilestones(values: ProjectInput["values"], fromFile: LegacyAssumption[]): ProjectInput["values"] {
+  const rows = values["TIME.MILESTONES"];
+  const fill = fromFile.filter((a) => a.param === "TIME.MILESTONES" && a.column);
+  if (!Array.isArray(rows) || fill.length === 0) return values;
+  const next = rows.map((r) => {
+    const row = { ...(r as Record<string, unknown>) };
+    for (const a of fill) if (row[a.column as string] === null || row[a.column as string] === undefined) row[a.column as string] = a.value;
+    return row;
+  });
+  return { ...values, "TIME.MILESTONES": next };
+}
+
+/** Входные данные расчёта сервиса у проекта из исходного Excel. */
+function serviceValues(project: CalcProject, c: LegacyCase): ProjectInput["values"] {
+  return serviceMilestones(serviceParking(serviceCapex(project.input.values, c), c), project.fromFile ?? []);
 }
 
 /**
@@ -83,7 +133,7 @@ export function projectInput(project: CalcProject, versions: AssumptionVersion[]
   const values = legacy
     ? { ...excelAssumptionValues(project.legacyCase as LegacyCase, versions), ...project.input.values }
     : project.legacyCase
-      ? serviceCapex(project.input.values, project.legacyCase)
+      ? serviceValues(project, project.legacyCase)
       : project.input.values;
   return { ...project.input, values, standard };
 }
@@ -180,10 +230,35 @@ export interface ProjectModel {
   input: ProjectInput;
 }
 
+/** Ключ предупреждения «рост посчитается дважды». */
+export const DOUBLE_GROWTH = "SALES.DOUBLE_GROWTH";
+
+/**
+ * Проверка расчёта сервиса: значение из исходного файла уже включает рост, который в проекте задан отдельно
+ * (рыночный рост исходника 2% в квартал включает рост по готовности). Пока значение из файла не пересмотрено, а
+ * отдельный параметр заполнен, рост считается дважды (решение владельца продукта 28.09.2026).
+ */
+export function doubleCountChecks(project: CalcProject, input: ProjectInput): CalcMessage[] {
+  if (project.input.mode === "legacy") return [];
+  const filled = (v: unknown) => v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0);
+  return (project.fromFile ?? []).flatMap((a) =>
+    (a.includes ?? [])
+      .filter((id) => filled(input.values[id] ?? input.standard?.[id]) && JSON.stringify(input.values[a.param]) === JSON.stringify(a.value))
+      .map((id) => ({
+        severity: "warning" as const,
+        formulaId: "F.SALES.PRICE" as FormulaId,
+        parameterId: a.param,
+        key: `${DOUBLE_GROWTH}:${id}`,
+        text: `«${getParameter(a.param).name}» перенесён из исходного файла и уже включает «${getParameter(id).name.toLowerCase()}». Надбавка заполнена, поэтому рост считается дважды. Пересмотрите рыночный рост.`,
+      })),
+  );
+}
+
 export function computeProject(project: CalcProject, versions: AssumptionVersion[] = SPEC_ASSUMPTIONS): ProjectModel {
   const horizon = projectHorizon(project, versions);
   const input = projectInput(project, versions);
-  const calc = new Engine(input, FORMULAS, horizon === null ? {} : { horizonMonths: horizon }).run(TARGETS);
+  const run = new Engine(input, FORMULAS, horizon === null ? {} : { horizonMonths: horizon }).run(TARGETS);
+  const calc = { ...run, messages: [...run.messages, ...doubleCountChecks(project, input)] };
   const result = project.input.mode === "legacy" && project.legacyWarnings ? { ...calc, messages: [...calc.messages, ...project.legacyWarnings] } : calc;
   const missing = new Set(result.messages.filter((m) => m.severity === "error" && m.parameterId).map((m) => m.parameterId as ParameterId));
   return { result, horizon, missing, versions, input };

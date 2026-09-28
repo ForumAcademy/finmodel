@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
-import { aggregate, calculate, compatWarnings, computeProject, legacyProject, periodKey, projectHorizon, type CalcProject } from "../src";
+import { aggregate, calculate, compatWarnings, computeProject, DOUBLE_GROWTH, inMode, legacyProject, periodKey, projectHorizon, STAGE_UPLIFT_NOT_COUNTED, type CalcProject } from "../src";
 import { loadCase } from "./support/cases";
 
 const demo = legacyProject(loadCase("derbenevskaya_legacy"), "Дербеневская (демо)");
@@ -67,7 +67,7 @@ describe("расчёт проекта целиком", () => {
 describe("значения расчёта сервиса, временно перенесённые из исходного файла", () => {
   it("рыночный рост цен: 2% в квартал из исходного файла → 8,24% в год на весь срок, не подтверждено", () => {
     const [growth] = demo.fromFile ?? [];
-    expect(growth).toMatchObject({ param: "SALES.PRICE_MARKET_GROWTH", status: "не подтверждено", note: "Перенесено из исходного файла, без обоснования рынком, требует подтверждения" });
+    expect(growth).toMatchObject({ param: "SALES.PRICE_MARKET_GROWTH", label: "Экспертное значение", status: "не подтверждено", note: "Перенесено из исходного файла, без обоснования рынком, требует подтверждения" });
     const v = demo.input.values["SALES.PRICE_MARKET_GROWTH"] as { by_year: Record<string, number>; after_last: string };
     expect(v.after_last).toBe("last");
     expect(v.by_year["2025"]).toBeCloseTo(0.08243216, 10);
@@ -76,5 +76,68 @@ describe("значения расчёта сервиса, временно пе�
   it("рост по стадиям готовности — отдельный параметр, из исходного файла не заполняется", () => {
     expect(demo.input.values["SALES.PRICE_STAGE_UPLIFT"]).toBeUndefined();
     expect(demo.fromFile?.map((a) => a.param)).not.toContain("SALES.PRICE_STAGE_UPLIFT");
+  });
+});
+
+describe("расчёт сервиса без Excel: пробелы Дербеневской", () => {
+  const normal = inMode(demo, "normal");
+  const m = computeProject(normal);
+  const keys = (x: ReturnType<typeof computeProject>) => x.result.messages.map((w) => w.key);
+  const withUplift = (p: CalcProject, values: Record<string, unknown> = {}): CalcProject => ({
+    ...p,
+    input: { ...p.input, values: { ...p.input.values, "SALES.PRICE_STAGE_UPLIFT": [{ stage: "РНВ", uplift: 0.05 }], ...values } },
+  });
+
+  it("пустой рост по стадиям — «не учтено»: цена и выручка считаются, в сообщениях отметка", () => {
+    expect(m.missing.has("SALES.PRICE_STAGE_UPLIFT")).toBe(false);
+    expect(keys(m)).toContain(STAGE_UPLIFT_NOT_COUNTED);
+    expect(m.result.formulas["F.SALES.PRICE"]?.value).toBeDefined();
+  });
+
+  it("рост по стадиям заполнен, а рыночный рост из исходного файла не пересмотрен — предупреждение о двойном росте", () => {
+    const filled = computeProject(withUplift(normal));
+    expect(keys(filled)).not.toContain(STAGE_UPLIFT_NOT_COUNTED);
+    const w = filled.result.messages.find((x) => x.key === `${DOUBLE_GROWTH}:SALES.PRICE_STAGE_UPLIFT`);
+    expect(w?.severity).toBe("warning");
+    expect(w?.text).toMatch(/дважды/);
+    const revised = computeProject(withUplift(normal, { "SALES.PRICE_MARKET_GROWTH": { by_year: { "2025": 0.05 }, after_last: "last" } }));
+    expect(keys(revised).filter((k) => k?.startsWith(DOUBLE_GROWTH))).toEqual([]);
+    expect(keys(computeProject(withUplift(demo))).filter((k) => k?.startsWith(DOUBLE_GROWTH))).toEqual([]);
+  });
+
+  it("начало и окончание СМР — из вех исходного файла (ТЭПы!C7, C9), метка «исходный файл», только в расчёте сервиса", () => {
+    const smr = demo.fromFile?.filter((a) => a.param === "TIME.MILESTONES") ?? [];
+    expect(smr.map((a) => [a.column, a.value, a.label])).toEqual([
+      ["construction_start", "2025-12-31", "исходный файл"],
+      ["construction_end", "2032-03-31", "исходный файл"],
+    ]);
+    const rows = m.input.values["TIME.MILESTONES"] as { construction_start: string; construction_end: string }[];
+    expect(rows.map((r) => [r.construction_start, r.construction_end])).toEqual([
+      ["2025-12-31", "2032-03-31"],
+      ["2025-12-31", "2032-03-31"],
+      ["2025-12-31", "2032-03-31"],
+    ]);
+    const legacyRows = computeProject(demo).input.values["TIME.MILESTONES"] as { construction_start?: string }[];
+    expect(legacyRows.every((r) => r.construction_start === undefined)).toBe(true);
+  });
+
+  it("прочие СМР, УДС, маркетинг, брокеридж: график по справочнику — в денежный поток попадает 100% суммы", () => {
+    expect(m.result.messages.filter((x) => x.formulaId === "F.CAPEX.SCHEDULE_WEIGHT" && x.severity === "error")).toEqual([]);
+    const cash = m.result.formulas["F.CAPEX.ITEM_CASH"]?.value as Record<string, Decimal[]>;
+    const sum = (xs: Decimal[] | undefined) => (xs ?? []).reduce((a, b) => a.add(b), new Decimal(0));
+    expect(sum(cash.MARKETING).toNumber()).toBeCloseTo(4194809207.75, 0);
+    expect(sum(cash.BROKERAGE).toNumber()).toBeCloseTo(4134560080.857636, 0);
+    expect(sum(cash.ROADS_UDS).gt(0)).toBe(true);
+    expect(sum(cash.OTHER_SMR).gt(0)).toBe(true);
+  });
+
+  it("машино-места в расчёте сервиса — по нормативу Москвы (до 70 м² — 0,8; 70–100 м² — 1,2)", () => {
+    // 961 × 0,8 (35,1 м²) + 720 × 0,8 (60,5 м²) + 720 × 1,2 (92 м²) = 2 208,8 → 2 209
+    expect((m.result.formulas["F.TEP.PARKING_REQUIRED"]?.value as Decimal).toNumber()).toBe(2209);
+    expect(m.missing.has("TEP.PARKING_NORM")).toBe(false);
+  });
+
+  it("без Excel расчёт останавливают только земельный налог и плата за ВРИ", () => {
+    expect([...m.missing].sort()).toEqual(["LAND.VRI_FEE", "TAX.LAND_RATE"]);
   });
 });
