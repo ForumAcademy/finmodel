@@ -63,3 +63,18 @@ describe("расчёт проекта целиком", () => {
     expect(aggregate([1, 2, 3, 4, 5], dates, "quarter", "last").sums).toEqual([1, 4, 5]);
   });
 });
+
+describe("значения расчёта сервиса, временно перенесённые из исходного файла", () => {
+  it("рыночный рост цен: 2% в квартал из исходного файла → 8,24% в год на весь срок, не подтверждено", () => {
+    const [growth] = demo.fromFile ?? [];
+    expect(growth).toMatchObject({ param: "SALES.PRICE_MARKET_GROWTH", status: "не подтверждено", note: "Перенесено из исходного файла, без обоснования рынком, требует подтверждения" });
+    const v = demo.input.values["SALES.PRICE_MARKET_GROWTH"] as { by_year: Record<string, number>; after_last: string };
+    expect(v.after_last).toBe("last");
+    expect(v.by_year["2025"]).toBeCloseTo(0.08243216, 10);
+  });
+
+  it("рост по стадиям готовности — отдельный параметр, из исходного файла не заполняется", () => {
+    expect(demo.input.values["SALES.PRICE_STAGE_UPLIFT"]).toBeUndefined();
+    expect(demo.fromFile?.map((a) => a.param)).not.toContain("SALES.PRICE_STAGE_UPLIFT");
+  });
+});

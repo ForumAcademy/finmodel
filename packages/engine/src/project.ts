@@ -5,7 +5,7 @@
  */
 import { getParameter, spec, type FormulaId, type ParameterId, type SpecAssumptionVersion as AssumptionVersion } from "@fm/spec";
 import { Engine, sinkFormulas } from "./context";
-import { legacyCaseInput, type LegacyCase } from "./legacy";
+import { legacyAssumptions, legacyCaseInput, type LegacyAssumption, type LegacyCase } from "./legacy";
 import { legacyChecks } from "./legacy-checks";
 import { dataQuestions, type DataQuestion } from "./legacy-questions";
 import { FORMULAS } from "./registry";
@@ -23,6 +23,8 @@ export interface CalcProject {
   legacyCase?: LegacyCase;
   /** Расхождения внутри исходного Excel: показываются в расчёте «как в исходном Excel». */
   legacyWarnings?: CalcMessage[];
+  /** Значения расчёта сервиса, временно перенесённые из исходного файла («Экспертное значение», не подтверждено). */
+  fromFile?: LegacyAssumption[];
 }
 
 export function versionOf(versions: AssumptionVersion[], n: number | undefined): AssumptionVersion | null {
@@ -227,5 +229,6 @@ export function legacyProject(c: LegacyCase, name: string, versions: AssumptionV
     assumptionsVersion: 1,
     legacyCase: c,
     legacyWarnings: legacyChecks(c),
+    fromFile: legacyAssumptions(c),
   };
 }

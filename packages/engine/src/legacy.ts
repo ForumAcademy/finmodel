@@ -125,6 +125,50 @@ function legacyCapex(c: LegacyCase, values: Partial<Record<ParameterId, unknown>
 
 /** Месяцев в квартале плана продаж исходника: ряд — поквартальный, объём квартала — поровну на три месяца. */
 const LEGACY_QUARTER_MONTHS = 3;
+const QUARTERS_PER_YEAR = 4;
+const PERCENT = 100;
+
+/**
+ * Значение расчёта сервиса, временно перенесённое из исходного файла без обоснования рынком (решение владельца
+ * продукта 28.09.2026). Метка — «Экспертное значение», источник — исходный файл, статус — «не подтверждено».
+ */
+export interface LegacyAssumption {
+  param: ParameterId;
+  value: unknown;
+  /** Ячейки исходного файла, из которых взято значение. */
+  cells: string;
+  /** Как значение получено из ячеек, словами. */
+  derivation: string;
+  status: "не подтверждено";
+  note: string;
+}
+
+const FROM_FILE_NOTE = "Перенесено из исходного файла, без обоснования рынком, требует подтверждения";
+
+/**
+ * Рыночный рост цен для расчёта сервиса из исходного файла: 2% в квартал → (1 + 0,02)^4 − 1 = 8,24% в год, на весь
+ * срок (after_last = last). Рост по стадиям готовности (SALES.PRICE_STAGE_UPLIFT) — отдельный параметр, отсюда не
+ * заполняется: в исходнике рост рынка и надбавка за готовность не разделены.
+ */
+function legacyMarketGrowth(c: LegacyCase): LegacyAssumption | null {
+  const q = c.sales_legacy?.price_growth_quarterly;
+  const start = c.project_inputs["GEN.MODEL_START_DATE"];
+  if (typeof q !== "number" || typeof start !== "string") return null;
+  const annual = new Decimal(1).add(q).pow(QUARTERS_PER_YEAR).sub(1).toNumber();
+  return {
+    param: "SALES.PRICE_MARKET_GROWTH",
+    value: { by_year: { [start.slice(0, 4)]: annual }, after_last: "last" },
+    cells: "План продаж!E30,E35,E40,E45,E50,E55",
+    derivation: `рост цены ${new Decimal(q).mul(PERCENT).toString()}% в квартал, пересчитан в годовой: (1 + ${q})^4 − 1`,
+    status: "не подтверждено",
+    note: FROM_FILE_NOTE,
+  };
+}
+
+/** Значения расчёта сервиса, временно перенесённые из исходного файла (см. LegacyAssumption). */
+export function legacyAssumptions(c: LegacyCase): LegacyAssumption[] {
+  return [legacyMarketGrowth(c)].filter((x): x is LegacyAssumption => x !== null);
+}
 
 /**
  * План продаж исходника → SALES.PRODUCTS, SALES.PACE, SALES.LEGACY_PRICE_GROWTH, SALES.PAYMENT_MIX:
@@ -168,6 +212,7 @@ function legacySales(c: LegacyCase, values: Partial<Record<ParameterId, unknown>
   values["SALES.PRODUCTS"] = products;
   values["SALES.PACE"] = pace;
   values["SALES.LEGACY_PRICE_GROWTH"] = [{ rate: sl.price_growth_quarterly, step_months: LEGACY_QUARTER_MONTHS }];
+  for (const a of legacyAssumptions(c)) values[a.param] = a.value;
   const pm = pi["SALES.PAYMENT_MIX"] as { installment: number; mortgage: number; full: number; down_payment: number; installment_quarters: number };
   const types = [...new Set(products.map((r) => r.product as string))];
   const mortgageDeals = new Decimal(pm.mortgage).add(pm.down_payment);
