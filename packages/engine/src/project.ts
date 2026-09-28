@@ -271,7 +271,8 @@ export function computeProject(project: CalcProject, versions: AssumptionVersion
   const run = new Engine(input, FORMULAS, horizon === null ? {} : { horizonMonths: horizon }).run(TARGETS);
   const calc = { ...run, messages: [...run.messages, ...doubleCountChecks(project, input)] };
   const result = project.input.mode === "legacy" && project.legacyWarnings ? { ...calc, messages: [...calc.messages, ...project.legacyWarnings] } : calc;
-  const missing = new Set(result.messages.filter((m) => m.severity === "error" && m.parameterId).map((m) => m.parameterId as ParameterId));
+  // Ошибки проверок модели (ключ CHECK.*) — расхождения, а не незаполненные значения
+  const missing = new Set(result.messages.filter((m) => m.severity === "error" && m.parameterId && !m.key?.startsWith("CHECK.")).map((m) => m.parameterId as ParameterId));
   return { result, horizon, missing, versions, input };
 }
 

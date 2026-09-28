@@ -2209,7 +2209,7 @@ PAYMENT_MIX_SUM   : |mortgage + full + installment − 1| < 1e-9
 SCHEDULE_SUM      : |Σ_t w[i,t] − 1| < 1e-9 для каждой статьи i
 SOLD_LE_STOCK     : Σ_t sold[k,t] <= stock[k]
 UNSOLD_AT_END     : remaining[k,T] > 0 → предупреждение
-REVENUE_EQ_CF     : Σ value = Σ поступлений (эскроу + ДКП) + дебиторка на конец
+REVENUE_EQ_CF     : Σ value = Σ раскрытия эскроу + Σ продаж после ввода + остаток эскроу на T + дебиторка на T; остаток эскроу и дебиторка > 0 → предупреждение
 BUDGET_EQ_CF      : Σ бюджета по статьям = Σ затрат в CF
 ESCROW_NONNEG     : esc_bal >= 0
 DEBT_LE_LIMIT     : Σ draw <= limit
@@ -2223,6 +2223,10 @@ STAGE_INPUTS      : обязательные входы TEP для GEN.PROJECT_S
 GPZU_LIMITS       : F.CHECK.GPZU_LIMITS без превышений (или есть решение об отклонении)
 APART_ALLOWED     : F.TEP.APART_AREA > 0 → GPZU.APART_ALLOWED = да
 GFA_SHARES_SUM    : стадия «оценка участка» → TEP.RES_GFA_SHARE + TEP.APART_GFA_SHARE <= 1
+GFA_SPLIT_LE_ABOVE: res + apart + nonres (F.TEP.GFA_SPLIT) <= F.TEP.GFA_ABOVE
+DDU_AFTER_RNS     : очередь с продажами по ДДУ → sales_start >= rns_date
+PHASE_WINDOWS     : у каждой очереди есть продукт (иначе предупреждение); расчёт сервиса — у каждого продукта есть месяц продаж (F.TIME.FLAG_PRESALE или F.TIME.FLAG_POST_RNV = 1)
+SOLD_LE_MARKET    : продажи в месяц <= ёмкость рынка (F.BENCH.MARKET_PACE)
 UNDERGROUND_CAP   : F.CHECK.UNDERGROUND_CAPACITY (стадия «концепция»)
 BENCH_MIN_COMPS   : число аналогов >= BENCH.MARKET_MIN_COMPS ИЛИ экспертное обоснование
 APT_MIX_SHARE_SUM : стадия «оценка участка» → |Σ_k area_share[k] − 1| < 1e-9
@@ -2232,7 +2236,7 @@ LESSOR_REQUIRED   : LAND.TENURE = аренда → LAND.LESSOR_TYPE задан
 HORIZON_LONG      : F.CF.HORIZON > TIME.HORIZON_WARN_M → предупреждение
 ```
 
-**Пояснение:** Свод проверок модели. APART_ALLOWED проверяется по вложенному ГПЗУ; если апартаменты не допускаются, продукт «апартаменты» недоступен. BENCH_MIN_COMPS: если пар «квартиры / апартаменты» меньше BENCH.MIN_PAIRS, скидка апартаментов — экспертная (уровень 5), без блокировки расчёта. UNDERGROUND_CAP даёт ошибку или предупреждение по вместимости подземной части. Проверка, у которой не заполнены входы, не запускается: статус «ждёт данных», в число ошибок не входит (решение владельца продукта 28.09.2026). Незаполненные обязательные поля — метка «Заполните» и счётчик на своей вкладке, не ошибка проверки. T — последний месяц модели.
+**Пояснение:** Свод проверок модели. APART_ALLOWED проверяется по вложенному ГПЗУ; если апартаменты не допускаются, продукт «апартаменты» недоступен. BENCH_MIN_COMPS: если пар «квартиры / апартаменты» меньше BENCH.MIN_PAIRS, скидка апартаментов — экспертная (уровень 5), без блокировки расчёта. UNDERGROUND_CAP даёт ошибку или предупреждение по вместимости подземной части. Проверка, у которой не заполнены входы, не запускается: статус «ждёт данных», в число ошибок не входит (решение владельца продукта 28.09.2026). Незаполненные обязательные поля — метка «Заполните» и счётчик на своей вкладке, не ошибка проверки. T — последний месяц модели. Результат — список {проверка, статус: сходится / ошибка / предупреждение / ждёт данных}. Проверки PAYMENT_MIX_SUM, SCHEDULE_SUM, SOLD_LE_STOCK, UNSOLD_AT_END, CASH_NONNEG, PARKING_NORM, APT_AREA_MATCH, APART_ALLOWED, GFA_SHARES_SUM, HORIZON_LONG выполняются в своих формулах (F.SALES.*, F.CAPEX.SCHEDULE_WEIGHT, F.CF.*, F.TEP.*) и здесь не повторяются. В расчёте «как в исходном Excel» найденное показывается справкой, а не ошибкой: он повторяет исходник как есть, расхождения исходника собраны в разделе «Расхождения». SOLD_LE_MARKET, UNDERGROUND_CAP, BENCH_MIN_COMPS, NCS_DEVIATION ждут аналогов и бенчмарков. DDU_AFTER_RNS — ч.1 ст.3 214-ФЗ: деньги дольщиков привлекаются только после получения разрешения на строительство.
 
 **Обозначения:**
 - `T` — последний месяц модели
@@ -2243,11 +2247,11 @@ HORIZON_LONG      : F.CF.HORIZON > TIME.HORIZON_WARN_M → предупрежд�
 - `cash[t]` — остаток денег (F.CF.CASH_BALANCE)
 - `deviation` — отклонение СМР от НЦС (F.CAPEX.NCS_BENCH)
 - `apt_check` — расхождение квартирографии и ТЭП (F.TEP.APT_AREA_CHECK)
-**Зависит от:** `F.CHECK.GPZU_LIMITS`, `F.CHECK.UNDERGROUND_CAPACITY`, `LAND.CADASTRAL_VALUE_AFTER_VRI`, `LAND.TENURE`, `LAND.LESSOR_TYPE`, `TIME.MILESTONES`, `F.CF.HORIZON`, `TIME.HORIZON_WARN_M`
+**Зависит от:** `F.CHECK.GPZU_LIMITS`, `F.CHECK.UNDERGROUND_CAPACITY`, `LAND.CADASTRAL_VALUE_AFTER_VRI`, `LAND.TENURE`, `LAND.LESSOR_TYPE`, `TIME.MILESTONES`, `F.TEP.GFA_SPLIT`, `F.TEP.GFA_ABOVE`, `SALES.PRODUCTS`, `F.TIME.FLAG_PRESALE`, `F.TIME.FLAG_POST_RNV`, `F.SALES.CONTRACT_VALUE`, `F.SALES.CASH_IN`, `F.ESC.BALANCE`, `F.FIN.DRAW`, `F.FIN.LIMIT`, `F.FIN.DEBT`
 
 **Почему так:** Ни одна из этих ошибок исходника не должна повториться незаметно
 
-**Источники:** `S_EXPERT`
+**Источники:** `S_EXPERT`, [S_214_ART3](https://www.consultant.ru/document/cons_doc_LAW_51038/24a7b7f2b0571ac53f7b789c337316109c23d1a7/)
 
 ### `F.CHECK.GPZU_LIMITS` — Проверка проекта по предельным параметрам ГПЗУ
 **Единица:** bool · **Размерность:** скаляр · **Статус:** verified

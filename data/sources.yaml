@@ -546,7 +546,7 @@ sources:
     issuer: "Банк России"
     url: "https://cbr.ru/statistics/ddkp/mo_br/"
     used_for: "траектория ключевой ставки на горизонт проекта"
-    accessed: 2026-09-25
+    accessed: 2026-09-28
     verified: true
 
   - id: S_CBR_ZCYC

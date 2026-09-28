@@ -23,7 +23,7 @@ export type RowSeries = Record<string, Decimal[]>;
 
 /** Продукты, которые продаются штуками (машино-места, кладовые); остальные — квадратными метрами. */
 const PIECE_PRODUCTS = new Set(["машино-места", "кладовые"]);
-const CHANNEL_DDU = "ДДУ_эскроу";
+export const CHANNEL_DDU = "ДДУ_эскроу";
 
 /** Строка SALES.PRODUCTS (столбцы — parameters.yaml). */
 interface ProductRow {

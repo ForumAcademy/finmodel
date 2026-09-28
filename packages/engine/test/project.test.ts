@@ -165,4 +165,33 @@ describe("расчёт сервиса без Excel: пробелы Дербен�
     expect(cash.every((x) => x.gte(-1))).toBe(true);
     expect(m.horizon).toBeGreaterThanOrEqual(f["F.CF.HORIZON"]?.value as number);
   });
+
+  it("проверки модели: ГНС по частям больше наземной на 7 500 м², очереди 1 и 2 без продуктов, выручка = поток", () => {
+    const checks = Object.fromEntries((m.result.formulas["F.CHECK.ALL"]?.value as { id: string; status: string }[]).map((c) => [c.id, c.status]));
+    expect(checks).toMatchObject({
+      GFA_SPLIT_LE_ABOVE: "ошибка",
+      DDU_AFTER_RNS: "сходится",
+      PHASE_WINDOWS: "предупреждение",
+      REVENUE_EQ_CF: "сходится",
+      SOLD_LE_MARKET: "ждёт данных",
+      GPZU_LIMITS: "ждёт данных",
+      DEBT_REPAID: "сходится",
+    });
+    const gfa = m.result.messages.find((x) => x.key === "CHECK.GFA_SPLIT_LE_ABOVE");
+    expect(gfa?.text).toMatch(/229\s467\sм² — больше наземной ГНС 221\s967\sм² на 7\s500\sм²/);
+    expect(m.missing.has("TEP.GFA_ABOVE")).toBe(false);
+    // В расчёте «как в исходном Excel» найденное — справка, не ошибка
+    const legacy = computeProject(demo).result.messages.filter((x) => x.key?.startsWith("CHECK."));
+    expect(legacy.every((x) => x.severity === "info")).toBe(true);
+  });
+
+  it("продажи по ДДУ раньше РНС — ошибка; ГПЗУ: превышение предела — ошибка, решение об отклонении снимает её", () => {
+    const rows = normal.input.values["TIME.MILESTONES"] as { phase: number; rns_date: string }[];
+    const early = computeProject({ ...normal, input: { ...normal.input, values: { ...normal.input.values, "TIME.MILESTONES": rows.map((r) => (r.phase === 3 ? { ...r, rns_date: "2027-12-31" } : r)) } } });
+    expect(early.result.messages.find((x) => x.key === "CHECK.DDU_AFTER_RNS")?.severity).toBe("error");
+    const gpzu = (extra: Record<string, unknown>) =>
+      (computeProject({ ...normal, input: { ...normal.input, values: { ...normal.input.values, "GPZU.MAX_GFA_ABOVE": 200000, ...extra } } }).result.formulas["F.CHECK.GPZU_LIMITS"]?.value as { status: string }).status;
+    expect(gpzu({})).toBe("ошибка");
+    expect(gpzu({ "GPZU.DEVIATION_PERMIT": [{ limit: "GPZU.MAX_GFA_ABOVE", permitted_value: 222000, decision: "решение", attachment_id: "x" }] })).toBe("сходится");
+  });
 });
