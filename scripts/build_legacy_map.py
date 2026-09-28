@@ -30,6 +30,10 @@ for it in capex:
 # ТЭПы!C48, C49: одно пояснение на обе ячейки (решение владельца продукта 27.09.2026)
 NOTE_C48_C49 = "ТЭПы!C49 = 5 200 и C48 = 10 332 не соответствуют текущим ТЭПам. C49 — ровно 127 м/м × 40,945 м², при этом в файле 862 машино-места (ТЭПы!C27). C48 на 10 м² больше площади ПСН в C23 (10 322). C49 в расчётах не участвует (только План продаж!D16). Вероятно, значения из модели Финляндского ЖК, не обновлённые под этот участок. Вопрос автору: откуда 5 200 и 10 332 и нужны ли они."
 
+# ТЭПы!C20, C21: жилая + нежилая ГНС больше наземной ГНС C19 на 7 500 м² (решение владельца продукта 28.09.2026:
+# верной считается наземная ГНС C19 как предел; C20 и C21 — уточнить у автора)
+NOTE_C20_C21 = "Жилая (C20 = 210 038 + 420) и нежилая (C21 = 19 009) ГНС вместе на 7 500 м² больше наземной ГНС C19 = 221 967 м². Вопрос автору: включены ли в нежилую подземные или стилобатные помещения на 7 500 м² (тогда наземная нежилая — 11 509 м²) и что означает «+420» в жилой."
+
 def value_target(sheet, row, col):
     c = gl(col)
     T = {
@@ -39,7 +43,7 @@ def value_target(sheet, row, col):
             15: ("LAND.AREA", "keep" if c == "C" else "remove", "" if c == "C" else "дубль"),
             17: ("GEN.PHASES_COUNT", "fix", "очереди должны считаться раздельно"),
             19: ("TEP.GFA_ABOVE", "keep", ""),
-            21: ("TEP.NONRES_GFA", "keep", ""),
+            21: ("TEP.NONRES_GFA", "clarify", NOTE_C20_C21),
             22: ("TEP.APT_AREA", "keep", ""),
             23: ("TEP.COMM_AREA", "remove", "коэффициент 0,8 без назначения"),
             27: ("TEP.PARKING_COUNT_OVERRIDE", "fix", "ниже норматива 2118-ПП"),
@@ -188,6 +192,7 @@ def formula_target(sheet, row, col):
             return {"E": ("F.TEP.GFA_BELOW_EST", "keep"), "F": ("F.TEP.PARKING_COUNT", "fix"), "H": ("SALES.PRODUCTS", "fix")}.get(c, ("F.TEP.GFA_BELOW_EST", "keep"))
         if row == 50: return ("F.TEP.SALEABLE_AREA", "keep")
         if row == 44 and c == "J": return ("F.TEP.PARKING_REQUIRED", "fix")
+        if row == 20 and c == "C": return ("TEP.RES_GFA", "clarify")
         if row in m: return (m[row], "keep")
     if sheet == "Бюджет":
         if 3 <= row <= 12: return ("F.SALES.REVENUE_TOTAL", "fix")

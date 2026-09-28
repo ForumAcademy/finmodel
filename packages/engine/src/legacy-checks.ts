@@ -30,6 +30,24 @@ export function legacyChecks(c: LegacyCase): CalcMessage[] {
     });
   }
 
+  // ГНС: жилая + нежилая больше наземной (ТЭПы!C19:C21). Верной считается наземная как предел (решение владельца
+  // продукта 28.09.2026); вопрос автору — что входит в нежилую; «+420» в жилой — отдельный вопрос
+  if (typeof tep.gfa_above_C19 === "number" && typeof tep.res_gfa_C20 === "number" && typeof tep.nonres_gfa_C21 === "number") {
+    const over = new Decimal(tep.res_gfa_C20).add(tep.nonres_gfa_C21).sub(tep.gfa_above_C19);
+    if (over.gt(0)) {
+      warn({
+        formulaId: "F.TEP.GFA_SPLIT",
+        parameterId: "TEP.NONRES_GFA",
+        key: "LEGACY.NONRES_GFA",
+        text: `Жилая (${fmt(tep.res_gfa_C20)} м²) и нежилая (${fmt(tep.nonres_gfa_C21)} м²) ГНС вместе больше наземной ГНС ${fmt(tep.gfa_above_C19)} м² на ${fmt(over)} м² (ТЭПы!C19:C21)`,
+      });
+    }
+    const typed = tep.res_gfa_C20_formula ?? "";
+    if (/^=\d+(\.\d+)?\+\d+(\.\d+)?$/.test(typed)) {
+      warn({ formulaId: "F.TEP.GFA_SPLIT", parameterId: "TEP.RES_GFA", key: "LEGACY.RES_GFA_TYPED", text: `Жилая ГНС ТЭПы!C20 введена как ${typed}: слагаемое без пояснения` });
+    }
+  }
+
   // Маркетинг Бюджет!F51 вбит числом и не равен ставке × выручке (соседняя строка брокериджа считается формулой)
   const { budget } = lc;
   const revenue = lc.sales_plan.revenue_row25_from_1q2026.reduce((s, v) => s.add(v), new Decimal(0));

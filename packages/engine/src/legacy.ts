@@ -43,6 +43,11 @@ export interface LegacyChecks {
     psn_stock_C48: number;
     psn_lot_D48: number;
     escrow_release_C12: unknown;
+    /** ГНС: наземная, жилая (и её формула), нежилая (ТЭПы!C19:C21). */
+    gfa_above_C19?: number;
+    res_gfa_C20?: number;
+    res_gfa_C20_formula?: string | null;
+    nonres_gfa_C21?: number;
   };
   sales_plan: { revenue_row25_from_1q2026: number[]; psn_lots_row43_sum: number };
   budget: {

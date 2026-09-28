@@ -8,12 +8,17 @@ describe("Проверки расчёта «как в исходном Excel»: 
   const text = (key: string) => m.find((x) => x.key === key)?.text ?? "";
 
   it("каждое расхождение — предупреждение с постоянным ключом", () => {
-    expect(m.map((x) => x.key)).toEqual(["LEGACY.PSN_STOCK", "LEGACY.MARKETING_F51", "LEGACY.CF1_LAG", "LEGACY.ESCROW_DATE", "LEGACY.CONTINGENCY_F42"]);
+    expect(m.map((x) => x.key)).toEqual(["LEGACY.PSN_STOCK", "LEGACY.NONRES_GFA", "LEGACY.RES_GFA_TYPED", "LEGACY.MARKETING_F51", "LEGACY.CF1_LAG", "LEGACY.ESCROW_DATE", "LEGACY.CONTINGENCY_F42"]);
     expect(m.every((x) => x.severity === "warning")).toBe(true);
   });
 
   it("запас ПСН: C23 = 10 322, C48 = 10 332; C35 = 149 281 вбито при сумме 153 882", () => {
     expect(text("LEGACY.PSN_STOCK")).toMatch(/C23 = 10\s322 м², ТЭПы!C48 = 10\s332 м².*C35 = 149\s281 м² вбита числом, а квартиры \+ ПСН = 153\s882 м²/);
+  });
+
+  it("ГНС: жилая и нежилая вместе на 7 500 м² больше наземной; «+420» в жилой — вопрос автору", () => {
+    expect(text("LEGACY.NONRES_GFA")).toMatch(/210\s458 м².*19\s009 м².*221\s967 м² на 7\s500 м²/);
+    expect(text("LEGACY.RES_GFA_TYPED")).toMatch(/=210038\+420/);
   });
 
   it("маркетинг F51 соответствует выручке 119,85 млрд, которой в файле нет", () => {
@@ -42,6 +47,8 @@ describe("Проверки расчёта «как в исходном Excel»: 
     lc.cf1.brokerage_row78 = [...lc.sales_plan.revenue_row25_from_1q2026];
     lc.cf1.escrow_release_row6_typed = [];
     lc.budget.contingency_F42_formula = "=E42*D42";
+    lc.tep.nonres_gfa_C21 = 11509;
+    lc.tep.res_gfa_C20_formula = null;
     expect(legacyChecks({ ...c, legacy_checks: lc })).toEqual([]);
   });
 });
