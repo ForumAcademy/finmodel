@@ -1,9 +1,9 @@
 // Файл сгенерирован packages/spec/scripts/build-spec.ts из data/*.yaml. Не редактировать вручную.
 
 /** Версия справочника: хеш содержимого data/*.yaml. Сохраняется в каждой версии расчёта. */
-export const SPEC_VERSION = "b5032d213ef8";
+export const SPEC_VERSION = "a387bd3f5ac4";
 /** Дата актуализации справочника: самая поздняя дата проверки источника. */
-export const SPEC_ACTUALIZED_AT = "2026-09-27";
+export const SPEC_ACTUALIZED_AT = "2026-09-28";
 
 /** ID источников из data/sources.yaml */
 export const SOURCE_IDS = [
@@ -15,6 +15,8 @@ export const SOURCE_IDS = [
   "S_MINFIN_VAT_DDU_2023",
   "S_MINFIN_VAT_APART_2023",
   "S_NK_174",
+  "S_NK_176",
+  "S_NK_287",
   "S_NK_251",
   "S_MINFIN_PROFIT_DDU_2026",
   "S_NK_283",
@@ -45,6 +47,8 @@ export const SOURCE_IDS = [
   "S_SP_42_2026",
   "S_SP_42_2016",
   "S_MSK_LANDTAX_74",
+  "S_MSK_LAW_34_2023",
+  "S_MSK_LAW_27_2025",
   "S_MSK_RENT_273PP",
   "S_MSK_VRI_593PP",
   "S_MSK_PARKING_2118PP",
@@ -101,6 +105,7 @@ export const PARAMETER_IDS = [
   "LAND.LEGAL_COSTS",
   "LAND.AGENT_FEE_RATE",
   "LAND.VRI_FEE",
+  "LAND.VRI_CHANGE",
   "LAND.RENT_ANNUAL",
   "LAND.RENT_PAYMENT_FREQ",
   "LAND.RENT_INDEXATION",
@@ -194,6 +199,9 @@ export const PARAMETER_IDS = [
   "TAX.VAT_RATE",
   "TAX.VAT_REGIME",
   "TAX.INPUT_VAT_RECOVERABLE",
+  "TAX.VAT_PAY_MONTHS",
+  "TAX.VAT_REFUND_LAG_M",
+  "TAX.PROFIT_TAX_PAY_MONTH",
   "TAX.PROFIT_RATE",
   "TAX.LOSS_CARRYFORWARD_LIMIT",
   "OPEX.MARKETING_RATE",

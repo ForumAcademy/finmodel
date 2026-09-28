@@ -3,11 +3,13 @@
  * пара режимов «расчёт сервиса / как в исходном Excel». Раньше жило в интерфейсе старого сервиса (lib/model.ts);
  * перенесено в ядро, чтобы экраны только показывали результат.
  */
+import Decimal from "decimal.js";
 import { getParameter, spec, type FormulaId, type ParameterId, type SpecAssumptionVersion as AssumptionVersion } from "@fm/spec";
 import { Engine, sinkFormulas } from "./context";
 import { legacyAssumptions, legacyCaseInput, type LegacyAssumption, type LegacyCase } from "./legacy";
 import { legacyChecks } from "./legacy-checks";
 import { dataQuestions, type DataQuestion } from "./legacy-questions";
+import { fmt } from "./lib/format";
 import { FORMULAS } from "./registry";
 import type { CalcMessage, ProjectInput, ResultSet } from "./types";
 
@@ -57,20 +59,73 @@ function excelAssumptionValues(c: LegacyCase, versions: AssumptionVersion[]): Pa
 /**
  * Статьи, которые в расчёте сервиса у проекта из Excel считаются по справочнику, а не суммой исходника: резерв —
  * ставка справочника (2% по методике Минстроя 421/пр) × стоимость СМР, график — по СМР (решение владельца продукта
- * 27.09.2026). Если сумму статьи изменили в проекте, остаётся она.
+ * 27.09.2026); по заданию (п. 4.F) агентское вознаграждение — ставка из вводных × цена участка (в исходнике ставка 2%
+ * задана, а сумма вбита 0), земельный налог или аренда и плата за ВРИ — по своим формулам, а не суммой исходника.
+ * Пока для формулы не хватает значения (ставка налога, плата за ВРИ), статья не считается и отмечена «заполните».
+ * Если сумму статьи изменили в проекте, остаётся она.
  */
-const SERVICE_BY_RATE = ["CONTINGENCY"];
+const SERVICE_BY_RATE = ["CONTINGENCY", "LAND_AGENT", "LAND_TAX_OR_RENT", "LAND_VRI"];
+
+/**
+ * Статьи, у которых в расчёте сервиса сумма — из бюджета исходника, а график — по справочнику статей: ряды CF1
+ * исходника дают не 100% суммы (прочие СМР — 0%, УДС — строки в CF1 нет, маркетинг — 98,56%, брокеридж — 66,11%),
+ * это расхождения исходника, а не срок расчёта. Если график статьи изменили в проекте, остаётся он.
+ */
+const SERVICE_SCHEDULE_BY_REFERENCE = ["OTHER_SMR", "ROADS_UDS", "MARKETING", "BROKERAGE"];
+
+type CapexRow = { item_id?: string; base?: string; rate?: number; schedule_rule?: string; schedule_manual?: unknown };
 
 function serviceCapex(values: ProjectInput["values"], c: LegacyCase): ProjectInput["values"] {
   const rows = values["CAPEX.ITEMS"];
   if (!Array.isArray(rows)) return values;
   const excel = new Map((c.capex_legacy ?? []).map((x) => [x.item_id, x.amount_F]));
+  const excelRows = new Map(((legacyCaseInput(c).values["CAPEX.ITEMS"] as CapexRow[] | undefined) ?? []).map((r) => [r.item_id, r]));
   const next = rows.map((r) => {
-    const row = r as { item_id?: string; base?: string; rate?: number };
+    const row = r as CapexRow;
     const byExcel = row.item_id && SERVICE_BY_RATE.includes(row.item_id) && row.base === "фикс" && row.rate === excel.get(row.item_id);
-    return byExcel ? { item_id: row.item_id } : r;
+    if (byExcel) return { item_id: row.item_id };
+    const schedule = excelRows.get(row.item_id);
+    const excelSchedule =
+      row.item_id && SERVICE_SCHEDULE_BY_REFERENCE.includes(row.item_id) && row.schedule_rule === schedule?.schedule_rule && JSON.stringify(row.schedule_manual) === JSON.stringify(schedule?.schedule_manual);
+    if (excelSchedule) {
+      const rest: CapexRow = { ...row };
+      delete rest.schedule_rule;
+      delete rest.schedule_manual;
+      return rest;
+    }
+    return r;
   });
   return { ...values, "CAPEX.ITEMS": next };
+}
+
+/**
+ * Нормы машино-мест исходника заданы по типам квартир — это допускается только в расчёте «как в исходном Excel». В
+ * расчёте сервиса действует норматив региона (regions.yaml), если в проекте норму не меняли.
+ */
+function serviceParking(values: ProjectInput["values"], c: LegacyCase): ProjectInput["values"] {
+  const excel = legacyCaseInput(c).values["TEP.PARKING_NORM"];
+  if (JSON.stringify(values["TEP.PARKING_NORM"]) !== JSON.stringify(excel)) return values;
+  const rest = { ...values };
+  delete rest["TEP.PARKING_NORM"];
+  return rest;
+}
+
+/** Вехи из исходного файла (метка «исходный файл»): заполняют только пустые ячейки таблицы вех. */
+function serviceMilestones(values: ProjectInput["values"], fromFile: LegacyAssumption[]): ProjectInput["values"] {
+  const rows = values["TIME.MILESTONES"];
+  const fill = fromFile.filter((a) => a.param === "TIME.MILESTONES" && a.column);
+  if (!Array.isArray(rows) || fill.length === 0) return values;
+  const next = rows.map((r) => {
+    const row = { ...(r as Record<string, unknown>) };
+    for (const a of fill) if (row[a.column as string] === null || row[a.column as string] === undefined) row[a.column as string] = a.value;
+    return row;
+  });
+  return { ...values, "TIME.MILESTONES": next };
+}
+
+/** Входные данные расчёта сервиса у проекта из исходного Excel. */
+function serviceValues(project: CalcProject, c: LegacyCase): ProjectInput["values"] {
+  return serviceMilestones(serviceParking(serviceCapex(project.input.values, c), c), project.fromFile ?? []);
 }
 
 /**
@@ -83,7 +138,7 @@ export function projectInput(project: CalcProject, versions: AssumptionVersion[]
   const values = legacy
     ? { ...excelAssumptionValues(project.legacyCase as LegacyCase, versions), ...project.input.values }
     : project.legacyCase
-      ? serviceCapex(project.input.values, project.legacyCase)
+      ? serviceValues(project, project.legacyCase)
       : project.input.values;
   return { ...project.input, values, standard };
 }
@@ -148,7 +203,15 @@ export function projectHorizon(project: CalcProject, versions: AssumptionVersion
   const lag = Number(projectValue(project, "TIME.ESCROW_RELEASE_LAG_M", versions) ?? 0);
   const capexEnd = manualEnd(project.input.values["CAPEX.ITEMS"], "schedule_manual", "weights", monthsTo);
   const salesEnd = manualEnd(project.input.values["SALES.PACE"], "manual", "values", monthsTo);
-  return Math.max(monthsTo(last) + 1 + lag, capexEnd + 1, salesEnd + 1, 1);
+  const base = Math.max(monthsTo(last) + 1 + lag, capexEnd + 1, salesEnd + 1, 1);
+  if (project.input.mode === "legacy") return base;
+  // Расчёт сервиса: до уплаты налога на прибыль за последний год (месяц TAX.PROFIT_TAX_PAY_MONTH следующего года)
+  // плюс запас TIME.HORIZON_TAIL_M. В расчёте «как в исходном Excel» налоги не считаются — горизонт как в CF1.
+  const payMonth = Number(projectValue(project, "TAX.PROFIT_TAX_PAY_MONTH", versions) ?? 0);
+  const tail = Number(projectValue(project, "TIME.HORIZON_TAIL_M", versions) ?? 0);
+  const endYear = Number(start.slice(...YEAR)) + Math.floor((Number(start.slice(...MONTH)) - 1 + base - 1) / MONTHS_PER_YEAR);
+  const payment = monthsTo(`${endYear + 1}-${String(payMonth).padStart(2, "0")}-01`);
+  return Math.max(base, payment + 1 + tail);
 }
 
 /**
@@ -180,13 +243,94 @@ export interface ProjectModel {
   input: ProjectInput;
 }
 
+/** Ключ предупреждения «рост посчитается дважды». */
+export const DOUBLE_GROWTH = "SALES.DOUBLE_GROWTH";
+
+/**
+ * Проверка расчёта сервиса: значение из исходного файла уже включает рост, который в проекте задан отдельно
+ * (рыночный рост исходника 2% в квартал включает рост по готовности). Пока значение из файла не пересмотрено, а
+ * отдельный параметр заполнен, рост считается дважды (решение владельца продукта 28.09.2026).
+ */
+export function doubleCountChecks(project: CalcProject, input: ProjectInput): CalcMessage[] {
+  if (project.input.mode === "legacy") return [];
+  const filled = (v: unknown) => v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0);
+  return (project.fromFile ?? []).flatMap((a) =>
+    (a.includes ?? [])
+      .filter((id) => filled(input.values[id] ?? input.standard?.[id]) && JSON.stringify(input.values[a.param]) === JSON.stringify(a.value))
+      .map((id) => ({
+        severity: "warning" as const,
+        formulaId: "F.SALES.PRICE" as FormulaId,
+        parameterId: a.param,
+        key: `${DOUBLE_GROWTH}:${id}`,
+        text: `«${getParameter(a.param).name}» перенесён из исходного файла и уже включает «${getParameter(id).name.toLowerCase()}». Надбавка заполнена, поэтому рост считается дважды. Пересмотрите рыночный рост.`,
+      })),
+  );
+}
+
 export function computeProject(project: CalcProject, versions: AssumptionVersion[] = SPEC_ASSUMPTIONS): ProjectModel {
   const horizon = projectHorizon(project, versions);
   const input = projectInput(project, versions);
-  const calc = new Engine(input, FORMULAS, horizon === null ? {} : { horizonMonths: horizon }).run(TARGETS);
+  const run = new Engine(input, FORMULAS, horizon === null ? {} : { horizonMonths: horizon }).run(TARGETS);
+  const calc = { ...run, messages: [...run.messages, ...doubleCountChecks(project, input)] };
   const result = project.input.mode === "legacy" && project.legacyWarnings ? { ...calc, messages: [...calc.messages, ...project.legacyWarnings] } : calc;
-  const missing = new Set(result.messages.filter((m) => m.severity === "error" && m.parameterId).map((m) => m.parameterId as ParameterId));
+  // Ошибки проверок модели (ключ CHECK.*) — расхождения, а не незаполненные значения
+  const missing = new Set(result.messages.filter((m) => m.severity === "error" && m.parameterId && !m.key?.startsWith("CHECK.")).map((m) => m.parameterId as ParameterId));
   return { result, horizon, missing, versions, input };
+}
+
+/** Пункт «Уточнить перед решением»: что не подтверждено → чем мешает решению → поле, которое нужно заполнить. */
+export interface ClarifyItem {
+  param: ParameterId;
+  problem: string;
+  impact: string;
+  /** Сравнение вариантов: сумма за весь срок, null — «не учтено» (нет значения с источником). */
+  compare?: { label: string; amount: Decimal | null }[];
+}
+
+/** Затраты на землю за весь срок при заданной форме права; null — не посчитаны (нет значения с источником). */
+function landCost(model: ProjectModel, tenure: string): Decimal | null {
+  const input: ProjectInput = { ...model.input, values: { ...model.input.values, "LAND.TENURE": tenure } };
+  const run = new Engine(input, FORMULAS, model.horizon === null ? {} : { horizonMonths: model.horizon }).run(["F.LAND.TAX_OR_RENT"]);
+  const v = run.formulas["F.LAND.TAX_OR_RENT"]?.value as Decimal[] | undefined;
+  return v ? v.reduce((a, b) => a.add(b), new Decimal(0)) : null;
+}
+
+/**
+ * «Уточнить перед решением» (задание, раздел 6, Дашборд): значения расчёта сервиса, которые взяты из исходного файла
+ * и помечены «уточнить». Для формы права — затраты на землю при собственности и при аренде (решение 28.09.2026):
+ * арендная плата без договора или расчёта по методике не выдумывается — «не учтено».
+ */
+export function clarifyBeforeDecision(project: CalcProject, model: ProjectModel): ClarifyItem[] {
+  if (project.input.mode === "legacy") return [];
+  return (project.fromFile ?? [])
+    .filter((a) => a.status === "уточнить")
+    .map((a): ClarifyItem => {
+      if (a.param === "LAND.TENURE") {
+        const own = landCost(model, "собственность");
+        const lease = landCost(model, "аренда");
+        return {
+          param: a.param,
+          problem: `Форма права на участок не подтверждена: в расчёте — «${String(a.value)}» по исходному файлу (${a.derivation}).`,
+          impact:
+            own === null
+              ? "От формы права зависят затраты на землю: налог или арендная плата. Подтвердите форму права выпиской ЕГРН."
+              : `Затраты на землю при собственности — ${fmt(own.round())} руб. за весь срок${lease === null ? "; при аренде не учтены: нет договора аренды или расчёта по методике" : `, при аренде — ${fmt(lease.round())} руб.`}. Подтвердите форму права выпиской ЕГРН.`,
+          compare: [
+            { label: "собственность", amount: own },
+            { label: "аренда", amount: lease },
+          ],
+        };
+      }
+      if (a.param === "LAND.VRI_CHANGE") {
+        const fee = model.result.formulas["F.LAND.VRI_FEE"]?.value as Decimal | undefined;
+        return {
+          param: a.param,
+          problem: `Нужна ли смена ВРИ, не подтверждено: в расчёте — «нужна» по исходному файлу (${a.derivation}).`,
+          impact: `${fee === undefined ? "Плата за изменение ВРИ не посчитана: нет её расчёта по акту Москвы" : `Плата за изменение ВРИ — ${fmt(fee.round())} руб.`}; если смена не нужна, платы нет. Подтвердите ВРИ выпиской ЕГРН и ГПЗУ.`,
+        };
+      }
+      return { param: a.param, problem: `«${getParameter(a.param).name}» не подтверждено: в расчёте — значение из исходного файла (${a.derivation}).`, impact: a.note };
+    });
 }
 
 /** Тот же проект в режиме mode. */

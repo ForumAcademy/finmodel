@@ -20,6 +20,7 @@ import { irr, xirr } from "../lib/irr";
 import { annualizeQuarterly, QuarterGrid } from "../lib/quarters";
 import type { EscrowBalance } from "./escrow";
 import type { CashIn } from "./sales";
+import type { TaxPayments } from "./tax";
 
 const ZERO = new Decimal(0);
 const ONE = new Decimal(1);
@@ -145,9 +146,9 @@ export const F_FIN_FUNDING_NEED = stepwise(function F_FIN_FUNDING_NEED(ctx: Form
     const g = quarterGrid(ctx);
     return { need: g.isEnd(t) ? g.sum(Array.from({ length: t + 1 }, (_, m) => capexAt(capex, m)), t) : ZERO, cash_bop: null };
   }
-  // Налоги (F.TAX.PAYMENTS) — этап 6: до этого в потребность не входят
-  ctx.message("info", "Налоги в потребность в финансировании пока не входят: их расчёт появится на следующем этапе");
   const fees = ctx.formula<Decimal[]>("F.FIN.FEES");
+  // Налоги месяца посчитаны раньше в этом месяце: налог на прибыль — за прошлый год, НДС — за прошлый квартал
+  const taxes = ctx.formula<TaxPayments>("F.TAX.PAYMENTS");
   let cash = ZERO;
   if (t > 0) {
     const p = t - 1;
@@ -165,9 +166,10 @@ export const F_FIN_FUNDING_NEED = stepwise(function F_FIN_FUNDING_NEED(ctx: Form
       .sub(at(rep.interest_paid, p))
       .sub(at(rep.principal, p))
       .sub(capexAt(capex, p))
+      .sub(at(taxes.total, p))
       .sub(at(fees, p));
   }
-  const need = Decimal.max(capexAt(capex, t).add(at(fees, t)).sub(cash), ZERO);
+  const need = Decimal.max(capexAt(capex, t).add(at(taxes.total, t)).add(at(fees, t)).sub(cash), ZERO);
   return { need, cash_bop: cash };
 });
 

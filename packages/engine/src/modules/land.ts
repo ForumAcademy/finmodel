@@ -5,18 +5,25 @@
 import Decimal from "decimal.js";
 import type { FormulaContext } from "../context";
 import { CalcError } from "../context";
-import { dayBefore, daysBetween, eomonth, prevMonthEnd, maxDate, minDate, monthDiff, overlapDays, quarterMonthEnds, type IsoDate } from "../lib/dates";
+import { dayBefore, daysBetween, eomonth, isIsoDate, prevMonthEnd, maxDate, minDate, monthDiff, overlapDays, quarterMonthEnds, type IsoDate } from "../lib/dates";
 import { isMilestoneKey, milestone, milestones, vriChangeDate, type MilestoneRow } from "./time";
 
 const ONE = new Decimal(1);
 const ZERO = new Decimal(0);
 const MONTHS_PER_YEAR = 12;
 
-/** Период владения участком для налога: от приобретения до окончания передачи последней очереди. */
-function landPeriod(rows: MilestoneRow[]): { from: IsoDate; to: IsoDate } {
+/**
+ * Период владения участком для налога: от приобретения до окончания передачи последней очереди. Окончание передачи
+ * не заполнено — до РНВ очереди, с предупреждением (как у налога на прибыль, F.TAX.PROFIT_BASE).
+ */
+function landPeriod(ctx: FormulaContext, rows: MilestoneRow[], warn = false): { from: IsoDate; to: IsoDate } {
+  const missing = rows.filter((r) => !isIsoDate(r.handover_end)).map((r) => r.phase);
+  if (warn && missing.length > 0) {
+    ctx.message("warning", `Земельный налог посчитан до РНВ очередей ${missing.join(", ")}: не заполнено окончание передачи по актам. Заполните его, чтобы налог шёл до передачи квартир`, "TIME.MILESTONES", "LAND.HANDOVER_END_MISSING");
+  }
   return {
     from: minDate(rows.map((r) => milestone(r, "land_acquired"))),
-    to: maxDate(rows.map((r) => milestone(r, "handover_end"))),
+    to: maxDate(rows.map((r) => (isIsoDate(r.handover_end) ? r.handover_end : milestone(r, "rnv_date")))),
   };
 }
 
@@ -41,7 +48,7 @@ export function F_LAND_TAX_COEF(ctx: FormulaContext): Decimal[] {
   const over = ctx.requireNum("TAX.LAND_COEF_OVER_3Y");
   const thresholdMonths = ctx.requireNum("TIME.RNS_TO_RNV_TAX_YEARS").mul(MONTHS_PER_YEAR);
   const rows = milestones(ctx);
-  const { from, to } = landPeriod(rows);
+  const { from, to } = landPeriod(ctx, rows);
   const vri = vriChangeDate(rows);
   // Коэффициент действует с приобретения участка до госрегистрации прав на объект (≈ окончание передачи последней очереди);
   // до смены ВРИ не применяется — коэффициенты привязаны к ВРИ «жилищное строительство».
@@ -57,7 +64,7 @@ function landTax(ctx: FormulaContext, rows: MilestoneRow[], date: IsoDate[]): De
   const cadAfter = vri === null ? null : ctx.requireNum("LAND.CADASTRAL_VALUE_AFTER_VRI");
   const rate = ctx.requireNum("TAX.LAND_RATE");
   const coef = ctx.formula<Decimal[]>("F.LAND.TAX_COEF");
-  const { from, to } = landPeriod(rows);
+  const { from, to } = landPeriod(ctx, rows, true);
   return date.map((d, t) => {
     if (d < from || d > to) return ZERO;
     const value = cadAfter !== null && vri !== null && d >= vri ? cadAfter : cad;
@@ -106,6 +113,8 @@ export function F_LAND_TAX_OR_RENT(ctx: FormulaContext): Decimal[] {
 }
 
 export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
+  // Смена ВРИ не нужна — платы нет
+  if (ctx.param<boolean>("LAND.VRI_CHANGE") === false) return ZERO;
   const region = ctx.region();
   if (region.vri_fee.exists === false) return ZERO;
   // Формула региона (например, Москва — 593-ПП) в спецификацию не выписана: обязательный ручной ввод с документом (CLAUDE.md, правило 8).

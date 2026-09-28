@@ -4,10 +4,15 @@
  * в последнем месяце календарного квартала (март, июнь, сентябрь, декабрь) или в последнем месяце горизонта.
  */
 import Decimal from "decimal.js";
-import type { IsoDate } from "./dates";
+import { monthOf, type IsoDate } from "./dates";
 
 const MONTHS_PER_QUARTER = 3;
 export const QUARTERS_PER_YEAR = 4;
+
+/** Дата — последний месяц календарного квартала (март, июнь, сентябрь, декабрь). */
+export function isQuarterEnd(date: IsoDate): boolean {
+  return monthOf(date) % MONTHS_PER_QUARTER === 0;
+}
 
 export class QuarterGrid {
   /** Для месяца t — месяц конца его периода. */

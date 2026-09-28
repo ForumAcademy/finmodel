@@ -129,18 +129,28 @@ const QUARTERS_PER_YEAR = 4;
 const PERCENT = 100;
 
 /**
- * Значение расчёта сервиса, временно перенесённое из исходного файла без обоснования рынком (решение владельца
- * продукта 28.09.2026). Метка — «Экспертное значение», источник — исходный файл, статус — «не подтверждено».
+ * Значение расчёта сервиса, временно перенесённое из исходного файла (решения владельца продукта 28.09.2026):
+ * - рыночный рост цен — метка «Экспертное значение», статус «не подтверждено» (без обоснования рынком);
+ * - вехи, которых нет в исходнике явно (начало СМР), — метка «исходный файл».
  */
 export interface LegacyAssumption {
   param: ParameterId;
+  /** Для таблицы по очередям — столбец, который заполнен из файла (TIME.MILESTONES → construction_start). */
+  column?: string;
   value: unknown;
   /** Ячейки исходного файла, из которых взято значение. */
   cells: string;
   /** Как значение получено из ячеек, словами. */
   derivation: string;
-  status: "не подтверждено";
+  label: "Экспертное значение" | "исходный файл";
+  /** «не подтверждено» — значение без обоснования; «уточнить» — факт проекта, который нужно подтвердить документом. */
+  status?: "не подтверждено" | "уточнить";
   note: string;
+  /**
+   * Параметры, рост которых уже входит в это значение: если такой параметр заполнен, а значение из файла не
+   * пересмотрено, рост посчитается дважды (рыночный рост исходника включает рост по готовности).
+   */
+  includes?: ParameterId[];
 }
 
 const FROM_FILE_NOTE = "Перенесено из исходного файла, без обоснования рынком, требует подтверждения";
@@ -160,14 +170,81 @@ function legacyMarketGrowth(c: LegacyCase): LegacyAssumption | null {
     value: { by_year: { [start.slice(0, 4)]: annual }, after_last: "last" },
     cells: "План продаж!E30,E35,E40,E45,E50,E55",
     derivation: `рост цены ${new Decimal(q).mul(PERCENT).toString()}% в квартал, пересчитан в годовой: (1 + ${q})^4 − 1`,
+    label: "Экспертное значение",
     status: "не подтверждено",
     note: FROM_FILE_NOTE,
+    includes: ["SALES.PRICE_STAGE_UPLIFT"],
   };
+}
+
+/** Квартал текстом исходника («4 кв 2025») → последний день квартала. */
+function quarterEnd(text: unknown): string | null {
+  const m = typeof text === "string" ? /^\s*([1-4])\s*кв\s*(\d{4})\s*$/.exec(text) : null;
+  if (!m) return null;
+  const month = Number(m[1]) * LEGACY_QUARTER_MONTHS;
+  const last = new Date(Date.UTC(Number(m[2]), month, 0));
+  return last.toISOString().slice(0, 10);
+}
+
+/**
+ * Начало и окончание СМР для расчёта сервиса (решение владельца продукта 28.09.2026: даты СМР — из вех исходника
+ * ТЭПы!C6:C12, метка «исходный файл»). Отдельной даты начала в вехах нет: строка «Начало стройки» CF1!D4 ссылается
+ * на ТЭПы!C7 «срок получения РНС»; окончание — ТЭПы!C9 «Завершение СМР без отделки» (CF1!D5). Даты в исходнике
+ * одни на проект, поэтому ставятся всем очередям, где веха пуста; квартал — его последний день. В расчёте «как в
+ * исходном Excel» не подставляются: там флаги CF1!4–5 по тексту не срабатывают, и это воспроизводится как есть.
+ */
+const SMR_MILESTONES = [
+  { column: "construction_start", key: "rns", cells: "ТЭПы!C7 (на неё ссылается CF1!D4 «Начало стройки»)", note: "В вехах исходного файла начала СМР нет: строка «Начало стройки» листа CF1 ссылается на срок получения РНС" },
+  { column: "construction_end", key: "smr_end", cells: "ТЭПы!C9 (CF1!D5 «Завершение стройки»)", note: "В исходном файле окончание СМР одно на проект" },
+] as const;
+
+function legacySmrDates(c: LegacyCase): LegacyAssumption[] {
+  const texts = c.project_inputs["TIME.MILESTONES_TEXT"] as Record<string, unknown> | undefined;
+  return SMR_MILESTONES.flatMap((m) => {
+    const text = texts?.[m.key];
+    const date = quarterEnd(text);
+    if (!date) return [];
+    return [{ param: "TIME.MILESTONES" as ParameterId, column: m.column, value: date, cells: m.cells, derivation: `«${String(text)}» — последний день квартала, для всех очередей`, label: "исходный файл" as const, note: m.note }];
+  });
+}
+
+/**
+ * Права на участок из исходного файла (решение владельца продукта 28.09.2026): форма права неизвестна, исходник
+ * считает налог от кадастровой стоимости (CF1 строка 84) — собственность; в бюджете исходника есть плата за ВРИ
+ * (Бюджет, строка 22) — смена ВРИ нужна. Оба значения — «уточнить» до выписки ЕГРН.
+ */
+function legacyLandRights(c: LegacyCase): LegacyAssumption[] {
+  const out: LegacyAssumption[] = [];
+  const legacyRate = c.project_inputs["TAX.LAND_RATE_legacy"];
+  if (typeof legacyRate === "number") {
+    out.push({
+      param: "LAND.TENURE",
+      value: "собственность",
+      cells: "CF1!A84,D84",
+      derivation: "исходный файл считает налог от кадастровой стоимости участка — так платит собственник",
+      label: "исходный файл",
+      status: "уточнить",
+      note: "Форма права не подтверждена: подтвердите выпиской ЕГРН",
+    });
+  }
+  const vri = c.capex_legacy?.find((b) => b.item_id === "LAND_VRI");
+  if (vri && typeof vri.amount_F === "number" && vri.amount_F > 0) {
+    out.push({
+      param: "LAND.VRI_CHANGE",
+      value: true,
+      cells: `Бюджет!D${vri.budget_row}:F${vri.budget_row}`,
+      derivation: "в бюджете исходного файла есть плата за изменение ВРИ",
+      label: "исходный файл",
+      status: "уточнить",
+      note: "Нужна ли смена ВРИ, не подтверждено: подтвердите выпиской ЕГРН и ГПЗУ",
+    });
+  }
+  return out;
 }
 
 /** Значения расчёта сервиса, временно перенесённые из исходного файла (см. LegacyAssumption). */
 export function legacyAssumptions(c: LegacyCase): LegacyAssumption[] {
-  return [legacyMarketGrowth(c)].filter((x): x is LegacyAssumption => x !== null);
+  return [legacyMarketGrowth(c), ...legacySmrDates(c), ...legacyLandRights(c)].filter((x): x is LegacyAssumption => x !== null);
 }
 
 /**
@@ -212,7 +289,7 @@ function legacySales(c: LegacyCase, values: Partial<Record<ParameterId, unknown>
   values["SALES.PRODUCTS"] = products;
   values["SALES.PACE"] = pace;
   values["SALES.LEGACY_PRICE_GROWTH"] = [{ rate: sl.price_growth_quarterly, step_months: LEGACY_QUARTER_MONTHS }];
-  for (const a of legacyAssumptions(c)) values[a.param] = a.value;
+  for (const a of legacyAssumptions(c)) if (!a.column) values[a.param] = a.value;
   const pm = pi["SALES.PAYMENT_MIX"] as { installment: number; mortgage: number; full: number; down_payment: number; installment_quarters: number };
   const types = [...new Set(products.map((r) => r.product as string))];
   const mortgageDeals = new Decimal(pm.mortgage).add(pm.down_payment);

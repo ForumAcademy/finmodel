@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getFormula, type FormulaId } from "@fm/spec";
-import { calculate, type ResultSet } from "../src";
+import { calculate, computeProject, inMode, legacyProject, type ResultSet } from "../src";
 import { legacyInput, loadCase } from "./support/cases";
 
 /** Формула читает только то, что объявлено в её depends_on (formulas.yaml) — паспорт показателя не врёт. */
@@ -15,6 +15,13 @@ describe("след расчёта совпадает с depends_on специф�
   it("Дербеневская (концепция, расчёт «как в исходном Excel»)", () => {
     const r = calculate(legacyInput(loadCase("derbenevskaya_legacy")), { horizonMonths: 120 });
     expect(Object.keys(r.formulas).length).toBeGreaterThan(10);
+    expect(undeclared(r)).toEqual([]);
+  });
+
+  it("Дербеневская, расчёт сервиса без Excel: налоги, денежный поток, показатели", () => {
+    const demo = legacyProject(loadCase("derbenevskaya_legacy"), "Д");
+    const r = computeProject(inMode(demo, "normal")).result;
+    expect(r.formulas["F.KPI.IRR"]).toBeDefined();
     expect(undeclared(r)).toEqual([]);
   });
 

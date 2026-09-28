@@ -73,6 +73,11 @@ export function yearOf(date: IsoDate): number {
   return parts(date)[0];
 }
 
+/** Номер месяца даты (1–12). */
+export function monthOf(date: IsoDate): number {
+  return parts(date)[1];
+}
+
 /** Предыдущий день. */
 export function dayBefore(date: IsoDate): IsoDate {
   return addDays(date, -1);

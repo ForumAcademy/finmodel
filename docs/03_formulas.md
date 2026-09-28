@@ -453,13 +453,14 @@ parking_required = CEILING( Σ_k F.TEP.APT_COUNT[k] × norm(TEP.APT_MIX.avg_area
 **Почему так:** Нормативы обеспеченности — обязательное требование РНГП; число мест определяет подземную часть и выручку
 
 **Отклонённые варианты:**
-- Вбитое число без документа (862 в исходнике при нормативе ≈ 2 785)
+- Вбитое число без документа (862 в исходнике при нормативе Москвы 2 209)
+- Нормы по порядку типов квартир, как в таблице исходника (тип 1 — 0,8, тип 2 — 1,2, тип 3 — 1,6 → 2 785): 2118-ПП задаёт норму по площади квартиры, а тип 2 (60,5 м²) и тип 3 (92 м²) попадают в 0,8 и 1,2
 
 **Источники:** [S_MSK_PARKING_2118PP](https://mperspektiva.ru/topics/moskva-izmenila-normativy-obespechennosti-novostroek-parkovkami/), [S_SPB_NGP_257](https://base.garant.ru/43424438/), [S_SP_42_2026](https://www.nep.expert/news/sp-42-13330-2026/)
 
 **Исходный Excel:** `ТЭПы!J41:J44` → fix — J44 перебит числом 862
 
-**Контрольный пример:** `{'input': {'counts': [961, 720, 720], 'norms': [0.8, 1.2, 1.6]}, 'output': 2785}`
+**Контрольный пример:** `{'input': {'counts': [961, 720, 720], 'avg_area': [35.108, 60.53, 92], 'norms': [0.8, 0.8, 1.2]}, 'output': 2209}`
 
 ### `F.TEP.PARKING_COUNT` — Количество машино-мест в модели
 **Единица:** шт · **Размерность:** скаляр · **Статус:** verified
@@ -686,7 +687,7 @@ ground_parking = landscape − roads − green
 rent_end = MIN_p TIME.MILESTONES[p][LAND.RENT_END_MILESTONE]
 ```
 
-**Пояснение:** Аренда (решение владельца продукта 27.09.2026): ставка — по договору (уровень 4) или региональной методике; платёж по умолчанию поквартально авансом; неполные первый и последний кварталы — пропорционально дням, платёж за неполный первый квартал — в первый месяц аренды (решение владельца продукта 27.09.2026); индексация — по договору (раз в год с даты приобретения, если договор не говорит иное); аренда прекращается с даты передачи первого помещения — участок переходит в общую долевую собственность собственников помещений МКД (LAND.RENT_END_MILESTONE, по умолчанию handover_start первой очереди; needs_verification). Смена ВРИ: с месяца вехи vri_change_date — новая кадастровая стоимость; дата начала применения новой кадастровой стоимости (ст.391 НК РФ) — needs_verification.
+**Пояснение:** Аренда (решение владельца продукта 27.09.2026): ставка — по договору (уровень 4) или региональной методике; платёж по умолчанию поквартально авансом; неполные первый и последний кварталы — пропорционально дням, платёж за неполный первый квартал — в первый месяц аренды (решение владельца продукта 27.09.2026); индексация — по договору (раз в год с даты приобретения, если договор не говорит иное); аренда прекращается с даты передачи первого помещения — участок переходит в общую долевую собственность собственников помещений МКД (LAND.RENT_END_MILESTONE, по умолчанию handover_start первой очереди; needs_verification). Окончание передачи по актам не заполнено — налог и коэффициент считаются до РНВ очереди с предупреждением (как F.TAX.PROFIT_BASE; решение 28.09.2026). Смена ВРИ: с месяца вехи vri_change_date — новая кадастровая стоимость; дата начала применения новой кадастровой стоимости (ст.391 НК РФ) — needs_verification.
 
 **Обозначения:**
 - `land_pay[t]` — результат: земельный налог или арендная плата за месяц t, руб
@@ -721,7 +722,9 @@ rent_end = MIN_p TIME.MILESTONES[p][LAND.RENT_END_MILESTONE]
 **Простыми словами** (Плата за изменение вида разрешённого использования участка, руб): Плата городу за смену вида разрешённого использования участка, если она есть в регионе. В Москве считается от прироста кадастровой стоимости и коэффициента территории и платится в месяц смены.
 
 ```
-ЕСЛИ в регионе есть плата за изменение ВРИ (region.vri_fee.exists):
+ЕСЛИ LAND.VRI_CHANGE = нет:
+  vri_fee = 0
+ИНАЧЕ ЕСЛИ в регионе есть плата за изменение ВРИ (region.vri_fee.exists):
   vri_fee = region_formula(LAND.CADASTRAL_VALUE, LAND.CADASTRAL_VALUE_AFTER_VRI, …)
 ИНАЧЕ:
   vri_fee = 0
@@ -732,12 +735,13 @@ rent_end = MIN_p TIME.MILESTONES[p][LAND.RENT_END_MILESTONE]
 **Обозначения:**
 - `vri_fee` — результат: плата за изменение вида разрешённого использования, руб
 - `region_formula` — порядок расчёта платы, установленный актом региона
-**Зависит от:** `GEN.REGION_CODE`, `LAND.CADASTRAL_VALUE`, `LAND.CADASTRAL_VALUE_AFTER_VRI`, `LAND.VRI_FEE`
+**Зависит от:** `GEN.REGION_CODE`, `LAND.VRI_CHANGE`, `LAND.CADASTRAL_VALUE`, `LAND.CADASTRAL_VALUE_AFTER_VRI`, `LAND.VRI_FEE`
 
 **Почему так:** Плата — региональная; привязка к приросту кадастровой стоимости делает её воспроизводимой
 
 **Отклонённые варианты:**
 - 5 000 руб/м² ГНС (исходник Бюджет!D22) — экспертно, без источника
+- Считать плату всегда, когда она есть в регионе, — участок с подходящим ВРИ её не платит (LAND.VRI_CHANGE = нет)
 
 **Источники:** [S_MSK_VRI_593PP](https://base.garant.ru/70457992/de40175ab12d04d68f792b5b742a18fc/)
 
@@ -1063,12 +1067,12 @@ pace[k,t]      = share[k] × remaining[k,t−1]                       — спо
 ```
 price[k,t]        = start_price[k] × Π_{price_date[k] < date[τ] <= date[t]} (1 + g_month[τ]) × stage_factor[p,t]
 g_month[τ]        = (1 + SALES.PRICE_MARKET_GROWTH[year(τ)])^(1/12) − 1
-stage_factor[p,t] = Π_{s — стадия, пройденная к месяцу t} (1 + uplift[s])
+stage_factor[p,t] = Π_{s — стадия, пройденная к месяцу t} (1 + uplift[s]);  ЕСЛИ SALES.PRICE_STAGE_UPLIFT пусто: stage_factor = 1 и отметка «рост по стадиям не учтён»
 пройдена: «котлован» — progress[t] > 0; «25%», «50%», «75%» — progress[t] >= 25%, 50%, 75%; «РНВ» — date[t] >= rnv_date[p]
 расчёт «как в исходном Excel»: price[k,t] = start_price[k] × (1 + rate)^floor( (m(t) − 1) / step_months ),  m(t) — месяцев от price_date[k] до date[t]
 ```
 
-**Пояснение:** «Старт продаж» — точка отсчёта: стартовая цена уже цена этой стадии, надбавка к ней не применяется. Для машино-мест и кладовых цена — за штуку. После последнего года ряда SALES.PRICE_MARKET_GROWTH — рост последнего года, если в ряду after_last = last.
+**Пояснение:** «Старт продаж» — точка отсчёта: стартовая цена уже цена этой стадии, надбавка к ней не применяется. Для машино-мест и кладовых цена — за штуку. После последнего года ряда SALES.PRICE_MARKET_GROWTH — рост последнего года, если в ряду after_last = last. Пустая надбавка по стадиям — «не учтено» (решение владельца продукта 28.09.2026): цена растёт только по рынку, в расчёте предупреждение, на дашборде отметка. Надбавка не придумывается и не приравнивается к нулю молча.
 
 **Обозначения:**
 - `price[k,t]` — результат: цена 1 м² (шт) продукта k в месяце t, руб
@@ -1084,6 +1088,7 @@ stage_factor[p,t] = Π_{s — стадия, пройденная к месяцу
 **Почему так:** Цена растёт по двум причинам: рынок (инфляция цен) и снижение риска по мере готовности. Раздельно — чтобы сценарии были осмысленны. Готовность — по деньгам СМР (F.CAPEX.SMR_PROGRESS), одна на проект: бюджет ведётся без разбивки по очередям; «РНВ» — по дате очереди
 
 **Отклонённые варианты:**
+- Пустая надбавка по стадиям останавливает расчёт цены — без неё не считаются выручка, эскроу и кредит, хотя рыночный рост задан
 - Константа 2%/квартал на весь срок (исходник) — за 29 кварталов +77%, без связи со стройкой и рынком; остаётся только в расчёте «как в исходном Excel»
 - Готовность по F.CAPEX.ITEM_CASH — цикл: в платежах есть статьи-доли выручки (маркетинг, брокеридж, вознаграждение девелопера), а выручка зависит от цены
 
@@ -1201,7 +1206,7 @@ revenue_gross = Σ_{k,t} value[k,t]
 revenue_net   = revenue_gross − Σ output_vat
 ```
 
-**Пояснение:** Выручка без НДС считается с модулем налогов (этап 6, F.TAX.OUTPUT_VAT); до этого — только выручка с НДС. База статей-долей выручки бюджета (маркетинг, брокеридж, вознаграждение девелопера) — выручка с НДС.
+**Пояснение:** База статей-долей выручки бюджета (маркетинг, брокеридж, вознаграждение девелопера) — выручка с НДС.
 
 **Обозначения:**
 - `revenue_gross` — результат: выручка с НДС, руб
@@ -1404,13 +1409,13 @@ cash_bop[t] = cash_bop[t−1] + equity_in[t−1] + draw[t−1] + Σ_p release[p,
 «Как в исходном Excel»: need = расходы квартала (CF1!F18:AS18)
 ```
 
-**Пояснение:** Налоги появятся с этапом 6 (F.TAX.PAYMENTS); до этого taxes_paid = 0, и это показывается на экране. Свободные деньги проекта cash_bop ведутся здесь же и на этапе 6 совпадут с остатком денег F.CF.CASH_BALANCE. Деньги, пришедшие в месяце, тратятся со следующего месяца.
+**Пояснение:** Налоги месяца (F.TAX.PAYMENTS) считаются раньше потребности в том же месяце: налог на прибыль платится за прошлый год, НДС — за прошлый квартал. Свободные деньги проекта cash_bop совпадают с остатком денег F.CF.CASH_BALANCE прошлого месяца. Деньги, пришедшие в месяце, тратятся со следующего месяца.
 
 **Обозначения:**
 - `need[t]` — результат: потребность в финансировании месяца t, руб
 - `cash_bop[t]` — свободные деньги проекта на начало месяца, руб
 - `capex_cash[t]` — платежи по бюджету в месяце: Σ_i item_cash[i,t] (F.CAPEX.ITEM_CASH)
-- `taxes_paid[t]` — налоговые платежи (F.TAX.PAYMENTS, этап 6)
+- `taxes_paid[t]` — налоговые платежи (F.TAX.PAYMENTS)
 - `fees[t]` — комиссии банка (F.FIN.FEES)
 - `release[p,t]` — раскрытие эскроу очереди (F.ESC.BALANCE)
 - `dkp_cash[t]` — поступления по договорам купли-продажи, мимо эскроу (F.SALES.CASH_IN)
@@ -1418,7 +1423,7 @@ cash_bop[t] = cash_bop[t−1] + equity_in[t−1] + draw[t−1] + Σ_p release[p,
 - `repaid[t]` — погашение кредита и процентов (F.FIN.REPAYMENT)
 **Зависит от:** `F.CAPEX.ITEM_CASH`, `F.TAX.PAYMENTS`, `F.ESC.BALANCE`, `F.SALES.CASH_IN`, `F.FIN.FEES`, `F.FIN.EQUITY_IN`, `F.FIN.DRAW`, `F.FIN.REPAYMENT`, `F.TIME.DATE`
 
-**Значение за прошлый месяц (t−1):** `F.TAX.PAYMENTS`, `F.FIN.EQUITY_IN`, `F.FIN.DRAW`, `F.FIN.REPAYMENT`
+**Значение за прошлый месяц (t−1):** `F.FIN.EQUITY_IN`, `F.FIN.DRAW`, `F.FIN.REPAYMENT`
 
 **Почему так:** Сначала используются собственные поступления проекта, затем собственный капитал, затем кредит
 
@@ -1666,15 +1671,19 @@ eff_rate     = XIRR( bank_flow[t], date[t] )
 **Простыми словами** (НДС с продаж, руб): Из суммы облагаемых договоров выделяется НДС, включённый в цену. Квартиры по ДДУ не облагаются, ПСН, машино-места и продажи по ДКП — по правилам справочника.
 
 ```
-output_vat[k,t] = value[k,t] × TAX.VAT_RATE / (1 + TAX.VAT_RATE) × taxable(k, channel(t))
+output_vat[k,t] = value[k,t] × TAX.VAT_RATE / (1 + TAX.VAT_RATE) × taxable(k, channel(k,t))
+channel(k,t)    = ДДУ, если договор до РНВ очереди продукта и продукт продаётся по ДДУ с эскроу; иначе ДКП
+расчёт «как в исходном Excel»: output_vat = 0 — налоги исходника переносятся вместе с разделом «Расхождения»
 ```
+
+**Пояснение:** Строка режима ищется по продукту и каналу; если строки нет — ошибка «нет правила НДС» (значение не придумывается).
 
 **Обозначения:**
 - `output_vat[k,t]` — результат: НДС с реализации продукта k в месяце t, руб
 - `value[k,t]` — стоимость договоров (F.SALES.CONTRACT_VALUE)
 - `taxable(k, channel)` — 1, если продажа продукта k по этому каналу облагается НДС (по TAX.VAT_REGIME), иначе 0
-- `channel(t)` — канал продаж в месяце t: ДДУ или ДКП
-**Зависит от:** `F.SALES.CONTRACT_VALUE`, `TAX.VAT_RATE`, `TAX.VAT_REGIME`
+- `channel(k,t)` — канал продаж договора месяца t: ДДУ или ДКП
+**Зависит от:** `F.SALES.CONTRACT_VALUE`, `TAX.VAT_RATE`, `TAX.VAT_REGIME`, `SALES.PRODUCTS`, `F.TIME.FLAG_POST_RNV`, `TIME.MILESTONES`
 
 **Почему так:** Цена в договоре включает НДС → выделение 22/122. Облагаются только продукты/каналы из таблицы режима
 
@@ -1702,7 +1711,7 @@ input_share = TAX.INPUT_VAT_RECOVERABLE ?? ( taxable_revenue_net / revenue_net )
 - `input_share` — результат: доля входящего НДС к вычету
 - `taxable_revenue_net` — облагаемая НДС выручка без НДС за весь проект
 - `revenue_net` — вся выручка без НДС
-**Зависит от:** `TAX.INPUT_VAT_RECOVERABLE`, `F.TAX.OUTPUT_VAT`, `F.SALES.REVENUE_TOTAL`
+**Зависит от:** `TAX.INPUT_VAT_RECOVERABLE`, `F.TAX.OUTPUT_VAT`, `F.SALES.REVENUE_TOTAL`, `TAX.VAT_RATE`
 
 **Почему так:** Раздельный учёт (п.4 ст.170 НК РФ): НДС по освобождённым операциям включается в стоимость
 
@@ -1714,10 +1723,14 @@ input_share = TAX.INPUT_VAT_RECOVERABLE ?? ( taxable_revenue_net / revenue_net )
 **Простыми словами** (НДС к уплате или возмещению, руб): За квартал НДС с продаж минус вычет. Плюс платится равными частями в три месяца после квартала, минус возвращается через три месяца.
 
 ```
-vat_q = Σ_{t∈q} output_vat[t] − Σ_{t∈q} input_vat[t] × input_share
+vat_q         = Σ_{t∈q} output_vat[t] − Σ_{t∈q} input_vat[t] × input_share
+input_vat[t]  = Σ_i item_cash[i,t] × r[i] / (1 + r[i]),   r[i] = ставка НДС статьи × облагаемая доля статьи
+vat_paid[t]   = vat_q / TAX.VAT_PAY_MONTHS  в каждом из TAX.VAT_PAY_MONTHS месяцев после квартала q, если vat_q > 0
+vat_refund[t] = −vat_q  в месяце q_end + TAX.VAT_REFUND_LAG_M, если vat_q < 0
+расчёт «как в исходном Excel»: 0
 ```
 
-**Пояснение:** Если vat_q > 0 — НДС уплачивается равными долями в течение трёх месяцев, следующих за кварталом. Если vat_q < 0 — возмещение через три месяца после квартала.
+**Пояснение:** Квартал — календарный, по датам модели. Невозмещаемый входящий НДС (input_vat × (1 − input_share)) остаётся в стоимости и уменьшает прибыль. Платежи за последние кварталы, выходящие за горизонт, в денежный поток не попадают — горизонт расчёта продлевается до уплаты налога на прибыль за последний год.
 
 **Обозначения:**
 - `vat_q` — результат: НДС к уплате (+) или возмещению (−) за квартал q, руб
@@ -1725,48 +1738,54 @@ vat_q = Σ_{t∈q} output_vat[t] − Σ_{t∈q} input_vat[t] × input_share
 - `output_vat[t]` — НДС с реализации (F.TAX.OUTPUT_VAT)
 - `input_vat[t]` — входящий НДС по затратам
 - `input_share` — доля к вычету (F.TAX.INPUT_VAT_SHARE)
-**Зависит от:** `F.TAX.OUTPUT_VAT`, `F.CAPEX.ITEM_CASH`, `F.TAX.INPUT_VAT_SHARE`
+- `r[i]` — ставка НДС статьи бюджета с учётом облагаемой доли (как в F.CAPEX.ITEM_CASH)
+- `vat_paid, vat_refund` — результат: уплата и возмещение НДС по месяцам, руб
+**Зависит от:** `F.TAX.OUTPUT_VAT`, `F.CAPEX.ITEM_CASH`, `F.TAX.INPUT_VAT_SHARE`, `CAPEX.ITEMS`, `TAX.VAT_RATE`, `TAX.VAT_RATE_OPTIONS`, `TAX.VAT_PAY_MONTHS`, `TAX.VAT_REFUND_LAG_M`, `F.TIME.DATE`, `LAND.TENURE`, `LAND.LESSOR_TYPE`, `OPEX.OVERHEAD_VAT_SHARE`
 
-**Почему так:** Налоговый период по НДС — квартал; порядок уплаты — ст.174 НК РФ
+**Почему так:** Налоговый период по НДС — квартал; уплата — тремя равными долями в месяцы после квартала (п.1 ст.174 НК РФ); возмещение — после камеральной проверки (ст.88, ст.176 НК РФ)
 
 **Отклонённые варианты:**
 - 5 млн в квартал вручную (исходник CF1!M85:AA85)
 
-**Источники:** [S_NK_164](https://www.consultant.ru/document/cons_doc_LAW_28165/35cc6698564adc4507baa31c9cfdbb4f2516d068/), [S_NK_174](https://www.consultant.ru/document/cons_doc_LAW_28165/)
+**Источники:** [S_NK_164](https://www.consultant.ru/document/cons_doc_LAW_28165/35cc6698564adc4507baa31c9cfdbb4f2516d068/), [S_NK_174](https://www.consultant.ru/document/cons_doc_LAW_28165/cf8ce1f96c094ce8316b91e3ee5831f20a57a4a8/), [S_NK_176](https://www.consultant.ru/document/cons_doc_LAW_28165/fb50bd7a761ecf37ca1edb1d8651dd7b673b6bf1/)
 
 **Исходный Excel:** `CF1!F85:AS85, Бюджет!F54` → replace
 
 ### `F.TAX.PROFIT_BASE` — Налоговая база по налогу на прибыль
 **Единица:** руб · **Размерность:** t · **Статус:** needs_verification
 
-**Простыми словами** (Налоговая база по налогу на прибыль, руб): Экономия по ДДУ признаётся в месяц окончания передачи очереди, прибыль по ДКП — в месяц продажи. Общие затраты делятся между очередями по продаваемой площади.
+**Простыми словами** (Налоговая база по налогу на прибыль, руб): Экономия по ДДУ признаётся в месяц окончания передачи очереди, прибыль по ДКП — в месяц продажи. Затраты делятся между договорами пропорционально их стоимости. Проценты и комиссии банка вычитаются в налоге за год.
 
 ```
-base[t]       = economy[p] × 1{ t = handover_end[p] } + profit_dkp[t] − other_expenses[t]
-economy[p]    = ddu_funds_net[p] − cost_transferred[p]
-profit_dkp[t] = dkp_revenue_net[t] − avg_cost_m2 × dkp_sold_area[t]
+base[t]            = Σ_p economy[p] × 1{ t = recognition[p] } + profit_dkp[t]
+economy[p]         = ddu_funds_net[p] − cost × ddu_value[p] / value_total
+profit_dkp[t]      = dkp_revenue_net[t] − cost × dkp_value[t] / value_total
+cost               = capex_total − input_vat_recoverable
+recognition[p]     = handover_end[p];  если пусто — rnv_date[p] и предупреждение «дата окончания передачи не задана»
+расчёт «как в исходном Excel»: 0
 ```
 
-**Пояснение:** Экономия по ДДУ признаётся в месяце окончания передачи очереди; общие затраты распределяются между очередями пропорционально продаваемой площади. Прибыль по ДКП — в месяце продажи. Прочие расходы, не относящиеся к целевому финансированию, — в периоде возникновения.
+**Пояснение:** Экономия по ДДУ признаётся в месяце окончания передачи очереди. Затраты (бюджет без возмещаемого НДС) распределяются между договорами пропорционально стоимости договоров: продаваемая площадь квартир и ПСН в м², а машино-места — в штуках, их нельзя сложить. Проценты и комиссии банка вычитаются из базы года в F.TAX.PROFIT_TAX: они считаются помесячно вместе с кредитом.
 
 **Обозначения:**
 - `base[t]` — результат: налоговая база по налогу на прибыль в месяце t, руб
 - `economy[p]` — экономия застройщика по ДДУ очереди p
-- `ddu_funds_net[p]` — средства дольщиков очереди p без НДС
-- `cost_transferred[p]` — затраты на передаваемые объекты очереди p
-- `handover_end[p]` — окончание передачи ключей очереди p
+- `ddu_funds_net[p]` — средства дольщиков очереди p без НДС: договоры до РНВ по ДДУ за вычетом НДС (F.TAX.OUTPUT_VAT)
+- `ddu_value[p], dkp_value[t]` — стоимость договоров ДДУ очереди p и ДКП месяца t с НДС
+- `value_total` — стоимость всех договоров проекта с НДС
+- `cost` — затраты проекта: бюджет (F.CAPEX.TOTAL) без возмещаемого входящего НДС (F.TAX.VAT_PAYABLE)
+- `recognition[p]` — месяц признания экономии очереди p
+- `handover_end[p]` — окончание передачи ключей очереди p (TIME.MILESTONES)
+- `rnv_date[p]` — дата РНВ очереди p (TIME.MILESTONES)
 - `profit_dkp[t]` — прибыль от продаж по ДКП
 - `dkp_revenue_net[t]` — выручка по ДКП без НДС
-- `avg_cost_m2` — средняя себестоимость 1 м²
-- `dkp_sold_area[t]` — площадь, проданная по ДКП
-- `other_expenses[t]` — прочие расходы вне целевого финансирования
-**Зависит от:** `F.SALES.CONTRACT_VALUE`, `F.CAPEX.TOTAL`, `F.FIN.INTEREST`, `TIME.MILESTONES`
-
-**Значение за прошлый месяц (t−1):** `F.FIN.INTEREST`
+**Зависит от:** `F.SALES.CONTRACT_VALUE`, `F.TAX.OUTPUT_VAT`, `F.TAX.VAT_PAYABLE`, `F.CAPEX.TOTAL`, `SALES.PRODUCTS`, `F.TIME.FLAG_POST_RNV`, `TIME.MILESTONES`, `F.TIME.DATE`
 
 **Почему так:** Средства дольщиков — целевое финансирование (пп.14 п.1 ст.251 НК РФ); финрез (экономия) — внереализационный доход в периоде исполнения всех обязательств по ДДУ (письмо Минфина от 28.07.2026 № 03-03-08/65074)
 
 **Отклонённые варианты:**
+- Затраты по продаваемой площади (прежняя редакция) — машино-места в штуках не складываются с м²
+- Проценты в базе месяца (прежняя редакция) — проценты считаются помесячно вместе с кредитом, а налоговые платежи входят в потребность в кредите: получался цикл
 - 5,7% от выручки (исходник Бюджет!M55)
 - (выручка − расходы − собственный капитал) × 25% (исходник Бюджет!J55:K55) — капитал не уменьшает базу
 
@@ -1780,19 +1799,24 @@ profit_dkp[t] = dkp_revenue_net[t] − avg_cost_m2 × dkp_sold_area[t]
 **Простыми словами** (Налог на прибыль, руб): База года минус убытки прошлых лет в пределах установленной доли, умноженная на ставку. Платится в марте следующего года.
 
 ```
+base[y]      = Σ_{t∈y} F.TAX.PROFIT_BASE[t] − Σ_{t∈y} interest[t] − Σ_{t∈y} fees[t]
 loss_used[y] = MIN( loss_cf[y−1], MAX(base[y], 0) × TAX.LOSS_CARRYFORWARD_LIMIT )
 tax[y]       = ( MAX(base[y], 0) − loss_used[y] ) × TAX.PROFIT_RATE
 loss_cf[y]   = loss_cf[y−1] − loss_used[y] + MAX(−base[y], 0)
+расчёт «как в исходном Excel»: 0
 ```
 
-**Пояснение:** Налог уплачивается в марте следующего года (упрощение; авансовые платежи — опция).
+**Пояснение:** Налог за год считается в первом месяце следующего года (помесячно вместе с кредитом: проценты и комиссии года к этому месяцу известны) и уплачивается в месяце TAX.PROFIT_TAX_PAY_MONTH (F.TAX.PAYMENTS). Авансовые платежи в течение года не моделируются (упрощение).
 
 **Обозначения:**
 - `tax[y]` — результат: налог на прибыль за год y, руб
-- `base[y]` — налоговая база за год (F.TAX.PROFIT_BASE)
+- `base[y]` — налоговая база за год: F.TAX.PROFIT_BASE минус проценты и комиссии банка года
+- `interest[t], fees[t]` — проценты и комиссии по кредиту (F.FIN.INTEREST, F.FIN.FEES)
 - `loss_used[y]` — убытки прошлых лет, зачтённые в году y
 - `loss_cf[y]` — непогашенные убытки на конец года
-**Зависит от:** `F.TAX.PROFIT_BASE`, `TAX.PROFIT_RATE`, `TAX.LOSS_CARRYFORWARD_LIMIT`
+**Зависит от:** `F.TAX.PROFIT_BASE`, `F.FIN.INTEREST`, `F.FIN.FEES`, `TAX.PROFIT_RATE`, `TAX.LOSS_CARRYFORWARD_LIMIT`, `F.TIME.DATE`
+
+**Значение за прошлый месяц (t−1):** `F.FIN.INTEREST`, `F.FIN.FEES`
 
 **Почему так:** Ставка 25% (ст.284), ограничение переноса убытков (ст.283)
 
@@ -1803,25 +1827,32 @@ loss_cf[y]   = loss_cf[y−1] − loss_used[y] + MAX(−base[y], 0)
 ### `F.TAX.PAYMENTS` — Налоговые платежи месяца
 **Единица:** руб · **Размерность:** t · **Статус:** needs_verification
 
-**Простыми словами** (Налоги месяца, руб): НДС к уплате (минус возмещение), налог на прибыль и земельный налог или аренда месяца.
+**Простыми словами** (Налоги месяца, руб): НДС к уплате (минус возмещение) и налог на прибыль за прошлый год в марте. Земельный налог или аренда — в бюджете, отдельной статьёй.
 
 ```
-taxes_paid[t] = vat_paid[t] − vat_refund[t] + profit_tax_paid[t] + land_pay[t]
+taxes_paid[t]      = vat_paid[t] − vat_refund[t] + profit_tax_paid[t]
+profit_tax_paid[t] = tax[год(t) − 1] × 1{ месяц(t) = TAX.PROFIT_TAX_PAY_MONTH }
+расчёт «как в исходном Excel»: 0
 ```
+
+**Пояснение:** Земельный налог или аренда в эту строку не входят: они уже в бюджете статьёй LAND_TAX_OR_RENT (F.CAPEX.ITEM_CASH) — иначе двойной счёт.
 
 **Обозначения:**
 - `taxes_paid[t]` — результат: налоговые платежи месяца t, руб
 - `vat_paid, vat_refund` — уплата и возмещение НДС (F.TAX.VAT_PAYABLE)
 - `profit_tax_paid[t]` — уплата налога на прибыль (F.TAX.PROFIT_TAX)
-- `land_pay[t]` — земельный налог или аренда (F.LAND.TAX_OR_RENT)
-**Зависит от:** `F.TAX.VAT_PAYABLE`, `F.TAX.PROFIT_TAX`, `F.LAND.TAX_OR_RENT`
+- `tax[y]` — налог на прибыль за год y (F.TAX.PROFIT_TAX)
+**Зависит от:** `F.TAX.VAT_PAYABLE`, `F.TAX.PROFIT_TAX`, `TAX.PROFIT_TAX_PAY_MONTH`, `F.TIME.DATE`
 
-**Почему так:** Единая строка налогов в CF
+**Значение за прошлый месяц (t−1):** `F.TAX.PROFIT_TAX`
+
+**Почему так:** Единая строка налогов в CF; сроки — п.1 ст.174 и п.1 ст.287 НК РФ
 
 **Отклонённые варианты:**
+- Земельный налог и в бюджете, и в налогах (прежняя редакция) — двойной счёт
 - Налог на имущество 0,2% кадастровой стоимости земли (исходник CF1!84): объект незавершённого строительства и квартиры-товары налогом на имущество по кадастровой стоимости у застройщика в общем случае не облагаются; земля облагается земельным налогом
 
-**Источники:** [S_NK_394](https://www.consultant.ru/document/cons_doc_LAW_28165/fd2ac88b2311a6053a128cfa43aa07672e826213/)
+**Источники:** [S_NK_174](https://www.consultant.ru/document/cons_doc_LAW_28165/cf8ce1f96c094ce8316b91e3ee5831f20a57a4a8/), [S_NK_287](https://www.consultant.ru/document/cons_doc_LAW_28165/17f089448303baae2053c544b5f1423572c91bda/)
 
 **Исходный Excel:** `CF1!F81:AS86` → replace
 
@@ -1842,7 +1873,7 @@ cfads[t] = Σ_p release[p,t] + dkp_cash[t] − Σ_i item_cash[i,t] − taxes_pai
 - `dkp_cash[t]` — поступления по ДКП
 - `item_cash[i,t]` — платежи по бюджету (F.CAPEX.ITEM_CASH)
 - `taxes_paid[t]` — налоги (F.TAX.PAYMENTS)
-**Зависит от:** `F.ESC.BALANCE`, `F.SALES.CASH_IN`, `F.CAPEX.ITEM_CASH`, `F.TAX.PAYMENTS`
+**Зависит от:** `F.ESC.BALANCE`, `F.SALES.CASH_IN`, `F.CAPEX.ITEM_CASH`, `F.TAX.PAYMENTS`, `F.TIME.DATE`
 
 **Почему так:** Деньги дольщиков доступны застройщику только после раскрытия эскроу — поэтому в CFADS входит раскрытие, а не продажи
 
@@ -1890,14 +1921,14 @@ fcfe[t] = cfads[t] + draw[t] − principal_repaid[t] − interest_paid[t] − fe
 cash[t] = cash[t−1] + fcfe[t] + equity_in[t] − distributions[t]
 ```
 
-**Пояснение:** Проверка: cash[t] >= 0. Если остаток отрицательный, дефицит cash_gap[t] = −cash[t] покрывает акционер.
+**Пояснение:** Проверка: cash[t] >= 0. Если остаток отрицательный, дефицит cash_gap[t] = −cash[t] покрывает акционер. Выплаты акционеру до конца расчёта не моделируются (distributions = 0): свободные деньги остаются в проекте и видны в остатке.
 
 **Обозначения:**
 - `cash[t]` — результат: остаток денежных средств на конец месяца, руб
 - `fcfe[t]` — поток акционера (F.CF.FCFE)
 - `equity_in[t]` — взнос акционера (F.FIN.EQUITY_IN)
 - `distributions[t]` — выплаты акционеру
-**Зависит от:** `F.CF.FCFE`, `F.FIN.EQUITY_IN`
+**Зависит от:** `F.CF.FCFE`, `F.FIN.EQUITY_IN`, `F.TIME.DATE`
 
 **Почему так:** Разрыв ликвидности должен быть виден явно
 
@@ -1922,7 +1953,7 @@ T_end = MAX( t_last_sale, t_release_last, t_debt_repaid, t_profit_tax_last ) + T
 - `t_release_last` — месяц раскрытия эскроу последней очереди (F.TIME.FLAG_ESCROW_RELEASE)
 - `t_debt_repaid` — месяц полного погашения долга и процентов (F.FIN.DEBT)
 - `t_profit_tax_last` — месяц уплаты налога на прибыль за последний год (F.TAX.PROFIT_TAX)
-**Зависит от:** `F.SALES.SOLD_AREA`, `F.TIME.FLAG_ESCROW_RELEASE`, `F.FIN.DEBT`, `F.TAX.PROFIT_TAX`, `TIME.HORIZON_TAIL_M`, `TIME.HORIZON_WARN_M`
+**Зависит от:** `F.SALES.SOLD_AREA`, `F.TIME.FLAG_ESCROW_RELEASE`, `F.FIN.DEBT`, `F.TAX.PROFIT_TAX`, `TIME.HORIZON_TAIL_M`, `TIME.HORIZON_WARN_M`, `TAX.PROFIT_TAX_PAY_MONTH`
 
 **Почему так:** Срок проекта — следствие вех, продаж, кредита и налогов; ручной срок обрезает хвост продаж, погашение долга и уплату налога
 
@@ -1974,7 +2005,7 @@ npv_equity  = Σ_t fcfe[t]  / (1 + r)^((date[t] − GEN.VALUATION_DATE) / 365)
 - `cfads[t]` — поток проекта (F.CF.CFADS)
 - `fcfe[t]` — поток акционера (F.CF.FCFE)
 - `r` — ставка дисконтирования (F.KPI.DISCOUNT_RATE)
-**Зависит от:** `F.CF.CFADS`, `F.CF.FCFE`, `F.KPI.DISCOUNT_RATE`, `GEN.VALUATION_DATE`
+**Зависит от:** `F.CF.CFADS`, `F.CF.FCFE`, `F.KPI.DISCOUNT_RATE`, `GEN.VALUATION_DATE`, `F.TIME.DATE`
 
 **Почему так:** Дисконтирование по фактическим датам (XNPV)
 
@@ -1999,7 +2030,7 @@ irr_equity  = XIRR( fcfe[t], date[t] )
 - `irr_project` — результат: IRR проекта
 - `irr_equity` — результат: IRR акционера
 - `XIRR` — внутренняя норма доходности по датам потоков
-**Зависит от:** `F.CF.CFADS`, `F.CF.FCFE`
+**Зависит от:** `F.CF.CFADS`, `F.CF.FCFE`, `F.TIME.DATE`
 
 **Почему так:** IRR — ставка, обнуляющая NPV
 
@@ -2026,11 +2057,11 @@ ROI          = net_profit / (capex_total_net + Σ interest)
 
 **Обозначения:**
 - `revenue_net` — выручка без НДС (F.SALES.REVENUE_TOTAL)
-- `capex_total_net` — бюджет без НДС
+- `capex_total_net` — бюджет без возмещаемого НДС: невозмещаемый НДС — часть затрат (п.2 ст.170 НК РФ)
 - `interest` — проценты (F.FIN.INTEREST)
 - `fees` — комиссии (F.FIN.FEES)
 - `profit_tax` — налог на прибыль (F.TAX.PROFIT_TAX)
-**Зависит от:** `F.SALES.REVENUE_TOTAL`, `F.CAPEX.TOTAL`, `F.FIN.INTEREST`, `F.TAX.PROFIT_TAX`
+**Зависит от:** `F.SALES.REVENUE_TOTAL`, `F.CAPEX.TOTAL`, `F.TAX.VAT_PAYABLE`, `F.FIN.INTEREST`, `F.FIN.FEES`, `F.TAX.PROFIT_TAX`
 
 **Почему так:** Недисконтированные показатели — с корректными названиями
 
@@ -2051,10 +2082,10 @@ markup  = wavg_price_all / cost_m2 − 1
 **Обозначения:**
 - `cost_m2` — результат: себестоимость 1 м² продаваемой площади, руб
 - `markup` — результат: наценка к себестоимости, доля
-- `capex_total_net` — бюджет без НДС
+- `capex_total_net` — бюджет без возмещаемого НДС (невозмещаемый НДС — часть затрат)
 - `interest` — проценты (F.FIN.INTEREST)
-- `wavg_price_all` — средневзвешенная цена всех продаж (F.SALES.WAVG_PRICE)
-**Зависит от:** `F.CAPEX.TOTAL`, `F.FIN.INTEREST`, `F.TEP.SALEABLE_AREA`, `F.SALES.WAVG_PRICE`
+- `wavg_price_all` — средневзвешенная цена продаж в м² (F.SALES.WAVG_PRICE); машино-места и кладовые продаются штуками и не входят
+**Зависит от:** `F.CAPEX.TOTAL`, `F.FIN.INTEREST`, `F.TEP.SALEABLE_AREA`, `F.SALES.WAVG_PRICE`, `F.TAX.VAT_PAYABLE`, `F.SALES.CONTRACT_VALUE`, `F.SALES.SOLD_AREA`, `SALES.PRODUCTS`, `TIME.MILESTONES`
 
 **Почему так:** Делитель — вся продаваемая площадь
 
@@ -2080,7 +2111,7 @@ payback_date = MIN{ date[t] : t > t_peak,  Σ_{τ<=t} fcfe[τ] >= 0 }
 - `payback_date` — результат: дата окупаемости
 - `t_peak` — месяц пика потребности
 - `fcfe[τ]` — поток акционера (F.CF.FCFE)
-**Зависит от:** `F.CF.FCFE`
+**Зависит от:** `F.CF.FCFE`, `F.TIME.DATE`
 
 **Почему так:** Ключевые для инвестора показатели ликвидности
 
@@ -2104,7 +2135,7 @@ market_value_unsold[t] = unsold_area[t] × price[t]
 - `capex_cash[τ]` — платежи по бюджету
 - `unsold_area[t]` — непроданный остаток площадей
 - `price[t]` — цена 1 м² (F.SALES.PRICE)
-**Зависит от:** `F.FIN.DEBT`, `F.FIN.INTEREST`, `F.CAPEX.ITEM_CASH`, `F.SALES.PRICE`
+**Зависит от:** `F.FIN.DEBT`, `F.FIN.INTEREST`, `F.CAPEX.ITEM_CASH`, `F.SALES.PRICE`, `F.SALES.SOLD_AREA`, `SALES.PRODUCTS`, `F.TIME.DATE`, `TIME.MILESTONES`
 
 **Почему так:** LTV — к рыночной стоимости активов (остаток площадей + эскроу), а не к дисконтированной стоимости капитала
 
@@ -2130,7 +2161,7 @@ LLCR[t] = Σ_{τ>=t}^{t_maturity} cfads[τ] / (1 + rate_avg)^((date[τ]−date[t
 - `t_maturity` — месяц погашения кредита
 - `rate_avg` — средняя ставка кредита
 - `debt[t] + accrued[t]` — долг с процентами
-**Зависит от:** `F.CF.CFADS`, `F.FIN.RATE`, `F.FIN.DEBT`
+**Зависит от:** `F.CF.CFADS`, `F.FIN.RATE`, `F.FIN.DEBT`, `F.TIME.DATE`
 
 **Почему так:** Общепринятое определение в проектном финансировании: приведённый CFADS за оставшийся срок кредита / остаток долга. Минимальное значение по периодам — ковенант
 
@@ -2159,7 +2190,7 @@ dkp_share   = dkp_revenue / revenue_gross
 - `value[t]` — стоимость договоров (F.SALES.CONTRACT_VALUE)
 - `flag_dkp[t]` — флаг продаж по ДКП (F.TIME.FLAG_POST_RNV)
 - `revenue_gross` — выручка с НДС (F.SALES.REVENUE_TOTAL)
-**Зависит от:** `F.SALES.CONTRACT_VALUE`, `F.TIME.FLAG_POST_RNV`
+**Зависит от:** `F.SALES.CONTRACT_VALUE`, `F.TIME.FLAG_POST_RNV`, `SALES.PRODUCTS`, `TIME.MILESTONES`
 
 **Почему так:** Показатель риска: доля выручки, не участвующей в покрытии кредита эскроу
 
@@ -2182,7 +2213,7 @@ PAYMENT_MIX_SUM   : |mortgage + full + installment − 1| < 1e-9
 SCHEDULE_SUM      : |Σ_t w[i,t] − 1| < 1e-9 для каждой статьи i
 SOLD_LE_STOCK     : Σ_t sold[k,t] <= stock[k]
 UNSOLD_AT_END     : remaining[k,T] > 0 → предупреждение
-REVENUE_EQ_CF     : Σ value = Σ поступлений (эскроу + ДКП) + дебиторка на конец
+REVENUE_EQ_CF     : Σ value = Σ раскрытия эскроу + Σ продаж после ввода + остаток эскроу на T + дебиторка на T; остаток эскроу и дебиторка > 0 → предупреждение
 BUDGET_EQ_CF      : Σ бюджета по статьям = Σ затрат в CF
 ESCROW_NONNEG     : esc_bal >= 0
 DEBT_LE_LIMIT     : Σ draw <= limit
@@ -2196,6 +2227,10 @@ STAGE_INPUTS      : обязательные входы TEP для GEN.PROJECT_S
 GPZU_LIMITS       : F.CHECK.GPZU_LIMITS без превышений (или есть решение об отклонении)
 APART_ALLOWED     : F.TEP.APART_AREA > 0 → GPZU.APART_ALLOWED = да
 GFA_SHARES_SUM    : стадия «оценка участка» → TEP.RES_GFA_SHARE + TEP.APART_GFA_SHARE <= 1
+GFA_SPLIT_LE_ABOVE: res + apart + nonres (F.TEP.GFA_SPLIT) <= F.TEP.GFA_ABOVE
+DDU_AFTER_RNS     : очередь с продажами по ДДУ → sales_start >= rns_date
+PHASE_WINDOWS     : у каждой очереди есть продукт (иначе предупреждение); расчёт сервиса — у каждого продукта есть месяц продаж (F.TIME.FLAG_PRESALE или F.TIME.FLAG_POST_RNV = 1)
+SOLD_LE_MARKET    : продажи в месяц <= ёмкость рынка (F.BENCH.MARKET_PACE)
 UNDERGROUND_CAP   : F.CHECK.UNDERGROUND_CAPACITY (стадия «концепция»)
 BENCH_MIN_COMPS   : число аналогов >= BENCH.MARKET_MIN_COMPS ИЛИ экспертное обоснование
 APT_MIX_SHARE_SUM : стадия «оценка участка» → |Σ_k area_share[k] − 1| < 1e-9
@@ -2205,7 +2240,7 @@ LESSOR_REQUIRED   : LAND.TENURE = аренда → LAND.LESSOR_TYPE задан
 HORIZON_LONG      : F.CF.HORIZON > TIME.HORIZON_WARN_M → предупреждение
 ```
 
-**Пояснение:** Свод проверок модели. APART_ALLOWED проверяется по вложенному ГПЗУ; если апартаменты не допускаются, продукт «апартаменты» недоступен. BENCH_MIN_COMPS: если пар «квартиры / апартаменты» меньше BENCH.MIN_PAIRS, скидка апартаментов — экспертная (уровень 5), без блокировки расчёта. UNDERGROUND_CAP даёт ошибку или предупреждение по вместимости подземной части. Проверка, у которой не заполнены входы, не запускается: статус «ждёт данных», в число ошибок не входит (решение владельца продукта 28.09.2026). Незаполненные обязательные поля — метка «Заполните» и счётчик на своей вкладке, не ошибка проверки. T — последний месяц модели.
+**Пояснение:** Свод проверок модели. APART_ALLOWED проверяется по вложенному ГПЗУ; если апартаменты не допускаются, продукт «апартаменты» недоступен. BENCH_MIN_COMPS: если пар «квартиры / апартаменты» меньше BENCH.MIN_PAIRS, скидка апартаментов — экспертная (уровень 5), без блокировки расчёта. UNDERGROUND_CAP даёт ошибку или предупреждение по вместимости подземной части. Проверка, у которой не заполнены входы, не запускается: статус «ждёт данных», в число ошибок не входит (решение владельца продукта 28.09.2026). Незаполненные обязательные поля — метка «Заполните» и счётчик на своей вкладке, не ошибка проверки. T — последний месяц модели. Результат — список {проверка, статус: сходится / ошибка / предупреждение / ждёт данных}. Проверки PAYMENT_MIX_SUM, SCHEDULE_SUM, SOLD_LE_STOCK, UNSOLD_AT_END, CASH_NONNEG, PARKING_NORM, APT_AREA_MATCH, APART_ALLOWED, GFA_SHARES_SUM, HORIZON_LONG выполняются в своих формулах (F.SALES.*, F.CAPEX.SCHEDULE_WEIGHT, F.CF.*, F.TEP.*) и здесь не повторяются. В расчёте «как в исходном Excel» найденное показывается справкой, а не ошибкой: он повторяет исходник как есть, расхождения исходника собраны в разделе «Расхождения». SOLD_LE_MARKET, UNDERGROUND_CAP, BENCH_MIN_COMPS, NCS_DEVIATION ждут аналогов и бенчмарков. DDU_AFTER_RNS — ч.1 ст.3 214-ФЗ: деньги дольщиков привлекаются только после получения разрешения на строительство.
 
 **Обозначения:**
 - `T` — последний месяц модели
@@ -2216,11 +2251,11 @@ HORIZON_LONG      : F.CF.HORIZON > TIME.HORIZON_WARN_M → предупрежд�
 - `cash[t]` — остаток денег (F.CF.CASH_BALANCE)
 - `deviation` — отклонение СМР от НЦС (F.CAPEX.NCS_BENCH)
 - `apt_check` — расхождение квартирографии и ТЭП (F.TEP.APT_AREA_CHECK)
-**Зависит от:** `F.CHECK.GPZU_LIMITS`, `F.CHECK.UNDERGROUND_CAPACITY`, `LAND.CADASTRAL_VALUE_AFTER_VRI`, `LAND.TENURE`, `LAND.LESSOR_TYPE`, `TIME.MILESTONES`, `F.CF.HORIZON`, `TIME.HORIZON_WARN_M`
+**Зависит от:** `F.CHECK.GPZU_LIMITS`, `F.CHECK.UNDERGROUND_CAPACITY`, `LAND.CADASTRAL_VALUE_AFTER_VRI`, `LAND.TENURE`, `LAND.LESSOR_TYPE`, `TIME.MILESTONES`, `F.TEP.GFA_SPLIT`, `F.TEP.GFA_ABOVE`, `SALES.PRODUCTS`, `F.TIME.FLAG_PRESALE`, `F.TIME.FLAG_POST_RNV`, `F.SALES.CONTRACT_VALUE`, `F.SALES.CASH_IN`, `F.ESC.BALANCE`, `F.FIN.DRAW`, `F.FIN.LIMIT`, `F.FIN.DEBT`
 
 **Почему так:** Ни одна из этих ошибок исходника не должна повториться незаметно
 
-**Источники:** `S_EXPERT`
+**Источники:** `S_EXPERT`, [S_214_ART3](https://www.consultant.ru/document/cons_doc_LAW_51038/24a7b7f2b0571ac53f7b789c337316109c23d1a7/)
 
 ### `F.CHECK.GPZU_LIMITS` — Проверка проекта по предельным параметрам ГПЗУ
 **Единица:** bool · **Размерность:** скаляр · **Статус:** verified

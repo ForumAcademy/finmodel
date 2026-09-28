@@ -8,7 +8,7 @@
  */
 import Decimal from "decimal.js";
 import type { FormulaContext } from "../context";
-import { CalcError } from "../context";
+import { CalcError, DependencyError } from "../context";
 import { isIsoDate, monthDiff, yearOf, type IsoDate } from "../lib/dates";
 import { fmt, fmtQuarter, parsePercent } from "../lib/format";
 import { growth } from "./capex";
@@ -23,7 +23,7 @@ export type RowSeries = Record<string, Decimal[]>;
 
 /** Продукты, которые продаются штуками (машино-места, кладовые); остальные — квадратными метрами. */
 const PIECE_PRODUCTS = new Set(["машино-места", "кладовые"]);
-const CHANNEL_DDU = "ДДУ_эскроу";
+export const CHANNEL_DDU = "ДДУ_эскроу";
 
 /** Строка SALES.PRODUCTS (столбцы — parameters.yaml). */
 interface ProductRow {
@@ -224,6 +224,9 @@ interface LegacyGrowth {
   step_months: number;
 }
 
+/** Ключ отметки «рост по стадиям не учтён». */
+export const STAGE_UPLIFT_NOT_COUNTED = "SALES.STAGE_UPLIFT_NOT_COUNTED";
+
 export function F_SALES_PRICE(ctx: FormulaContext): RowSeries {
   const date = ctx.formula<IsoDate[]>("F.TIME.DATE");
   const list = products(ctx);
@@ -262,7 +265,11 @@ export function F_SALES_PRICE(ctx: FormulaContext): RowSeries {
     if (!gMonth.has(y)) gMonth.set(y, ONE.add(market(y)).pow(ONE.div(MONTHS_PER_YEAR)));
     return gMonth.get(y) as Decimal;
   };
-  const uplift = ctx.require<UpliftRow[]>("SALES.PRICE_STAGE_UPLIFT");
+  // Пустая надбавка — «не учтено»: цена растёт только по рынку, в сообщениях отметка (решение владельца продукта 28.09.2026)
+  const uplift = ctx.param<UpliftRow[]>("SALES.PRICE_STAGE_UPLIFT") ?? [];
+  if (ctx.param("SALES.PRICE_STAGE_UPLIFT") === null) {
+    ctx.message("warning", "Рост цены по стадиям готовности не учтён: надбавка не заполнена, цена растёт только по рынку. Заполните надбавку по стадиям.", "SALES.PRICE_STAGE_UPLIFT", STAGE_UPLIFT_NOT_COUNTED);
+  }
   if (!Array.isArray(uplift)) throw new CalcError("Рост цены по стадиям: нужен список строк", "SALES.PRICE_STAGE_UPLIFT");
   const stages = uplift
     .map((r) => ({ test: stageTest(r.stage), k: ONE.add(r.uplift ?? 0) }))
@@ -400,7 +407,7 @@ export function F_SALES_END_PRICE(ctx: FormulaContext): Record<string, Decimal |
   return out;
 }
 
-/** Выручка: с НДС — сейчас; без НДС — с модулем налогов (этап 6). */
+/** Выручка с НДС и без НДС (null — НДС с продаж не посчитан). */
 export interface Revenue {
   gross: Decimal;
   net: Decimal | null;
@@ -410,8 +417,16 @@ export interface Revenue {
 export function F_SALES_REVENUE_TOTAL(ctx: FormulaContext): Revenue {
   const value = ctx.formula<RowSeries>("F.SALES.CONTRACT_VALUE");
   const byRow = Object.fromEntries(Object.entries(value).map(([k, s]) => [k, sum(s)]));
-  ctx.message("info", "Выручка без НДС появится с расчётом налогов (этап 6)");
-  return { gross: Object.values(byRow).reduce((s, x) => s.add(x), ZERO), net: null, byRow };
+  const gross = Object.values(byRow).reduce((s, x) => s.add(x), ZERO);
+  // Выручка — база статей-долей бюджета: без НДС с продаж она всё равно считается, net остаётся пустым
+  let net: Decimal | null = null;
+  try {
+    const vat = ctx.formula<{ byRow: RowSeries }>("F.TAX.OUTPUT_VAT");
+    net = gross.sub(Object.values(vat.byRow).reduce((s, xs) => s.add(sum(xs)), ZERO));
+  } catch (e) {
+    if (!(e instanceof DependencyError)) throw e;
+  }
+  return { gross, net, byRow };
 }
 
 export const SALES_FORMULAS = {
