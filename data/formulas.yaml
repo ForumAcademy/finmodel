@@ -1,0 +1,2492 @@
+# Каталог формул расчётного ядра.
+# Каждая формула — «паспорт»: что считаем, как, почему именно так, что отклонено, на чём основано, откуда пришло из исходника.
+#
+# Нотация выражений (язык-нейтральный псевдокод, реализуется 1:1 в packages/engine):
+#   t            — индекс месяца (0..T-1), date[t] — последний день месяца
+#   p            — очередь (phase), k — продукт/тип квартир, i — статья бюджета
+#   X[t-1]       — значение в месяце t−1 (для t=0 → 0)
+#   Σ_t, Σ_k     — суммы по индексу
+#   ID параметров — из parameters.yaml, ID формул — F.*
+#   1{условие}   — индикатор (1 если истина, иначе 0)
+#
+# Поля: id, module, name, unit, dims, expr, depends_on, rationale (почему так), rejected (какие варианты отклонены и почему),
+#       source_ids, legacy (ячейки исходника и вердикт), status (verified | needs_verification), example (контрольный пример).
+#   expr         — только формула (условия — ЕСЛИ / ИНАЧЕ); пояснения текстом — в note.
+#   note         — необязательное пояснение словами (проверки, оговорки, ссылки на акты).
+#   terms        — необязательная расшифровка промежуточных обозначений из expr («need[t]» → что это).
+#   lag_depends_on — подмножество depends_on, для которого берётся значение прошлого месяца X[t-1]. Такие связи
+#                    разрывают цикл в графе (ставка ПФ ← покрытие эскроу за t−1); любой другой цикл — ошибка валидатора.
+
+formulas:
+
+  # =====================================================================
+  # TIME — временная шкала и флаги
+  # =====================================================================
+
+  - id: F.TIME.DATE
+    module: TIME
+    name: "Дата конца месяца t"
+    plain:
+      title: "Дата конца месяца расчёта"
+      how: "Расчёт идёт по месяцам начиная с месяца даты начала модели. Каждому месяцу соответствует дата его последнего дня, к ней привязаны платежи и поступления месяца."
+    unit: дата
+    dims: [t]
+    expr: "date[t] = EOMONTH(GEN.MODEL_START_DATE, t)"
+    terms:
+      "date[t]": "последний день месяца t"
+    depends_on: [GEN.MODEL_START_DATE]
+    rationale: "Единая месячная шкала для всех модулей; отчёты агрегируют месяцы в кварталы/годы"
+    rejected:
+      - "Квартальный шаг исходника: проценты и покрытие эскроу считаются грубо, раскрытие эскроу сдвигается до 3 месяцев"
+    source_ids: [S_EXPERT]
+    legacy: {cells: "CF1!E2:AS2", verdict: fix, issue: "F2 = EDATE, далее EOMONTH — разные функции в одном ряду"}
+    status: verified
+
+  - id: F.TIME.DAYS
+    module: TIME
+    name: "Дней в месяце t"
+    plain:
+      title: "Дней в месяце расчёта"
+      how: "Число дней в каждом месяце расчёта. Нужно для процентов по кредиту и платежей, которые делятся пропорционально дням."
+    unit: дни
+    dims: [t]
+    expr: |
+      days[t] = date[t] − date[t−1]
+      days[0] = DAY(date[0])
+    terms:
+      "days[t]": "число дней в месяце t"
+      "date[t]": "последний день месяца t (F.TIME.DATE)"
+      "DAY(x)": "номер дня в дате x"
+    depends_on: [F.TIME.DATE]
+    rationale: "Проценты по кредиту начисляются по фактическим дням (факт/365), как в кредитных договорах"
+    rejected: []
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F3:AS3", verdict: keep}
+    status: verified
+
+  - id: F.TIME.FLAG_CONSTRUCTION
+    module: TIME
+    name: "Флаг периода строительства очереди"
+    plain:
+      title: "Идёт ли стройка очереди в этом месяце"
+      how: "Месяцы, когда идёт стройка очереди: от начала до окончания строительства по вехам проекта."
+    unit: "0/1"
+    dims: [p, t]
+    expr: "flag_constr[p,t] = 1{ construction_start[p] <= date[t] < construction_end[p] }"
+    terms:
+      "flag_constr[p,t]": "1 — месяц t входит в период строительства очереди p, иначе 0"
+      "construction_start[p]": "дата начала СМР очереди p (TIME.MILESTONES)"
+      "construction_end[p]": "дата окончания СМР очереди p (TIME.MILESTONES)"
+      "date[t]": "последний день месяца t (F.TIME.DATE)"
+    depends_on: [TIME.MILESTONES, F.TIME.DATE]
+    rationale: "Сравнение настоящих дат; определяет выборку ПФ и распределение СМР"
+    rejected:
+      - "Текстовые вехи исходника («4 кв 2025») — сравнение даты с текстом всегда ложно, флаги строки CF1!4–5 были нулевыми"
+    source_ids: [S_GRK_51]
+    legacy: {cells: "CF1!F4:AS5", verdict: fix, issue: "D4, D5 ссылаются на текст ТЭПы!C7, C9"}
+    status: verified
+
+  - id: F.TIME.FLAG_PRESALE
+    module: TIME
+    name: "Флаг продаж по ДДУ (эскроу)"
+    plain:
+      title: "Идут ли продажи по ДДУ в этом месяце"
+      how: "Месяцы продаж по ДДУ с деньгами на эскроу: от старта продаж до разрешения на ввод."
+    unit: "0/1"
+    dims: [p, t]
+    expr: "flag_ddu[p,t] = 1{ sales_start[p] <= date[t] < rnv_date[p] }"
+    terms:
+      "flag_ddu[p,t]": "1 — в месяце t очередь p продаётся по ДДУ (эскроу), иначе 0"
+      "sales_start[p]": "дата старта продаж очереди p (TIME.MILESTONES)"
+      "rnv_date[p]": "дата РНВ очереди p (TIME.MILESTONES)"
+      "date[t]": "последний день месяца t (F.TIME.DATE)"
+    depends_on: [TIME.MILESTONES, F.TIME.DATE]
+    rationale: "До РНВ продажи возможны только по ДДУ с эскроу (ст.15.4 214-ФЗ); старт — не раньше РНС (ст.51 ГрК) и публикации проектной декларации"
+    rejected:
+      - "Исходник: граница продаж по эскроу = «окончание ПФ» (CF1!D6), а не РНВ очереди; флаги AB8:AS8 перебиты нулями вручную"
+    source_ids: [S_214_ART15_4, S_GRK_51, S_GRK_55]
+    legacy: {cells: "CF1!F8:AS9", verdict: fix}
+    status: verified
+
+  - id: F.TIME.FLAG_POST_RNV
+    module: TIME
+    name: "Флаг продаж по ДКП (после РНВ)"
+    plain:
+      title: "Идут ли продажи по ДКП в этом месяце"
+      how: "Месяцы после разрешения на ввод. В них продажи идут по ДКП, и деньги приходят застройщику напрямую."
+    unit: "0/1"
+    dims: [p, t]
+    expr: "flag_dkp[p,t] = 1{ date[t] >= rnv_date[p] }"
+    terms:
+      "flag_dkp[p,t]": "1 — в месяце t очередь p продаётся по ДКП (после РНВ), иначе 0"
+      "rnv_date[p]": "дата РНВ очереди p (TIME.MILESTONES)"
+      "date[t]": "последний день месяца t (F.TIME.DATE)"
+    depends_on: [TIME.MILESTONES, F.TIME.DATE]
+    rationale: "После РНВ нераспроданные помещения продаются по ДКП, деньги поступают застройщику напрямую"
+    rejected: []
+    source_ids: [S_GRK_55]
+    legacy: {cells: "CF1!F9:AS9", verdict: fix}
+    status: verified
+
+  - id: F.TIME.FLAG_ESCROW_RELEASE
+    module: TIME
+    name: "Флаг месяца раскрытия эскроу очереди"
+    plain:
+      title: "Месяц раскрытия эскроу очереди"
+      how: "Дата разрешения на ввод очереди плюс задержка раскрытия эскроу. В этот месяц застройщик получает деньги с эскроу и гасит проектный кредит."
+    unit: "0/1"
+    dims: [p, t]
+    expr: |
+      flag_release[p,t] = 1{ t == month_index(rnv_date[p]) + TIME.ESCROW_RELEASE_LAG_M }
+      расчёт «как в исходном Excel»: flag_release[p,t] = 1{ t == month_index(TIME.LEGACY_ESCROW_RELEASE_DATE) } для всех очередей
+    note: "Лаг по умолчанию 3 месяца (консервативно), 1 месяц — для чувствительности. Тот же месяц раскрытия определяет погашение проектного финансирования и конец начисления процентов (F.FIN.REPAYMENT через F.ESC.BALANCE), чтобы проценты не считались до другой даты, чем раскрытие. Расчёт «как в исходном Excel» повторяет исходник: одна дата раскрытия, проставленная руками (CF1!AB6)."
+    terms:
+      "flag_release[p,t]": "1 — в месяце t раскрывается эскроу очереди p, иначе 0"
+      "month_index(x)": "номер месяца модели, в который попадает дата x"
+      "rnv_date[p]": "дата РНВ очереди p (TIME.MILESTONES)"
+    depends_on: [TIME.MILESTONES, TIME.ESCROW_RELEASE_LAG_M, F.TIME.DATE, TIME.LEGACY_ESCROW_RELEASE_DATE]
+    rationale: "ч.6 ст.15.5 214-ФЗ — перечисление не позднее 10 рабочих дней после РНВ; раскрытие по каждой очереди отдельно"
+    rejected:
+      - "Раскрытие одной датой для всех очередей по «окончанию ПФ» (исходник) — завышает процентные расходы по ранним очередям"
+    source_ids: [S_214_ART15_5]
+    legacy: {cells: "CF1!F6:AS6", verdict: fix, issue: "AB6 = 1 проставлено руками"}
+    status: verified
+
+  # =====================================================================
+  # TEP — площади
+  # =====================================================================
+
+  # Источник площадей зависит от GEN.PROJECT_STAGE (см. шапку раздела TEP в parameters.yaml):
+  #   «оценка участка» — предельные параметры ГПЗУ/ПЗЗ + коэффициенты уровня 4/5;
+  #   «концепция»      — ТЭП архитектора (уровень 4, вложение обязательно).
+
+  - id: F.TEP.GFA_ABOVE
+    module: TEP
+    name: "ГНС наземной части в модели"
+    plain:
+      title: "Площадь наземной части (ГНС), м²"
+      how: "На стадии «концепция» берётся из ТЭП архитектора. На стадии «оценка участка» — предел из ГПЗУ, а если его нет, пятно застройки × средняя этажность."
+      example: "В проекте площадь наземной части — {=}."
+    unit: м2
+    dims: []
+    expr: |
+      ЕСЛИ GEN.PROJECT_STAGE = «концепция»:
+        gfa_above = TEP.GFA_ABOVE
+      ЕСЛИ GEN.PROJECT_STAGE = «оценка участка»:
+        ЕСЛИ GPZU.MAX_GFA_ABOVE задана:  gfa_above = GPZU.MAX_GFA_ABOVE
+        ИНАЧЕ:                           gfa_above = TEP.FOOTPRINT_AREA × TEP.AVG_FLOORS
+    note: "На стадии «концепция» берётся ГНС из ТЭП архитектора. На стадии «оценка участка» — предельная суммарная поэтажная площадь из ГПЗУ/ПЗЗ, а если она там не указана — пятно застройки × средняя этажность. Соответствие пределам ГПЗУ проверяет F.CHECK.GPZU_LIMITS (на стадии оценки — автоматически)."
+    terms:
+      "gfa_above": "результат: ГНС наземной части в модели, м²"
+    depends_on: [GEN.PROJECT_STAGE, TEP.GFA_ABOVE, GPZU.MAX_GFA_ABOVE, TEP.FOOTPRINT_AREA, TEP.AVG_FLOORS]
+    rationale: "До концепции объём застройки ограничен предельными параметрами разрешённого строительства (ст.38 ГрК РФ): суммарная поэтажная площадь из ГПЗУ/ПЗЗ — прямой предел; если её нет — пятно застройки × средняя этажность, где пятно не больше участка × максимальный процент застройки. После концепции — ТЭП архитектора, который сверяется с пределами ГПЗУ"
+    rejected:
+      - "Ввод ГНС числом на стадии оценки без документа — не проверяется по ГПЗУ"
+      - "Молча ограничивать пятно MIN(пятно, участок × % застройки) — скрывает ошибку ввода; вместо этого блокирующая ошибка F.CHECK.GPZU_LIMITS"
+      - "Одна «СПП (ГНС)» без указания стадии и документа (исходник ТЭПы!C19)"
+    source_ids: [S_GRK_38, S_PROJECT_DOCS]
+    legacy: {cells: "ТЭПы!C19", verdict: fix, issue: "вводилось числом без указания, из ГПЗУ или из концепции"}
+    status: verified
+
+  - id: F.TEP.GFA_SPLIT
+    module: TEP
+    name: "ГНС жилой, апартаментной и нежилой части в модели"
+    plain:
+      title: "Площадь жилой, апартаментной и нежилой частей, м²"
+      how: "На стадии «концепция» берётся из документов. На стадии «оценка участка» наземная площадь делится по заданным долям жилья и апартаментов, остаток — нежилая часть."
+      example: "Жилая часть {=.res|м2}, апартаменты {=.apart|м2}, нежилая часть {=.nonres|м2}."
+    unit: м2
+    dims: []
+    expr: |
+      ЕСЛИ GEN.PROJECT_STAGE = «концепция» ИЛИ разделение задано в ГПЗУ/ППТ:
+        res_gfa    = TEP.RES_GFA
+        apart_gfa  = TEP.APART_GFA
+        nonres_gfa = TEP.NONRES_GFA
+      ИНАЧЕ (стадия «оценка участка»):
+        res_gfa    = F.TEP.GFA_ABOVE × TEP.RES_GFA_SHARE
+        apart_gfa  = F.TEP.GFA_ABOVE × TEP.APART_GFA_SHARE
+        nonres_gfa = F.TEP.GFA_ABOVE × (1 − TEP.RES_GFA_SHARE − TEP.APART_GFA_SHARE)
+    note: "На стадии «оценка участка» площади берутся из ГПЗУ/ППТ, если документ задаёт разделение (жилая, нежилая, при апартаментах — апартаментная часть); иначе считаются долями от ГНС наземной части. Ошибка, если TEP.RES_GFA_SHARE + TEP.APART_GFA_SHARE > 1. Апартаменты (apart_gfa > 0) допускаются, только если ГПЗУ допускает объекты гостиничного назначения — GPZU.APART_ALLOWED (проверка F.CHECK.ALL → APART_ALLOWED)."
+    terms:
+      "res_gfa": "результат: ГНС жилой части, м²"
+      "apart_gfa": "результат: ГНС апартаментной части, м²"
+      "nonres_gfa": "результат: ГНС нежилой части (коммерция, встроенные соцобъекты), м²"
+    depends_on: [GEN.PROJECT_STAGE, TEP.RES_GFA, TEP.APART_GFA, TEP.NONRES_GFA, F.TEP.GFA_ABOVE, TEP.RES_GFA_SHARE, TEP.APART_GFA_SHARE]
+    rationale: "Жилая, апартаментная и нежилая части имеют разные коэффициенты продаваемой площади, разные продукты, цены и НДС. Разделение берётся из документа, а при его отсутствии — долями, чтобы части в сумме давали ГНС наземную"
+    rejected:
+      - "Одну часть из документа, а другую — долей: смешение документа и допущения, сумма может не совпасть с ГНС"
+      - "Считать апартаменты частью жилой ГНС: апартаменты — нежилые помещения с другим ВРИ, НДС и ипотекой"
+    source_ids: [S_GRK_38, S_PROJECT_DOCS, S_COMPANY_ACTUALS, S_ROSREESTR_P0412]
+    legacy: {cells: "ТЭПы!C20:C21", verdict: keep}
+    status: verified
+
+  - id: F.TEP.APT_AREA
+    module: TEP
+    name: "Площадь квартир в модели (для продажи, по ДДУ)"
+    plain:
+      title: "Площадь квартир, м²"
+      how: "На стадии «концепция» берётся из ТЭП архитектора. На стадии «оценка участка» — жилая часть × коэффициент полезной площади квартир."
+      example: "В проекте площадь квартир — {=}."
+    unit: м2
+    dims: []
+    expr: |
+      ЕСЛИ GEN.PROJECT_STAGE = «концепция»:       apt_area_total = TEP.APT_AREA
+      ЕСЛИ GEN.PROJECT_STAGE = «оценка участка»:  apt_area_total = res_gfa × TEP.APT_EFFICIENCY
+    terms:
+      "apt_area_total": "результат: площадь квартир для продажи, м²"
+      "res_gfa": "ГНС жилой части (F.TEP.GFA_SPLIT), м²"
+    depends_on: [GEN.PROJECT_STAGE, TEP.APT_AREA, F.TEP.GFA_SPLIT, TEP.APT_EFFICIENCY]
+    rationale: "Площадь квартиры для продажи — площадь по ДДУ: общая площадь жилого помещения (ч.5 ст.15 ЖК РФ) плюс лоджии × 0,5, балконы × 0,3, террасы × 0,3, веранды × 1,0 (Приказ Минстроя № 854/пр); обмер — Приказ Росреестра № П/0393, приложение 2. До концепции площадь квартир получают из ГНС жилой части через коэффициент, подтверждённый фактом компании (уровень 4) или экспертом (уровень 5)"
+    rejected:
+      - "Ввод итоговой площади квартир на стадии оценки без коэффициента — непроверяемо"
+      - "Обратный расчёт коэффициента из заданной площади (исходник ТЭПы!D22 = C22/C20)"
+      - "Общая площадь по ЖК без лоджий/балконов — не совпадает с площадью в ДДУ, по которой считается выручка"
+    source_ids: [S_ZHK_15, S_MINSTROY_854, S_ROSREESTR_P0393, S_PROJECT_DOCS, S_COMPANY_ACTUALS]
+    legacy: {cells: "ТЭПы!C22, ТЭПы!D22", verdict: fix, issue: "площадь вбита числом, коэффициент получен обратным делением"}
+    status: verified
+
+  - id: F.TEP.COMM_AREA
+    module: TEP
+    name: "Площадь ПСН в модели"
+    plain:
+      title: "Площадь коммерческих помещений (ПСН), м²"
+      how: "На стадии «концепция» берётся из ТЭП архитектора. На стадии «оценка участка» — нежилая часть × коэффициент полезной площади ПСН."
+      example: "В проекте площадь ПСН — {=}."
+    unit: м2
+    dims: []
+    expr: |
+      ЕСЛИ GEN.PROJECT_STAGE = «концепция»:       comm_area = TEP.COMM_AREA
+      ЕСЛИ GEN.PROJECT_STAGE = «оценка участка»:  comm_area = nonres_gfa × TEP.COMM_EFFICIENCY
+    terms:
+      "comm_area": "результат: площадь коммерческих помещений (ПСН), м²"
+      "nonres_gfa": "ГНС нежилой части (F.TEP.GFA_SPLIT), м²"
+    depends_on: [GEN.PROJECT_STAGE, TEP.COMM_AREA, F.TEP.GFA_SPLIT, TEP.COMM_EFFICIENCY]
+    rationale: "Та же логика, что для квартир, со своим коэффициентом: у нежилой части иная доля продаваемой площади. Обмер — Приказ Росреестра № П/0393, приложение 2"
+    rejected:
+      - "Применять к нежилой части коэффициент квартир — разная планировочная эффективность"
+      - "Коэффициент 0,8 без назначения (исходник ТЭПы!D23)"
+    source_ids: [S_ROSREESTR_P0393, S_PROJECT_DOCS, S_COMPANY_ACTUALS]
+    legacy: {cells: "ТЭПы!C23", verdict: keep}
+    status: verified
+
+  - id: F.TEP.APART_AREA
+    module: TEP
+    name: "Площадь апартаментов в модели"
+    plain:
+      title: "Площадь апартаментов, м²"
+      how: "Считается, только если ГПЗУ допускает объекты гостиничного назначения, иначе ноль. Берётся из ТЭП архитектора или равна апартаментной части × коэффициент полезной площади."
+      example: "В проекте площадь апартаментов — {=}."
+    unit: м2
+    dims: []
+    expr: |
+      ЕСЛИ GPZU.APART_ALLOWED = нет:               apart_area = 0
+      ИНАЧЕ ЕСЛИ GEN.PROJECT_STAGE = «концепция»:       apart_area = TEP.APART_AREA
+      ИНАЧЕ ЕСЛИ GEN.PROJECT_STAGE = «оценка участка»:  apart_area = apart_gfa × TEP.APART_EFFICIENCY
+    note: "Апартаменты возможны, только если ГПЗУ допускает объекты гостиничного назначения. Подсказка в интерфейсе: продукту соответствует ВРИ 4.7 «Гостиничное обслуживание» (LAND.VRI_CODES, П/0412)."
+    terms:
+      "apart_area": "результат: площадь апартаментов для продажи, м²"
+      "apart_gfa": "ГНС апартаментной части (F.TEP.GFA_SPLIT), м²"
+    depends_on: [GEN.PROJECT_STAGE, TEP.APART_AREA, F.TEP.GFA_SPLIT, TEP.APART_EFFICIENCY, GPZU.APART_ALLOWED, LAND.VRI_CODES]
+    rationale: "Апартаменты — нежилые помещения гостиничного назначения. Разрешение подтверждается ГПЗУ проекта (уровень 4, вложение): слово «апартаменты» в классификаторе ВРИ (П/0412) не используется, связь апартаментов с кодом 4.7 «Гостиничное обслуживание» — практика, поэтому код 4.7 — только подсказка, а решающий документ — ГПЗУ. Площадь — по той же логике, что квартиры, со своим коэффициентом; обмер — П/0393"
+    rejected:
+      - "Разрешать апартаменты без проверки ГПЗУ — продукт может оказаться недопустимым на участке"
+      - "Решать по наличию кода 4.7 в ВРИ — классификатор не упоминает апартаменты, решающий документ — ГПЗУ"
+      - "Применять к апартаментам коэффициент квартир — другая планировочная эффективность"
+    source_ids: [S_PROJECT_DOCS, S_ROSREESTR_P0412, S_ROSREESTR_P0393, S_COMPANY_ACTUALS]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.TEP.STORAGE
+    module: TEP
+    name: "Кладовые: количество и площадь в модели"
+    plain:
+      title: "Кладовые: количество, шт, и площадь, м²"
+      how: "На стадии «концепция» берётся из ТЭП архитектора. На стадии «оценка участка» — число квартир × кладовых на квартиру, площадь — число кладовых × средняя площадь."
+      example: "Кладовых {=.count|шт}, площадь {=.area|м2}."
+    unit: шт
+    dims: []
+    expr: |
+      ЕСЛИ GEN.PROJECT_STAGE = «концепция»:
+        storage_count = TEP.STORAGE_COUNT
+        storage_area  = TEP.STORAGE_AREA
+      ЕСЛИ GEN.PROJECT_STAGE = «оценка участка»:
+        storage_count = FLOOR( Σ_k F.TEP.APT_COUNT[k] × TEP.STORAGE_PER_APT )
+        storage_area  = storage_count × TEP.STORAGE_AVG_AREA
+    note: "Площадь кладовых входит в подземную часть (F.TEP.GFA_BELOW) и сверх неё не добавляется."
+    terms:
+      "storage_count": "результат: количество кладовых, шт"
+      "storage_area": "результат: площадь кладовых, м²"
+      "k": "тип квартир из квартирографии"
+      "FLOOR(x)": "округление вниз до целого"
+    depends_on: [GEN.PROJECT_STAGE, TEP.STORAGE_COUNT, TEP.STORAGE_AREA, F.TEP.APT_COUNT, TEP.STORAGE_PER_APT, TEP.STORAGE_AVG_AREA]
+    rationale: "Кладовые продаются поштучно и размещаются в подземной части. До концепции количество определяется обеспеченностью на квартиру по концепциям компании (уровень 4), округление вниз — нельзя продать больше, чем построено"
+    rejected:
+      - "Добавлять площадь кладовых к ГНС сверх подземной части — двойной счёт"
+      - "Фиксированное количество без привязки к числу квартир"
+    source_ids: [S_COMPANY_ACTUALS, S_PROJECT_DOCS, S_ROSREESTR_P0393]
+    legacy: {cells: "ТЭПы!E50", verdict: fix, issue: "«Прочие помещения» = 0"}
+    status: verified
+
+  - id: F.TEP.APT_COUNT
+    module: TEP
+    name: "Количество квартир по типу"
+    plain:
+      title: "Количество квартир по типам, шт"
+      how: "На стадии «концепция» берётся из квартирографии. На стадии «оценка участка» площадь квартир делится между типами по долям и на среднюю площадь квартиры типа, с округлением вниз."
+      example: "Всего квартир — {=|шт}."
+    unit: шт
+    dims: [k]
+    expr: |
+      ЕСЛИ GEN.PROJECT_STAGE = «концепция»:       count[k] = TEP.APT_MIX.count[k]
+      ЕСЛИ GEN.PROJECT_STAGE = «оценка участка»:  count[k] = FLOOR( TEP.APT_MIX.area_share[k] × apt_area_total / TEP.APT_MIX.avg_area[k] )
+    note: "На стадии «оценка участка» ошибка, если доли площади по типам в сумме не равны 1: |Σ_k area_share[k] − 1| > 1e-9."
+    terms:
+      "count[k]": "результат: количество квартир типа k, шт"
+      "k": "тип квартир из квартирографии"
+      "apt_area_total": "площадь квартир для продажи (F.TEP.APT_AREA), м²"
+      "FLOOR(x)": "округление вниз до целого"
+    depends_on: [GEN.PROJECT_STAGE, TEP.APT_MIX, F.TEP.APT_AREA]
+    rationale: "Квартира — целое число. На стадии оценки квартирография задаётся долями площади и средней площадью типа, количество вычисляется; округление вниз гарантирует, что продаётся не больше площади, чем есть"
+    rejected:
+      - "ROUND — может дать площадь больше F.TEP.APT_AREA"
+      - "Дробное количество (исходник: дробные лоты ПСН 136,1 × 80 м², План продаж!43)"
+      - "Одновременный ввод количества и долей (исходник ТЭПы!C41:C43 и F41:F43) — расходятся"
+    source_ids: [S_PROJECT_DOCS, S_COMPANY_ACTUALS]
+    legacy: {cells: "ТЭПы!F41:F43", verdict: keep}
+    status: verified
+    example: {input: {area_share: 0.25, apt_area_total: 143560, avg_area: 35.108}, output: 1022}
+
+  - id: F.TEP.APT_TYPE_AREA
+    module: TEP
+    name: "Площадь квартир по типу"
+    plain:
+      title: "Площадь квартир по типам, м²"
+      how: "Для каждого типа число квартир умножается на среднюю площадь квартиры."
+      example: "Всего по типам — {=}."
+    unit: м2
+    dims: [k]
+    expr: "apt_area[k] = F.TEP.APT_COUNT[k] × TEP.APT_MIX.avg_area[k]"
+    terms:
+      "apt_area[k]": "результат: площадь квартир типа k, м²"
+      "k": "тип квартир из квартирографии"
+    depends_on: [F.TEP.APT_COUNT, TEP.APT_MIX]
+    rationale: "Количество и средняя площадь — первичные данные квартирографии; средняя площадь — по ДДУ, как F.TEP.APT_AREA"
+    rejected: []
+    source_ids: [S_PROJECT_DOCS]
+    legacy: {cells: "ТЭПы!E41:E43", verdict: keep}
+    status: verified
+    example: {input: {count: 961, avg_area: 35.108}, output: 33738.788}
+
+  - id: F.TEP.APT_SHARE
+    module: TEP
+    name: "Доля типа квартир (по количеству)"
+    plain:
+      title: "Доля типа квартир по количеству"
+      how: "Число квартир типа, делённое на общее число квартир."
+    unit: доля
+    dims: [k]
+    expr: "apt_share[k] = F.TEP.APT_COUNT[k] / Σ_k F.TEP.APT_COUNT[k]"
+    terms:
+      "apt_share[k]": "результат: доля квартир типа k в общем количестве"
+      "k": "тип квартир из квартирографии"
+    depends_on: [F.TEP.APT_COUNT]
+    rationale: "Доля вычисляется — нельзя получить противоречие между долей и количеством"
+    rejected: ["Ручной ввод долей параллельно с количеством (ТЭПы!C41:C43)"]
+    source_ids: [S_PROJECT_DOCS]
+    legacy: {cells: "ТЭПы!C41:C43", verdict: replace}
+    status: verified
+
+  - id: F.TEP.APT_AREA_CHECK
+    module: TEP
+    name: "Сверка площади квартир: квартирография vs ТЭП"
+    plain:
+      title: "Сверка площади квартир: квартирография и ТЭП"
+      how: "Сумма площадей квартир по квартирографии сравнивается с площадью квартир в ТЭП. Если расхождение больше допуска, появляется предупреждение."
+      example: "Расхождение {=.diff_m2|м2}, это {=.check|доля} площади по ТЭП."
+    unit: доля
+    dims: []
+    expr: |
+      apt_diff_m2 = Σ_k apt_area[k] − apt_area_total
+      apt_check   = apt_diff_m2 / apt_area_total
+    note: "Предупреждение «расхождение {apt_diff_m2} м² ({apt_check})», если |apt_check| > TEP.APT_AREA_TOLERANCE."
+    terms:
+      "apt_diff_m2": "результат: расхождение квартирографии и ТЭП, м²"
+      "apt_check": "результат: расхождение в долях от площади по ТЭП"
+      "apt_area[k]": "площадь квартир типа k (F.TEP.APT_TYPE_AREA), м²"
+      "apt_area_total": "площадь квартир по ТЭП (F.TEP.APT_AREA), м²"
+    depends_on: [F.TEP.APT_TYPE_AREA, F.TEP.APT_AREA, TEP.APT_AREA_TOLERANCE]
+    rationale: "На стадии концепции площадь квартир есть дважды — итог ТЭП и сумма квартирографии; на стадии оценки сумма меньше итога из-за округления количества вниз. Расхождение больше порога должно быть видно с разницей в м² и %"
+    rejected: ["Молча брать одно из двух чисел (в исходнике ТЭПы!E44 и ТЭПы!C22 введены независимо)"]
+    source_ids: [S_PROJECT_DOCS]
+    legacy: {cells: "ТЭПы!E44 vs ТЭПы!C22", verdict: new}
+    status: verified
+
+  - id: F.TEP.PARKING_REQUIRED
+    module: TEP
+    name: "Требуемое количество машино-мест по нормативу региона"
+    plain:
+      title: "Сколько машино-мест требует норматив региона, шт"
+      how: "Число квартир каждого типа умножается на норматив машино-мест региона, к этому добавляются места для апартаментов. Итог округляется вверх."
+      example: "По нормативу нужно {=|шт}."
+    unit: шт
+    dims: []
+    expr: |
+      parking_required = CEILING( Σ_k F.TEP.APT_COUNT[k] × norm(TEP.APT_MIX.avg_area[k]) + parking_apart )
+      ЕСЛИ TEP.PARKING_NORM_APART.unit = «на единицу»:         parking_apart = TEP.PARKING_NORM_APART.value × TEP.APART_COUNT
+      ЕСЛИ TEP.PARKING_NORM_APART.unit = «на 100 м² площади»:  parking_apart = TEP.PARKING_NORM_APART.value × F.TEP.APART_AREA / 100
+    note: "Нормативы машино-мест для квартир — из акта региона: Москва — ПП № 2118-ПП от 05.08.2026, СПб — ПП № 257 от 11.04.2017. Для апартаментов — норматив градостроительного проектирования для объектов гостиничного назначения: значение и единица («на единицу» или «на 100 м² площади») — из РНГП региона; пока значения региона нет — ручной ввод с документом (решение владельца продукта 27.09.2026). Расчёт «как в исходном Excel»: нормы по типам квартир из tests/cases/*_legacy.yaml (TEP.PARKING_NORM, rule = per_type); в расчёте сервиса запрещено."
+    terms:
+      "parking_required": "результат: требуемое количество машино-мест, шт"
+      "norm(a)": "норматив машино-мест на квартиру средней площадью a — из TEP.PARKING_NORM региона"
+      "parking_apart": "машино-места для апартаментов по нормативу TEP.PARKING_NORM_APART (значение и единица — из РНГП региона)"
+      "k": "тип квартир из квартирографии"
+      "CEILING(x)": "округление вверх до целого"
+    depends_on: [F.TEP.APT_COUNT, TEP.APT_MIX, TEP.PARKING_NORM, TEP.PARKING_NORM_APART, TEP.APART_COUNT, F.TEP.APART_AREA]
+    rationale: "Нормативы обеспеченности — обязательное требование РНГП; число мест определяет подземную часть и выручку"
+    rejected: ["Вбитое число без документа (862 в исходнике при нормативе ≈ 2 785)"]
+    source_ids: [S_MSK_PARKING_2118PP, S_SPB_NGP_257, S_SP_42_2026]
+    legacy: {cells: "ТЭПы!J41:J44", verdict: fix, issue: "J44 перебит числом 862"}
+    status: needs_verification
+    example: {input: {counts: [961, 720, 720], norms: [0.8, 1.2, 1.6]}, output: 2785}
+
+  - id: F.TEP.PARKING_COUNT
+    module: TEP
+    name: "Количество машино-мест в модели"
+    plain:
+      title: "Количество машино-мест, шт"
+      how: "Большее из двух: сколько мест требует норматив и сколько задано в ГПЗУ. Ручное значение принимается только с документом."
+      example: "В проекте {=|шт}, по нормативу требуется {F.TEP.PARKING_REQUIRED|шт}."
+    unit: шт
+    dims: []
+    expr: |
+      parking_calc = MAX( F.TEP.PARKING_REQUIRED, TEP.PARKING_GPZU_COUNT ?? 0 )
+      parking      = TEP.PARKING_COUNT_OVERRIDE ?? parking_calc
+    note: "Знак «??» означает: берётся левое значение, если оно заполнено, иначе правое. Ручное значение (TEP.PARKING_COUNT_OVERRIDE) — только с вложенным документом. Предупреждение «ниже норматива, основание — документ», если ручное значение меньше F.TEP.PARKING_REQUIRED."
+    terms:
+      "parking_calc": "расчётное количество машино-мест: большее из норматива и ГПЗУ/ППТ, шт"
+      "parking": "результат: количество машино-мест в модели, шт"
+    depends_on: [F.TEP.PARKING_REQUIRED, TEP.PARKING_GPZU_COUNT, TEP.PARKING_COUNT_OVERRIDE]
+    rationale: "Число мест — норматив региона или больше, если так требуют ГПЗУ/ППТ. Отклонение, в том числе меньше норматива, допустимо только по документу (ГПЗУ, ППТ, СТУ, решение органа)"
+    rejected:
+      - "Вбитое число поверх норматива без документа (исходник ТЭПы!C27, J44 = 862)"
+      - "Брать ГПЗУ/ППТ, даже если оно меньше норматива, — норматив обязателен; меньшее число — только по документу через override"
+    source_ids: [S_PROJECT_DOCS, S_MSK_PARKING_2118PP, S_SPB_NGP_257]
+    legacy: {cells: "ТЭПы!C27", verdict: fix}
+    status: verified
+
+  - id: F.TEP.PARKING_SPACE_MIN_AREA
+    module: TEP
+    name: "Минимальная площадь машино-места"
+    plain:
+      title: "Минимальная площадь машино-места, м²"
+      how: "Минимальная длина машино-места × минимальная ширина по требованиям Росреестра."
+      example: "{TEP.PARKING_SPACE_MIN_LENGTH} × {TEP.PARKING_SPACE_MIN_WIDTH} = {=}."
+    unit: м2
+    dims: []
+    expr: "parking_space_min = TEP.PARKING_SPACE_MIN_LENGTH × TEP.PARKING_SPACE_MIN_WIDTH"
+    terms:
+      "parking_space_min": "результат: минимальная площадь машино-места, м²"
+    depends_on: [TEP.PARKING_SPACE_MIN_LENGTH, TEP.PARKING_SPACE_MIN_WIDTH]
+    rationale: "Нижняя граница площади на одно машино-место: само место не меньше 5,3 × 2,5 м (Приказ Росреестра № П/0316); с проездами площадь не может быть меньше. Максимальный размер с 28.10.2021 не ограничен — верхней границы нет"
+    rejected: ["Задавать 13,25 м² отдельным числом — теряется связь с размерами из приказа"]
+    source_ids: [S_ROSREESTR_P0316]
+    legacy: {cells: null, verdict: new}
+    status: verified
+    example: {input: {length: 5.3, width: 2.5}, output: 13.25}
+
+  - id: F.TEP.GFA_BELOW_EST
+    module: TEP
+    name: "Оценка подземной площади по числу машино-мест и кладовым"
+    plain:
+      title: "Оценка площади подземной части, м²"
+      how: "Оценка до появления ТЭП: число машино-мест × площадь паркинга на одно место вместе с проездами, плюс площадь кладовых."
+    unit: м2
+    dims: []
+    expr: "gfa_below_est = F.TEP.PARKING_COUNT × TEP.PARKING_AREA_PER_SPACE + storage_area"
+    note: "Ошибка, если TEP.PARKING_AREA_PER_SPACE < F.TEP.PARKING_SPACE_MIN_AREA."
+    terms:
+      "gfa_below_est": "результат: оценка подземной площади, м²"
+      "storage_area": "площадь кладовых (F.TEP.STORAGE), м²"
+    depends_on: [F.TEP.PARKING_COUNT, TEP.PARKING_AREA_PER_SPACE, F.TEP.PARKING_SPACE_MIN_AREA, F.TEP.STORAGE]
+    rationale: "Только стадия «Оценка участка»: подземной концепции ещё нет. Площадь на место с проездами — факт компании (уровень 4) или эксперт (уровень 5) с обоснованием и диапазоном; меньше минимальной площади самого места быть не может. Кладовые размещаются в подземной части и входят в её площадь"
+    rejected: []
+    source_ids: [S_COMPANY_ACTUALS, S_ROSREESTR_P0316]
+    legacy: {cells: "ТЭПы!E49, ТЭПы!C34", verdict: keep}
+    status: verified
+    example: {input: {parking: 862, area_per_space: 40.945}, output: 35294.59}
+
+  - id: F.TEP.GFA_BELOW
+    module: TEP
+    name: "Площадь подземной части в модели"
+    plain:
+      title: "Площадь подземной части, м²"
+      how: "На стадии «концепция» берётся из ТЭП архитектора, на стадии «оценка участка» — оценка по машино-местам и кладовым."
+      example: "В проекте площадь подземной части — {=}."
+    unit: м2
+    dims: []
+    expr: |
+      ЕСЛИ GEN.PROJECT_STAGE = «концепция»:       gfa_below = TEP.GFA_BELOW
+      ЕСЛИ GEN.PROJECT_STAGE = «оценка участка»:  gfa_below = F.TEP.GFA_BELOW_EST
+    terms:
+      "gfa_below": "результат: площадь подземной части в модели, м²"
+    depends_on: [GEN.PROJECT_STAGE, TEP.GFA_BELOW, F.TEP.GFA_BELOW_EST]
+    rationale: "На стадии концепции подземная часть (паркинг, техпомещения) — из ТЭП архитектора; до неё — оценка через число машино-мест"
+    rejected: ["Выводить подземную площадь из числа мест и после концепции (исходник ТЭПы!C34 = E49)"]
+    source_ids: [S_PROJECT_DOCS, S_COMPANY_ACTUALS]
+    legacy: {cells: "ТЭПы!C34", verdict: fix}
+    status: verified
+
+  - id: F.TEP.GFA_TOTAL
+    module: TEP
+    name: "ГНС общая"
+    plain:
+      title: "Общая площадь (ГНС), м²"
+      how: "Площадь наземной части плюс площадь подземной части."
+      example: "{F.TEP.GFA_ABOVE} + {F.TEP.GFA_BELOW} = {=}."
+    unit: м2
+    dims: []
+    expr: "gfa_total = F.TEP.GFA_ABOVE + F.TEP.GFA_BELOW"
+    terms:
+      "gfa_total": "результат: ГНС общая (наземная + подземная), м²"
+    depends_on: [F.TEP.GFA_ABOVE, F.TEP.GFA_BELOW]
+    rationale: "Разделение на наземную и подземную части — у них разная стоимость СМР и разный охват НЦС"
+    rejected: ["Одна «СПП (ГНС)» без разделения (исходник ТЭПы!C19)"]
+    source_ids: [S_PROJECT_DOCS, S_NCS_TECHPART]
+    legacy: {cells: "ТЭПы!C19", verdict: fix}
+    status: verified
+
+  - id: F.TEP.SALEABLE_AREA
+    module: TEP
+    name: "Продаваемая площадь (м²)"
+    plain:
+      title: "Продаваемая площадь, м²"
+      how: "Сумма площадей, которые продаются в квадратных метрах: квартиры, апартаменты, ПСН и кладовые. Машино-места считаются в штуках и сюда не входят."
+      example: "Квартиры {F.TEP.APT_TYPE_AREA} + апартаменты {F.TEP.APART_AREA} + ПСН {F.TEP.COMM_AREA} + кладовые {F.TEP.STORAGE.area|м2} = {=}."
+    unit: м2
+    dims: []
+    expr: "saleable = Σ_k apt_area[k] + apart_area + comm_area + storage_area"
+    note: "Машино-места считаются отдельно, в штуках (F.TEP.PARKING_COUNT), и в м² не суммируются. МОП, техпомещения и проезды паркинга в продаваемую площадь не входят."
+    terms:
+      "saleable": "результат: продаваемая площадь, м²"
+      "apt_area[k]": "площадь квартир типа k (F.TEP.APT_TYPE_AREA), м²"
+      "apart_area": "площадь апартаментов (F.TEP.APART_AREA), м²"
+      "comm_area": "площадь ПСН (F.TEP.COMM_AREA), м²"
+      "storage_area": "площадь кладовых (F.TEP.STORAGE), м²"
+    depends_on: [F.TEP.APT_TYPE_AREA, F.TEP.APART_AREA, F.TEP.COMM_AREA, F.TEP.STORAGE]
+    rationale: "Единое определение для всех проектов: продаваемая площадь = квартиры + апартаменты + ПСН + кладовые, каждая — по правилам обмера Росреестра (П/0393, приложение 2), квартиры — по ДДУ. Итоговым числом не вводится (параметра нет): сумма всегда раскладывается по продуктам и сходится с планом продаж"
+    rejected:
+      - "Ввод итогового числа (исходник ТЭПы!C35 = 149 281): не раскладывается по продуктам и расходится с суммой квартир и ПСН (153 882)"
+      - "Суммировать м² машино-мест с м² квартир (дашборд исходника — 189 177 м²)"
+      - "Включать МОП, техпомещения, проезды паркинга — они не продаются"
+    source_ids: [S_ROSREESTR_P0393, S_ZHK_15, S_MINSTROY_854, S_PROJECT_DOCS]
+    legacy: {cells: "ТЭПы!C35, ТЭПы!E38, CF1!D11", verdict: fix, issue: "C35 — число без расшифровки; в новой модели не используется, в расчёте «как в исходном Excel» — только база перевода сумм бюджета в ставки на м²"}
+    status: verified
+
+  - id: F.TEP.LANDSCAPE_AREA
+    module: TEP
+    name: "Площадь благоустройства и её состав"
+    plain:
+      title: "Площадь благоустройства и её состав, м²"
+      how: "Площадь участка × доля благоустройства. Из неё по долям выделяются дороги и озеленение, остаток — открытые парковки и площадки."
+      example: "Благоустройство {=.landscape|м2}: дороги {=.roads|м2}, озеленение {=.green|м2}, остальное {=.ground_parking|м2}."
+    unit: м2
+    dims: []
+    expr: |
+      landscape      = LAND.AREA × TEP.LANDSCAPE_SHARE
+      roads          = landscape × TEP.ROAD_SHARE
+      green          = landscape × TEP.GREEN_SHARE
+      ground_parking = landscape − roads − green
+    terms:
+      "landscape": "результат: площадь благоустройства, м²"
+      "roads": "внутриквартальные проезды, м²"
+      "green": "озеленение, м²"
+      "ground_parking": "наземная парковка и прочее благоустройство, м²"
+    depends_on: [LAND.AREA, TEP.LANDSCAPE_SHARE, TEP.ROAD_SHARE, TEP.GREEN_SHARE]
+    rationale: "База для статьи «Благоустройство»; проверка минимального озеленения по НГП"
+    rejected: []
+    source_ids: [S_PROJECT_DOCS, S_SP_42_2026]
+    legacy: {cells: "ТЭПы!C29:C33", verdict: keep}
+    status: verified
+
+  # =====================================================================
+  # LAND — земельные платежи
+  # =====================================================================
+
+  - id: F.LAND.TAX_COEF
+    module: LAND
+    name: "Повышающий коэффициент земельного налога"
+    plain:
+      title: "Повышающий коэффициент земельного налога"
+      how: "Пока идёт жилищное строительство, налог на землю умножается на повышающий коэффициент налогового кодекса: сначала меньший, потом больший. До смены вида разрешённого использования и там, где повышение не действует, коэффициент равен единице."
+    unit: коэф
+    dims: [t]
+    expr: |
+      ЕСЛИ TAX.LAND_COEF_APPLY = нет  ИЛИ  date[t] < vri_change_date:
+        coef[t] = 1
+      ИНАЧЕ ЕСЛИ years_since(land_acquired, date[t]) <= TIME.RNS_TO_RNV_TAX_YEARS:
+        coef[t] = TAX.LAND_COEF_UP_TO_3Y
+      ИНАЧЕ:
+        coef[t] = TAX.LAND_COEF_OVER_3Y
+    note: "Повышающий коэффициент действует до государственной регистрации прав на построенный объект (≈ окончание передачи ключей последней очереди). До даты смены ВРИ коэффициенты не применяются — они привязаны к ВРИ «жилищное строительство» (решение владельца продукта 27.09.2026)."
+    terms:
+      "coef[t]": "результат: коэффициент к земельному налогу в месяце t"
+      "years_since(a, b)": "число лет от даты a до даты b"
+      "land_acquired": "дата приобретения участка (TIME.MILESTONES)"
+      "date[t]": "последний день месяца t (F.TIME.DATE)"
+      "vri_change_date": "дата смены ВРИ (TIME.MILESTONES) — если смена ВРИ предстоит"
+    depends_on: [TAX.LAND_COEF_APPLY, TAX.LAND_COEF_UP_TO_3Y, TAX.LAND_COEF_OVER_3Y, TIME.MILESTONES, TIME.RNS_TO_RNV_TAX_YEARS, F.TIME.DATE]
+    rationale: "п.15 ст.396 НК РФ; для участков > 300 млн руб. — позиция ФНС (письмо 25.08.2026)"
+    rejected: ["Отсутствие коэффициентов (исходник) — налог занижен в 2–4 раза"]
+    source_ids: [S_NK_396, S_FNS_LANDCOEF_2026]
+    legacy: {cells: null, verdict: new}
+    status: needs_verification
+
+  - id: F.LAND.TAX_OR_RENT
+    module: LAND
+    name: "Земельный налог или аренда, помесячно"
+    plain:
+      title: "Земельный налог или аренда, руб в месяц"
+      how: "Собственность: кадастровая стоимость × ставка налога × повышающий коэффициент ÷ 12, от покупки участка до конца передачи квартир. Аренда: годовая плата по договору с ежегодной индексацией, по месяцам, до передачи первого помещения."
+    unit: руб
+    dims: [t]
+    expr: |
+      ЕСЛИ LAND.TENURE = собственность:
+        land_pay[t] = cad_value[t] × TAX.LAND_RATE × F.LAND.TAX_COEF[t] / 12 × 1{ land_acquired <= date[t] <= handover_end_last }
+      ЕСЛИ LAND.TENURE = аренда:
+        rent_month[t] = LAND.RENT_ANNUAL × (1 + LAND.RENT_INDEXATION) ^ FLOOR(years_since(land_acquired, date[t])) / 12 × rent_days[t]
+        ЕСЛИ LAND.RENT_PAYMENT_FREQ = ежемесячно:                          land_pay[t] = rent_month[t]
+        ЕСЛИ LAND.RENT_PAYMENT_FREQ = поквартально авансом:                land_pay[t] = Σ_{m ∈ квартал(t), m >= t} rent_month[m] × 1{ t — первый месяц квартала ИЛИ t = t_start }
+        ЕСЛИ LAND.RENT_PAYMENT_FREQ = поквартально по окончании квартала:  land_pay[t] = Σ_{m ∈ квартал(t)} rent_month[m] × 1{ t — последний месяц квартала }
+
+      ЕСЛИ vri_change_date задана И date[t] >= vri_change_date:  cad_value[t] = LAND.CADASTRAL_VALUE_AFTER_VRI
+      ИНАЧЕ:                                                     cad_value[t] = LAND.CADASTRAL_VALUE
+      rent_end = MIN_p TIME.MILESTONES[p][LAND.RENT_END_MILESTONE]
+    note: "Аренда (решение владельца продукта 27.09.2026): ставка — по договору (уровень 4) или региональной методике; платёж по умолчанию поквартально авансом; неполные первый и последний кварталы — пропорционально дням, платёж за неполный первый квартал — в первый месяц аренды (решение владельца продукта 27.09.2026); индексация — по договору (раз в год с даты приобретения, если договор не говорит иное); аренда прекращается с даты передачи первого помещения — участок переходит в общую долевую собственность собственников помещений МКД (LAND.RENT_END_MILESTONE, по умолчанию handover_start первой очереди; needs_verification). Смена ВРИ: с месяца вехи vri_change_date — новая кадастровая стоимость; дата начала применения новой кадастровой стоимости (ст.391 НК РФ) — needs_verification."
+    terms:
+      "land_pay[t]": "результат: земельный налог или арендная плата за месяц t, руб"
+      "cad_value[t]": "кадастровая стоимость участка, действующая в месяце t, руб"
+      "rent_month[t]": "арендная плата, приходящаяся на месяц t (до группировки платежей по периодичности), руб"
+      "rent_days[t]": "доля дней месяца t внутри аренды [land_acquired; rent_end): 1 — полный месяц; неполные первый и последний месяцы — по дням"
+      "t_start": "месяц начала аренды (месяц land_acquired): если аренда начинается внутри квартала, платёж за неполный первый квартал — в этот месяц"
+      "rent_end": "дата окончания аренды: самая ранняя среди очередей дата вехи LAND.RENT_END_MILESTONE"
+      "vri_change_date": "дата смены ВРИ (TIME.MILESTONES)"
+      "land_acquired": "дата приобретения участка (TIME.MILESTONES)"
+      "handover_end_last": "окончание передачи ключей последней очереди (TIME.MILESTONES)"
+      "years_since(a, b)": "число лет от даты a до даты b"
+      "FLOOR(x)": "округление вниз до целого"
+      "1{условие}": "1, если условие выполнено, иначе 0"
+    depends_on: [LAND.TENURE, LAND.CADASTRAL_VALUE, LAND.CADASTRAL_VALUE_AFTER_VRI, TAX.LAND_RATE, F.LAND.TAX_COEF, LAND.RENT_ANNUAL, LAND.RENT_PAYMENT_FREQ, LAND.RENT_INDEXATION, LAND.RENT_END_MILESTONE, TIME.MILESTONES, F.TIME.DATE]
+    rationale: "Налог — от кадастровой стоимости (ст.390–391 НК РФ) по ставке муниципалитета; платёж только за период владения. Одна строка вместо двух в исходнике — нет двойного счёта"
+    rejected:
+      - "Равномерное деление итоговой суммы на 7,25 года (CF1!F24, F84) — игнорирует даты владения и коэффициенты"
+      - "Одновременно «Аренда/налог ЗУ» и «Налог на имущество» 0,2% (исходник)"
+    source_ids: [S_NK_394, S_NK_396, S_FNS_RATES, S_MSK_RENT_273PP, S_SPB_RENT_608]
+    legacy: {cells: "CF1!F24:AH24, CF1!F84:AH84, CF1!B84", verdict: replace}
+    status: needs_verification
+    example: {input: {cad_value: 5834907660, rate: 0.015, coef: 2}, output_per_month: 14587269.15, note: "ставка 1,5% — пример для участка > 300 млн; фактическая — по ОКТМО"}
+
+  - id: F.LAND.VRI_FEE
+    module: LAND
+    name: "Плата за изменение ВРИ"
+    plain:
+      title: "Плата за изменение вида разрешённого использования участка, руб"
+      how: "Плата городу за смену вида разрешённого использования участка, если она есть в регионе. В Москве считается от прироста кадастровой стоимости и коэффициента территории и платится в месяц смены."
+      example: "В проекте плата — {=}."
+    unit: руб
+    dims: []
+    expr: |
+      ЕСЛИ в регионе есть плата за изменение ВРИ (region.vri_fee.exists):
+        vri_fee = region_formula(LAND.CADASTRAL_VALUE, LAND.CADASTRAL_VALUE_AFTER_VRI, …)
+      ИНАЧЕ:
+        vri_fee = 0
+    note: "Москва: плата считается от прироста кадастровой стоимости (КС2 − КС1) × коэффициент территории по приложению к ПП 593-ПП. Платится в месяц вехи смены ВРИ (TIME.MILESTONES.vri_change_date, статья LAND_VRI); веха обязательна, если задана LAND.CADASTRAL_VALUE_AFTER_VRI (проверка CHECK.ALL → VRI_DATE_REQUIRED) (решение владельца продукта 27.09.2026)."
+    terms:
+      "vri_fee": "результат: плата за изменение вида разрешённого использования, руб"
+      "region_formula": "порядок расчёта платы, установленный актом региона"
+    depends_on: [GEN.REGION_CODE, LAND.CADASTRAL_VALUE, LAND.CADASTRAL_VALUE_AFTER_VRI, LAND.VRI_FEE]
+    rationale: "Плата — региональная; привязка к приросту кадастровой стоимости делает её воспроизводимой"
+    rejected: ["5 000 руб/м² ГНС (исходник Бюджет!D22) — экспертно, без источника"]
+    source_ids: [S_MSK_VRI_593PP]
+    legacy: {cells: "Бюджет!D22:F22", verdict: replace}
+    status: needs_verification
+
+  # =====================================================================
+  # CAPEX — бюджет и график затрат
+  # =====================================================================
+
+  - id: F.CAPEX.ITEM_TOTAL
+    module: CAPEX
+    name: "Сумма статьи в ценах даты расценки"
+    plain:
+      title: "Сумма статьи бюджета в ценах даты расценки, руб"
+      how: "Ставка статьи × её база (площадь, стоимость стройки, выручка) или фиксированная сумма. Помесячные статьи — ставка в месяц × число месяцев между вехами. Цены на дату расценки, без роста."
+    unit: руб
+    dims: [i]
+    expr: |
+      ЕСЛИ base[i] = фикс:          item_total[i] = rate[i]
+      ЕСЛИ base[i] = фикс_в_месяц:  item_total[i] = rate[i] × Σ_t day_share[i,t]
+      ИНАЧЕ:                        item_total[i] = rate[i] × base_qty[i]
+    note: "База задаётся в capex_items.base: параметр или формула. Статьи «фикс в месяц» (SITE_SECURITY, DEVELOPER_OVERHEAD): ставка в месяц × число месяцев между вехами schedule_from и schedule_to; неполные первый и последний месяцы — пропорционально дням (решение владельца продукта 27.09.2026). Индексация — в F.CAPEX.INDEX, помесячно. Ставка — из строки статьи в CAPEX.ITEMS (rate), иначе из параметра rate_param; статья без ставки — ошибка «заполните ставку». База «формула» (LAND_TAX_OR_RENT, LAND_VRI): item_total = итог формулы статьи. Статьи, база или график которых — выручка (F.SALES.*), считаются с этапа 4 и до тех пор в итог не входят (предупреждение)."
+    terms:
+      "item_total[i]": "результат: сумма статьи i в ценах даты расценки, руб"
+      "i": "статья бюджета"
+      "rate[i]": "ставка статьи (параметр rate_param)"
+      "base_qty[i]": "объём базы статьи (м², шт, руб и т. п.)"
+      "day_share[i,t]": "доля дней месяца t внутри интервала [schedule_from; schedule_to): 1 — полный месяц, дни / дней в месяце — первый и последний"
+    depends_on: [CAPEX.ITEMS, TIME.MILESTONES, LAND.PURCHASE_PRICE, LAND.LEGAL_COSTS, LAND.AGENT_FEE_RATE, LAND.CITY_CASH_COMPENSATION, LAND.CITY_OBJECTS_COST, CAPEX.CONTINGENCY_RATE, OPEX.DEV_FEE_RATE, OPEX.MARKETING_RATE, OPEX.BROKERAGE_RATE, LAND.AREA, TEP.GFA_ABOVE, TEP.GFA_BELOW, TEP.MOP_AREA, F.TEP.GFA_ABOVE, F.TEP.GFA_BELOW, F.TEP.GFA_TOTAL, F.TEP.SALEABLE_AREA, F.TEP.LANDSCAPE_AREA, F.CAPEX.SMR_TOTAL, F.SALES.REVENUE_TOTAL, F.LAND.TAX_OR_RENT, F.LAND.VRI_FEE]
+    rationale: "Сумма всегда выводится из ставки и объёма — любую цифру можно объяснить"
+    rejected:
+      - "Вбитая сумма + обратный расчёт расценки D = F/E (исходник Бюджет!D17:D49) — расценка не проверяема"
+    source_ids: [S_COMPANY_ACTUALS, S_NCS_2026_01]
+    legacy: {cells: "Бюджет!D17:F49", verdict: replace}
+    status: verified
+
+  - id: F.CAPEX.INDEX
+    module: CAPEX
+    name: "Индекс пересчёта из цен даты расценки в цены месяца t"
+    plain:
+      title: "Индекс роста цен статьи к месяцу платежа"
+      how: "Во сколько раз вырастут цены от даты расценки до месяца платежа. Стройка растёт по прогнозу цен на инвестиции, содержание и охрана — по потребительским ценам, суммы по договору и доли от выручки не индексируются."
+    unit: коэф
+    dims: [i, t]
+    expr: |
+      ЕСЛИ index_type[i] = none ИЛИ расчёт «как в исходном Excel»:  index[i,t] = 1
+      ИНАЧЕ:                                              index[i,t] = Π_y (1 + g[y]) ^ share[i,y,t]
+      g[y] = CAPEX.COST_INDEX[y]  при index_type[i] = investment
+      g[y] = CAPEX.OPEX_INDEX[y]  при index_type[i] = cpi
+      для y после последнего года прогноза:  g[y] = g[последний год]
+    note: "Строительные статьи (СМР, сети, благоустройство, соцобъекты, ПИР) — дефлятор инвестиций в основной капитал; содержание застройщика, охрана, юридические услуги — ИПЦ; без индексации — суммы по договору, статьи со своей формулой и все статьи с базой «доля от другой суммы»: от выручки (MARKETING, BROKERAGE, DEV_FEE) и от СМР (TECH_CUSTOMER, AUTHOR_SUPERVISION, TECH_SUPERVISION, CONTINGENCY) — база уже в ценах своего месяца (решение владельца продукта 27.09.2026). После 2029 — последнее значение прогноза МЭР (допущение, S_EXPERT) (решение владельца продукта 27.09.2026). Расчёт «как в исходном Excel» — без индексации: суммы исходника в ценах исходника, цель режима — сверка с Excel; индексация смешала бы исправление ошибок с ростом цен. Эффект индексации показывается отдельно (F.CAPEX.INDEX_EFFECT)."
+    terms:
+      "index[i,t]": "результат: множитель пересчёта статьи i в цены месяца t"
+      "Π_y": "произведение по годам y"
+      "g[y]": "годовой индекс года y: CAPEX.COST_INDEX (index_type = investment) или CAPEX.OPEX_INDEX (index_type = cpi)"
+      "share[i,y,t]": "доля года y в интервале от даты уровня цен ставки price_date[i] до конца месяца t (каждый месяц — своя доля, индекс растёт помесячно)"
+      "price_date[i]": "дата уровня цен ставки статьи (CAPEX.ITEMS)"
+      "index_type[i]": "тип индекса статьи (capex_items.yaml): investment | cpi | none"
+    depends_on: [CAPEX.COST_INDEX, CAPEX.OPEX_INDEX, CAPEX.ITEMS, F.TIME.DATE]
+    rationale: "Стройка длится 3–6 лет; без индексации затраты занижены. Стройка дорожает по дефлятору инвестиций, зарплаты и услуги — по ИПЦ; оба — прогноз МЭР (сценарные условия, базовый вариант)"
+    rejected:
+      - "Отсутствие индексации (исходник)"
+      - "Один индекс на все статьи — зарплаты и охрана растут с инфляцией, стройка — с дефлятором инвестиций"
+      - "ИПЦ или дефлятор для статей «доля от выручки / от СМР» — выручка уже растёт с ценой м², СМР уже проиндексированы: рост цен учитывался бы дважды"
+    source_ids: [S_MINEC_SCENARIO_2027, S_FGISCS, S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.CAPEX.SCHEDULE_WEIGHT
+    module: CAPEX
+    name: "Вес месяца в графике статьи"
+    plain:
+      title: "Доля суммы статьи, которая платится в месяце"
+      how: "Сумма статьи раскладывается по месяцам по её правилу: равномерно, по плавной кривой, одним платежом, вслед за стройкой или продажами либо вручную. Доли по месяцам в сумме дают 100%."
+    unit: доля
+    dims: [i, t]
+    expr: |
+      from = MIN_p schedule_from[p];   to = MAX_p schedule_to[p]
+      uniform:                w[t] = 1 / N,  from <= t < to
+      uniform (фикс_в_месяц): w[t] = day_share[t] / Σ day_share
+      s_curve:                x_t = (t − t_from + 1) / N;   C(x) = 3x² − 2x³;   w[t] = C(x_t) − C(x_{t−1})
+      at_milestone:           w[t] = 1 в месяце вехи from
+      follow_smr:             w[t] = smr_cash[t] / Σ smr_cash
+      follow_sales:           w[t] = sales_value[t] / Σ sales_value
+      manual:                 w[t] = ряд пользователя
+      расчёт «как в исходном Excel»:    w[m] = w_q[q] / 3  для каждого из трёх месяцев m квартала q
+    note: "Очереди (решение владельца продукта 27.09.2026, вариант А): один график на статью — от самой ранней вехи schedule_from до самой поздней вехи schedule_to среди всех очередей; для at_milestone — самая ранняя дата вехи. Способ распределения задаётся у статьи бюджета. follow_smr: smr_cash — платежи статей групп СМР, сети, благоустройство, соцобъекты по их собственным графикам (сумма × вес, без индекса и НДС; статьи с follow_smr не входят — иначе цикл). schedule_rule = formula (LAND_TAX_OR_RENT): w[t] = land_pay[t] / Σ land_pay. Статья с нулевой суммой графика не требует. Ручной ряд (manual) — столбец schedule_manual: первый месяц, шаг (месяц или квартал) и доли. В расчёте «как в исходном Excel» ручные квартальные ряды исходника переводятся в месяцы: доля квартала делится поровну на три месяца. Проверка: Σ_t w = 1; в расчёте «как в исходном Excel» ряд исходника берётся как есть (Excel один в один, решение владельца продукта 27.09.2026), и Σ_t w ≠ 1 — предупреждение: в CF попадает не та сумма, что в бюджете."
+    terms:
+      "w[t]": "результат: доля суммы статьи, приходящаяся на месяц t"
+      "N": "число месяцев распределения"
+      "from, to": "начало и конец распределения: самая ранняя веха schedule_from и самая поздняя веха schedule_to среди всех очередей"
+      "t_from": "первый месяц распределения"
+      "C(x)": "S-кривая: накопленная доля к моменту x"
+      "smr_cash[t]": "платежи по СМР в месяце t: Σ сумма статьи × вес по статьям групп СМР, сети, благоустройство, соцобъекты с графиком не follow_smr"
+      "sales_value[t]": "стоимость договоров, заключённых в месяце t (F.SALES.CONTRACT_VALUE)"
+      "day_share[t]": "доля дней месяца t внутри интервала [from; to) — для статей «фикс в месяц»"
+      "w_q[q]": "доля квартала q из ручного ряда исходника (tests/cases → capex_legacy), расчёт «как в исходном Excel»"
+    depends_on: [CAPEX.ITEMS, TIME.MILESTONES, F.TIME.DATE, F.CAPEX.ITEM_TOTAL, F.LAND.TAX_OR_RENT, F.SALES.CONTRACT_VALUE, CAPEX.SCHEDULE_SUM_TOLERANCE]
+    rationale: "График привязан к вехам: сдвиг РНС автоматически сдвигает затраты. S-кривая C(x) = 3x²−2x³ — симметричная кривая освоения с пиком в середине стройки"
+    rejected:
+      - "Ручные проценты по кварталам (исходник CF1 строки «Проставить темп,%») — не двигаются вместе с датами, суммы рядов ≠ 100% не контролируются"
+      - "Отдельный график по каждой очереди с делением суммы пропорционально продаваемой площади (вариант Б) — точнее, но требует полных вех и квартирографии по всем очередям; отложено"
+      - "Расчёт «как в исходном Excel»: вся доля квартала — на последний месяц квартала — сдвигает затраты позже и занижает проценты и потребность в финансировании"
+    source_ids: [S_EXPERT]
+    legacy: {cells: "CF1!F22:AS76 (строки «Проставить темп»)", verdict: replace, issue: "ряды сохранены в tests/cases как manual для сверки"}
+    status: verified
+    example: {input: {rule: s_curve, N: 4}, output: [0.15625, 0.34375, 0.34375, 0.15625]}
+
+  - id: F.CAPEX.ITEM_CASH
+    module: CAPEX
+    name: "Платёж по статье в месяце t (с НДС)"
+    plain:
+      title: "Платёж по статье в месяце, с НДС, руб"
+      how: "Сумма статьи × доля месяца по графику × индекс роста цен, плюс НДС по ставке статьи. Если сумма уже с НДС, налог не добавляется."
+    unit: руб
+    dims: [i, t]
+    expr: |
+      item_cash[i,t] = item_total[i] × w[i,t] × index[i,t] × vat_k[i]
+      ЕСЛИ vat_included[i]:  vat_k[i] = 1
+      ИНАЧЕ:                 vat_k[i] = 1 + vat_rate[i] × vat_taxable_share[i]
+    note: "Ставка НДС задаётся у каждой статьи (решение владельца продукта 27.09.2026): покупка участка, плата за ВРИ, денежная компенсация городу — 0; земельный налог — вне НДС, аренда государственной / муниципальной земли — 0, у частного собственника — 0,22 (LAND.TENURE, LAND.LESSOR_TYPE); подрядчики — 0,22, на УСН — 0,05 / 0,07 по договору; содержание застройщика — облагаемая доля OPEX.OVERHEAD_VAT_SHARE."
+    terms:
+      "item_cash[i,t]": "результат: платёж по статье i в месяце t с НДС, руб"
+      "item_total[i]": "сумма статьи (F.CAPEX.ITEM_TOTAL), руб"
+      "w[i,t]": "вес месяца в графике статьи (F.CAPEX.SCHEDULE_WEIGHT)"
+      "index[i,t]": "индекс пересчёта цен (F.CAPEX.INDEX)"
+      "vat_k[i]": "множитель НДС статьи"
+      "vat_included[i]": "ставка статьи уже включает НДС (да/нет)"
+      "vat_rate[i]": "ставка НДС статьи (capex_items.yaml): TAX.VAT_RATE или 0 / 0,05 / 0,07 / 0,22; первое подходящее правило vat_rules заменяет её"
+      "vat_taxable_share[i]": "облагаемая НДС доля суммы статьи; по умолчанию 1 (для DEVELOPER_OVERHEAD — OPEX.OVERHEAD_VAT_SHARE)"
+    depends_on: [F.CAPEX.ITEM_TOTAL, F.CAPEX.SCHEDULE_WEIGHT, F.CAPEX.INDEX, CAPEX.ITEMS, TAX.VAT_RATE, TAX.VAT_RATE_OPTIONS, LAND.TENURE, LAND.LESSOR_TYPE, OPEX.OVERHEAD_VAT_SHARE]
+    rationale: "Денежный поток — с НДС (так платят подрядчикам); вычитаемая часть НДС возвращается в модуле TAX"
+    rejected:
+      - "Смешение сумм с НДС и без НДС в исходнике (не указано)"
+      - "Единый флаг «облагается / не облагается» — не учитывает ставки подрядчиков на УСН (5% / 7%) и смешанные статьи"
+    source_ids: [S_NK_164, S_NK_146, S_NK_149]
+    legacy: {cells: "CF1!F21:AS76 (нечётные строки)", verdict: fix}
+    status: verified
+
+  - id: F.CAPEX.SMR_TOTAL
+    module: CAPEX
+    name: "Итого СМР (без НДС, в ценах расценок)"
+    plain:
+      title: "Итого строительно-монтажные работы, без НДС, руб"
+      how: "Сумма статей строительства, сетей, благоустройства и социальных объектов в ценах даты расценки, без НДС. От неё считаются резерв, технический заказчик и надзоры."
+      example: "В проекте — {=}."
+    unit: руб
+    dims: []
+    expr: "smr_total = Σ_{i ∈ СМР, сети, благоустройство, соцобъекты} rate[i] × base_qty[i]"
+    note: "Слагаемые — те же, что F.CAPEX.ITEM_TOTAL для статей этих групп (ставка × база). Считается напрямую от ставок и баз, а не от F.CAPEX.ITEM_TOTAL: резерв, техзаказчик и надзоры — доля от СМР, поэтому ITEM_TOTAL зависит от SMR_TOTAL, и обратная ссылка дала бы цикл. База статьи этих групп не может быть F.CAPEX.SMR_TOTAL."
+    terms:
+      "smr_total": "результат: итого СМР без НДС в ценах расценок, руб"
+      "rate[i]": "ставка статьи (CAPEX.ITEMS или параметр rate_param)"
+      "base_qty[i]": "объём базы статьи (м², шт; для «фикс» — 1)"
+    depends_on: [CAPEX.ITEMS, LAND.AREA, TEP.GFA_ABOVE, TEP.GFA_BELOW, TEP.MOP_AREA, F.TEP.GFA_ABOVE, F.TEP.GFA_BELOW, F.TEP.GFA_TOTAL, F.TEP.SALEABLE_AREA, F.TEP.LANDSCAPE_AREA]
+    rationale: "База для процентных статей (техзаказчик, стройконтроль, резерв)"
+    rejected: ["База техзаказчика — выручка (исходник Бюджет!E43)"]
+    source_ids: [S_MINSTROY_297]
+    legacy: {cells: "Бюджет!F30", verdict: fix}
+    status: verified
+
+
+  - id: F.CAPEX.SMR_PROGRESS
+    module: CAPEX
+    name: "Строительная готовность по платежам СМР"
+    plain:
+      title: "Строительная готовность по оплате работ"
+      how: "Доля строительных работ, оплаченных к этому месяцу. По ней цена продаж получает надбавки за стадии готовности."
+    unit: доля
+    dims: [t]
+    expr: |
+      progress[t]  = Σ_{τ<=t} smr_cash[τ] / Σ_τ smr_cash[τ]
+      smr_cash[t]  = Σ_{i ∈ СМР, сети, благоустройство, соцобъекты; правило ≠ follow_smr} rate[i] × base_qty[i] × w[i,t]
+    note: "Слагаемые — как в F.CAPEX.SMR_TOTAL, веса — по правилу графика статьи (как F.CAPEX.SCHEDULE_WEIGHT), без индекса и НДС. Считается напрямую, а не от F.CAPEX.ITEM_CASH: платежи бюджета включают статьи-доли выручки, а выручка зависит от цены, которая зависит от готовности (цикл)."
+    terms:
+      "progress[t]": "результат: доля выполненных СМР на конец месяца t"
+      "smr_cash[t]": "платежи по СМР в месяце t в ценах расценок без НДС, руб"
+      "rate[i], base_qty[i]": "ставка и объём базы статьи (как F.CAPEX.SMR_TOTAL)"
+      "w[i,t]": "вес месяца в графике статьи по её правилу"
+    depends_on: [CAPEX.ITEMS, TIME.MILESTONES, F.TIME.DATE, LAND.AREA, TEP.GFA_ABOVE, TEP.GFA_BELOW, TEP.MOP_AREA, F.TEP.GFA_ABOVE, F.TEP.GFA_BELOW, F.TEP.GFA_TOTAL, F.TEP.SALEABLE_AREA, F.TEP.LANDSCAPE_AREA]
+    rationale: "Надбавка к цене по стадиям готовности (F.SALES.PRICE) привязана к фактическому ходу стройки, а не к календарю"
+    rejected: ["Готовность по доле срока строительства — не учитывает неравномерность платежей (S-кривая)", "Готовность по F.CAPEX.ITEM_CASH — цикл через статьи-доли выручки"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+  - id: F.CAPEX.NCS_BENCH
+    module: CAPEX
+    name: "Контроль СМР надземной части по НЦС"
+    plain:
+      title: "Контроль стоимости строительства надземной части по нормативам (НЦС), руб"
+      how: "Стоимость надземной части сравнивается с государственным нормативом цены строительства, пересчитанным на регион. Если отклонение больше допуска, ставке нужно обоснование."
+    unit: руб
+    dims: []
+    expr: |
+      ncs_bench = NCS_per_m2(класс, этажность) × F.TEP.GFA_ABOVE × region.ncs_k_per × К_рег × К_с × Ипр
+      deviation = item_total[SMR_ABOVE] / ncs_bench − 1
+    note: "Если |deviation| > CAPEX.NCS_BENCH_TOLERANCE, для ставки СМР надземной части требуется обоснование."
+    terms:
+      "ncs_bench": "результат: контрольная стоимость СМР надземной части по НЦС, руб"
+      "deviation": "результат: отклонение бюджета от НЦС, доля"
+      "NCS_per_m2": "показатель НЦС на 1 м² по классу и этажности"
+      "region.ncs_k_per": "коэффициент перехода к ценам региона (regions.yaml)"
+      "К_рег": "коэффициент регионально-климатических условий"
+      "К_с": "коэффициент сейсмичности"
+      "Ипр": "прогнозный индекс-дефлятор"
+      "item_total[SMR_ABOVE]": "сумма статьи «СМР надземной части» (F.CAPEX.ITEM_TOTAL), руб"
+    depends_on: [F.TEP.GFA_ABOVE, GEN.REGION_CODE, CAPEX.NCS_BENCH_TOLERANCE]
+    rationale: "Формула пересчёта НЦС по п.40 техчасти: С = [(НЦС×М×Кпер×Кпер/зон×Крег×Кс)+Зр]×Ипр+НДС. В НЦС уже учтены ПИР, стройконтроль, резерв — при сравнении их нужно добавить к расценке компании"
+    rejected: []
+    source_ids: [S_NCS_2026_01, S_NCS_TECHPART]
+    legacy: {cells: null, verdict: new}
+    status: needs_verification
+
+  - id: F.CAPEX.INDEX_EFFECT
+    module: CAPEX
+    name: "Эффект индексации затрат"
+    plain:
+      title: "Эффект роста цен на затраты, руб"
+      how: "Разница между платежами с ростом цен и теми же платежами без роста, по всем статьям и месяцам."
+      example: "В проекте рост цен добавляет к бюджету {=}."
+    unit: руб
+    dims: []
+    expr: "index_effect = Σ_i Σ_t item_cash[i,t] × (1 − 1 / index[i,t])"
+    note: "Часть бюджета с НДС, которая возникла из-за роста цен от даты расценки до месяца платежа: item_total × w × (index − 1) × vat_k. В расчёте «как в исходном Excel» индексации нет — эффект 0."
+    terms:
+      "index_effect": "результат: прирост бюджета с НДС из-за индексации цен, руб"
+      "item_cash[i,t]": "платёж по статье i в месяце t (F.CAPEX.ITEM_CASH), руб"
+      "index[i,t]": "индекс пересчёта цен (F.CAPEX.INDEX)"
+    depends_on: [F.CAPEX.ITEM_CASH, F.CAPEX.INDEX]
+    rationale: "Показывает, сколько бюджета даёт рост цен, отдельно от ставок и объёмов — так видно, чем бюджет модели отличается от бюджета в ценах расценок"
+    rejected: []
+    source_ids: [S_MINEC_SCENARIO_2027]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.CAPEX.TOTAL
+    module: CAPEX
+    name: "Итого бюджет"
+    plain:
+      title: "Итого бюджет, с НДС, руб"
+      how: "Сумма платежей по всем статьям бюджета за весь расчёт, с ростом цен и НДС."
+      example: "Итого платежей по всем статьям за весь расчёт — {=}."
+    unit: руб
+    dims: []
+    expr: "capex_total = Σ_i Σ_t item_cash[i,t]"
+    note: "Проверка: итог равен сумме бюджета по группам (CHECK.BUDGET_EQ_CF)."
+    terms:
+      "capex_total": "результат: итого бюджет с НДС, руб"
+      "item_cash[i,t]": "платёж по статье i в месяце t (F.CAPEX.ITEM_CASH), руб"
+    depends_on: [F.CAPEX.ITEM_CASH]
+    rationale: "Итог бюджета и итог денежного потока — одно число"
+    rejected: ["Бюджет и CF1 расходятся (исходник: УДС 535,6 млн есть в бюджете, нет в CF1)"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "Бюджет!F59, CF1!C18", verdict: fix}
+    status: verified
+
+  # =====================================================================
+  # SALES — план продаж
+  # =====================================================================
+
+  - id: F.SALES.SOLD_AREA
+    module: SALES
+    name: "Продано в месяце, м² (шт для м/м)"
+    plain:
+      title: "Продано в месяце, м² (машино-места и кладовые — шт)"
+      how: "Сколько площади продаётся за месяц. Берётся темп из плана продаж, но продать больше, чем построено, нельзя: когда площадь заканчивается, продажи останавливаются. До ввода дома в эксплуатацию продаём по ДДУ, после — по договору купли-продажи. Деньги по ДДУ поступают на эскроу и раскрываются после ввода дома, по ДКП — сразу."
+    unit: м2
+    dims: [k, p, t]
+    expr: |
+      sold[k,t]      = MIN( pace[k,t], remaining[k,t−1] ) × allowed[k,t]
+      remaining[k,t] = stock[k] − Σ_{τ<=t} sold[k,τ]
+      allowed[k,t]   = flag_ddu[p,t] × 1{ channel[k] = ДДУ_эскроу } ИЛИ flag_dkp[p,t]
+      pace[k,t]      = share[k] × remaining[k,t−1]                       — способ «доля остатка»
+                     | per_month[k]                                      — способ «в месяц»
+                     | values[k, period(t)] / step_months[k]             — ручной ряд: объём периода поровну по его месяцам
+      ручной ряд: pace[k,t0] += Σ_{t<t0} pace[k,t],  t0 — первый месяц, когда allowed[k,t] = 1 (план до старта продаж переносится на него)
+      расчёт «как в исходном Excel»: sold[k,t] = pace[k,t] (ручной ряд исходника без ограничений)
+    note: "Расчёт «как в исходном Excel» повторяет Excel: продажи — как в ряду исходника, без ограничения запасом и периодом продаж; если продано больше запаса, выдаётся предупреждение (исходник: ПСН 10 888,6 м² при запасе 10 322 м²). Непроданный остаток в конце горизонта — предупреждение."
+    terms:
+      "sold[k,t]": "результат: продано продукта k в месяце t, м² (для машино-мест и кладовых — шт)"
+      "k": "строка продукта (SALES.PRODUCTS: тип квартир, ПСН, машино-места и т. д.)"
+      "p": "очередь, к которой относится продукт k"
+      "pace[k,t]": "темп продаж (SALES.PACE)"
+      "remaining[k,t]": "непроданный остаток на конец месяца; remaining[k,−1] = stock[k]"
+      "stock[k]": "построено, площадь продукта к продаже (SALES.PRODUCTS: stock_area, для м/м и кладовых — stock_units)"
+      "channel[k]": "как продаётся до РНВ: ДДУ с эскроу или не продаётся (SALES.PRODUCTS)"
+      "flag_ddu, flag_dkp": "флаги продаж по ДДУ (от старта продаж до РНВ) и по ДКП (после РНВ) (F.TIME.FLAG_PRESALE, F.TIME.FLAG_POST_RNV)"
+      "share[k], per_month[k], values, step_months": "параметры темпа (SALES.PACE: value, manual)"
+    depends_on: [SALES.PACE, SALES.PRODUCTS, TIME.MILESTONES, CAPEX.SCHEDULE_SUM_TOLERANCE, F.TIME.DATE, F.TIME.FLAG_PRESALE, F.TIME.FLAG_POST_RNV]
+    rationale: "Нельзя продать больше, чем построено; продажи — только в разрешённый период. Объём ручного плана, пришедшийся на месяцы до первого разрешённого, переносится на первый разрешённый месяц: квартал старта продаж в плане учитывается целиком, как в Excel (решение владельца продукта 27.09.2026). Расчёт «как в исходном Excel» нужен для сверки выручки с Excel по типам (reconciliation_targets), поэтому ряд исходника берётся как есть"
+    rejected: ["Темпы без ограничения остатком (исходник) — в расчёте сервиса", "Отбрасывать объём плана до старта продаж — квартал старта делится поровну по месяцам, и часть его плана теряется (очередь 3 Дербеневской: 5 604 м² квартир при старте 31.03.2026)", "Квартальный шаг модели — модель месячная, квартальный ряд делится поровну по месяцам"]
+    source_ids: [S_EISZHS_SALES]
+    legacy: {cells: "План продаж!E28:AU54", verdict: fix}
+    status: verified
+
+  - id: F.SALES.PRICE
+    module: SALES
+    name: "Цена 1 м² в месяце t"
+    plain:
+      title: "Цена 1 м² в месяце, руб/м² (машино-места и кладовые — руб/шт)"
+      how: "Цена начинается со стартовой цены продукта и каждый месяц растёт на рыночный рост. На стадиях готовности дома (котлован, 25%, 50%, 75%, разрешение на ввод) к ней добавляется надбавка стадии."
+    unit: руб/м2
+    dims: [k, t]
+    expr: |
+      price[k,t]        = start_price[k] × Π_{price_date[k] < date[τ] <= date[t]} (1 + g_month[τ]) × stage_factor[p,t]
+      g_month[τ]        = (1 + SALES.PRICE_MARKET_GROWTH[year(τ)])^(1/12) − 1
+      stage_factor[p,t] = Π_{s — стадия, пройденная к месяцу t} (1 + uplift[s])
+      пройдена: «котлован» — progress[t] > 0; «25%», «50%», «75%» — progress[t] >= 25%, 50%, 75%; «РНВ» — date[t] >= rnv_date[p]
+      расчёт «как в исходном Excel»: price[k,t] = start_price[k] × (1 + rate)^floor( (m(t) − 1) / step_months ),  m(t) — месяцев от price_date[k] до date[t]
+    note: "«Старт продаж» — точка отсчёта: стартовая цена уже цена этой стадии, надбавка к ней не применяется. Для машино-мест и кладовых цена — за штуку. После последнего года ряда SALES.PRICE_MARKET_GROWTH — рост последнего года, если в ряду after_last = last."
+    terms:
+      "price[k,t]": "результат: цена 1 м² (шт) продукта k в месяце t, руб"
+      "start_price[k]": "стартовая цена продукта на дату цены (SALES.PRODUCTS)"
+      "price_date[k]": "дата стартовой цены (SALES.PRODUCTS); если пуста — дата начала модели"
+      "g_month": "месячный рост цены из годового"
+      "stage_factor[p,t]": "произведение надбавок SALES.PRICE_STAGE_UPLIFT за пройденные стадии строительства очереди p"
+      "progress[t]": "строительная готовность: накопленные платежи СМР / итого (F.CAPEX.SMR_PROGRESS)"
+      "rnv_date[p]": "дата РНВ очереди p (TIME.MILESTONES)"
+      "rate, step_months": "рост цены за период исходника и длина периода (SALES.LEGACY_PRICE_GROWTH)"
+    depends_on: [SALES.PRODUCTS, SALES.PRICE_MARKET_GROWTH, SALES.PRICE_STAGE_UPLIFT, SALES.LEGACY_PRICE_GROWTH, GEN.MODEL_START_DATE, TIME.MILESTONES, F.TIME.DATE, F.CAPEX.SMR_PROGRESS]
+    rationale: "Цена растёт по двум причинам: рынок (инфляция цен) и снижение риска по мере готовности. Раздельно — чтобы сценарии были осмысленны. Готовность — по деньгам СМР (F.CAPEX.SMR_PROGRESS), одна на проект: бюджет ведётся без разбивки по очередям; «РНВ» — по дате очереди"
+    rejected: ["Константа 2%/квартал на весь срок (исходник) — за 29 кварталов +77%, без связи со стройкой и рынком; остаётся только в расчёте «как в исходном Excel»", "Готовность по F.CAPEX.ITEM_CASH — цикл: в платежах есть статьи-доли выручки (маркетинг, брокеридж, вознаграждение девелопера), а выручка зависит от цены"]
+    source_ids: [S_EISZHS_SERIES, S_MINEC_SCENARIO_2027]
+    legacy: {cells: "План продаж!E31:AM56", verdict: replace}
+    status: verified
+
+  - id: F.SALES.CONTRACT_VALUE
+    module: SALES
+    name: "Стоимость договоров, заключённых в месяце t"
+    plain:
+      title: "Стоимость договоров, заключённых в месяце, руб"
+      how: "Проданная в месяце площадь × цена месяца. Это сумма договоров, а не деньги: когда они придут, зависит от способа оплаты."
+    unit: руб
+    dims: [k, p, t]
+    expr: "value[k,t] = sold[k,t] × price[k,t]"
+    terms:
+      "value[k,t]": "результат: стоимость договоров по продукту k, заключённых в месяце t, руб"
+      "sold[k,t]": "продано в месяце (F.SALES.SOLD_AREA)"
+      "price[k,t]": "цена 1 м² (F.SALES.PRICE), руб"
+    depends_on: [F.SALES.SOLD_AREA, F.SALES.PRICE]
+    rationale: "Выручка по подписанным договорам (с НДС, если продукт облагается)"
+    rejected: []
+    source_ids: [S_EXPERT]
+    legacy: {cells: "План продаж!E27, E32, E37, E42, E47, E52", verdict: keep}
+    status: verified
+
+  - id: F.SALES.CASH_IN
+    module: SALES
+    name: "Поступления от покупателей по графику оплат"
+    plain:
+      title: "Поступления от покупателей, руб"
+      how: "Ипотека и полная оплата приходят в месяц договора, рассрочка — первым взносом и равными частями. Деньги по договорам до разрешения на ввод идут на эскроу, после — застройщику."
+    unit: руб
+    dims: [k, p, t]
+    expr: |
+      cash_in[k,t]     = Σ_{τ<=t} value[k,τ] × ( (mortgage_share + full_share) × 1{t = τ} + installment_share × ( down × 1{t = τ} + (1 − down) / n × 1{τ < t <= τ + n} ) )
+      cash_in_ddu[k,t] = то же по договорам, заключённым до РНВ очереди (1 − flag_dkp[p,τ] = 1)
+      расчёт «как в исходном Excel»: ДДУ — договоры по TIME.LEGACY_ESCROW_DEPOSIT_END включительно; cash_in[k,t] = 0 при t > SALES.LEGACY_CASH_IN_END
+    note: "Ипотека и 100% оплата поступают в месяце договора; по рассрочке в месяце договора — первый взнос, остаток — равными долями n месяцев. Доли берутся по продукту строки (SALES.PAYMENT_MIX: product); сумма долей ипотеки, 100% оплаты и рассрочки должна быть 1. Расчёт «как в исходном Excel» (Excel один в один): ипотечные сделки 0,9 (0,7 кредит + 0,2 ПВ), 100% оплата 0,1, рассрочки нет — вся выручка поступает в месяце сделки, как CF1!F15; на эскроу — сделки по дату из CF1!F8:AS8; поступления после 1 кв 2033 в CF не попадают, как в CF1!F15:AH15 (предупреждение). Первоначальный взнос по ипотеке (mortgage_down_payment) на поступления не влияет: и взнос, и кредит приходят в месяце сделки."
+    terms:
+      "cash_in[k,t]": "результат: поступления от покупателей продукта k в месяце t, руб"
+      "cash_in_ddu[k,t]": "результат: из них по договорам ДДУ (идут на эскроу), руб"
+      "value[k,τ]": "стоимость договоров месяца τ (F.SALES.CONTRACT_VALUE), руб"
+      "mortgage_share, full_share, installment_share": "доли ипотеки, 100% оплаты и рассрочки (SALES.PAYMENT_MIX)"
+      "down": "первый взнос по рассрочке, доля (SALES.PAYMENT_MIX)"
+      "n": "срок рассрочки, мес (SALES.PAYMENT_MIX: installment_months)"
+      "flag_dkp[p,τ]": "месяц договора после РНВ очереди — договор ДКП (F.TIME.FLAG_POST_RNV)"
+    depends_on: [F.SALES.CONTRACT_VALUE, SALES.PAYMENT_MIX, SALES.PRODUCTS, TIME.MILESTONES, F.TIME.FLAG_POST_RNV, F.TIME.DATE, TIME.LEGACY_ESCROW_DEPOSIT_END, SALES.LEGACY_CASH_IN_END]
+    rationale: "Ипотека и 100% оплата поступают в месяц сделки; рассрочка — первоначальный взнос + равные платежи. Проверка: сумма долей = 1. Деньги по ДДУ отделяются от ДКП, потому что идут на эскроу"
+    rejected: ["Структура оплат на листе «Эскроу» не связана с CF1 и не сходится к 100% (исходник 0,7+0,1+0)"]
+    source_ids: [S_CBR_MORTGAGE]
+    legacy: {cells: "Эскроу!C5:AL33", verdict: replace}
+    status: verified
+
+  - id: F.SALES.WAVG_PRICE
+    module: SALES
+    name: "Средневзвешенная цена продаж"
+    plain:
+      title: "Средняя цена продаж, руб/м² (для машино-мест и кладовых — руб за штуку)"
+      how: "Сумма договоров по продукту, делённая на всю проданную площадь."
+    unit: руб/м2
+    dims: [k]
+    expr: "wavg_price[k] = Σ_t value[k,t] / Σ_t sold[k,t]"
+    terms:
+      "wavg_price[k]": "результат: средневзвешенная цена продукта k, руб/м²"
+      "value[k,t]": "стоимость договоров (F.SALES.CONTRACT_VALUE)"
+      "sold[k,t]": "продано (F.SALES.SOLD_AREA)"
+    depends_on: [F.SALES.CONTRACT_VALUE, F.SALES.SOLD_AREA]
+    rationale: "Средняя цена должна учитывать объёмы продаж в каждом периоде"
+    rejected: ["AVERAGE цен по периодам (исходник План продаж!D31, D66) — период без продаж весит как пиковый"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "План продаж!D31, D36, D41, D66", verdict: replace}
+    status: verified
+
+  - id: F.SALES.END_PRICE
+    module: SALES
+    name: "Цена в конце продаж"
+    plain:
+      title: "Цена в месяц последней продажи, руб/м²"
+      how: "Цена продукта в последнем месяце, когда по нему идут продажи."
+    unit: руб/м2
+    dims: [k]
+    expr: "end_price[k] = price[k, t_last_sale[k]]"
+    terms:
+      "end_price[k]": "результат: цена продукта k в последнем месяце продаж, руб/м²"
+      "t_last_sale[k]": "последний месяц, в котором sold > 0"
+    depends_on: [F.SALES.PRICE, F.SALES.SOLD_AREA]
+    rationale: "Фактический последний месяц продаж"
+    rejected: ["Фиксированный столбец S (исходник План продаж!D65)"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "План продаж!D65", verdict: replace}
+    status: verified
+
+  - id: F.SALES.REVENUE_TOTAL
+    module: SALES
+    name: "Выручка итого (с НДС) и без НДС"
+    plain:
+      title: "Выручка итого, руб"
+      how: "Сумма всех договоров по всем продуктам за весь расчёт, с НДС."
+    unit: руб
+    dims: []
+    expr: |
+      revenue_gross = Σ_{k,t} value[k,t]
+      revenue_net   = revenue_gross − Σ output_vat
+    note: "Выручка без НДС считается с модулем налогов (этап 6, F.TAX.OUTPUT_VAT); до этого — только выручка с НДС. База статей-долей выручки бюджета (маркетинг, брокеридж, вознаграждение девелопера) — выручка с НДС."
+    terms:
+      "revenue_gross": "результат: выручка с НДС, руб"
+      "revenue_net": "результат: выручка без НДС, руб"
+      "value[k,t]": "стоимость договоров (F.SALES.CONTRACT_VALUE)"
+      "output_vat": "НДС с реализации (F.TAX.OUTPUT_VAT)"
+    depends_on: [F.SALES.CONTRACT_VALUE, F.TAX.OUTPUT_VAT]
+    rationale: "Итог плана продаж = итог выручки в CF (CHECK.REVENUE_EQ_CF)"
+    rejected: ["Исходник: план продаж 118,13 млрд, CF1 117,51 млрд — продажи после столбца AH не перенесены (−616 млн)"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "План продаж!D25, Бюджет!F12, CF1!C15", verdict: fix}
+    status: verified
+
+  # =====================================================================
+  # ESCROW
+  # =====================================================================
+
+  - id: F.ESC.DEPOSIT
+    module: ESCROW
+    name: "Пополнение эскроу"
+    plain:
+      title: "Поступления на эскроу, руб"
+      how: "Деньги покупателей по ДДУ до разрешения на ввод, по очередям."
+    unit: руб
+    dims: [p, t]
+    expr: "deposit[p,t] = Σ_{k ∈ очередь p} cash_in_ddu[k,t]"
+    terms:
+      "deposit[p,t]": "результат: поступления на эскроу очереди p в месяце t, руб"
+      "cash_in_ddu[k,t]": "поступления по договорам ДДУ — заключённым до РНВ очереди (F.SALES.CASH_IN)"
+      "k ∈ очередь p": "строки SALES.PRODUCTS с phase = p"
+    depends_on: [F.SALES.CASH_IN, F.TIME.FLAG_PRESALE, SALES.PRODUCTS, TIME.MILESTONES]
+    rationale: "Все платежи по ДДУ, включая рассрочку, поступают на эскроу (ст.15.4 214-ФЗ)"
+    rejected: []
+    source_ids: [S_214_ART15_4]
+    legacy: {cells: "CF1!F92:AS92", verdict: keep}
+    status: verified
+
+  - id: F.ESC.BALANCE
+    module: ESCROW
+    name: "Остаток на эскроу на конец месяца"
+    plain:
+      title: "Остаток на эскроу на конец месяца, руб"
+      how: "Остаток прошлого месяца плюс поступления минус раскрытие. В месяц раскрытия застройщик получает весь остаток."
+    unit: руб
+    dims: [p, t]
+    expr: |
+      esc_bal[p,t] = esc_bal[p,t−1] + deposit[p,t] − release[p,t]
+      release[p,t] = flag_release[p,t] × (esc_bal[p,t−1] + deposit[p,t]) + 1{ t > t_release[p] } × deposit[p,t]
+    note: "В месяц раскрытия застройщику передаётся весь остаток; поступления после раскрытия передаются в том же месяце."
+    terms:
+      "esc_bal[p,t]": "результат: остаток на эскроу очереди p на конец месяца, руб"
+      "deposit[p,t]": "пополнение эскроу (F.ESC.DEPOSIT)"
+      "release[p,t]": "раскрытие — передача средств застройщику, руб"
+      "flag_release[p,t]": "флаг месяца раскрытия (F.TIME.FLAG_ESCROW_RELEASE)"
+      "t_release[p]": "месяц раскрытия эскроу очереди p"
+    depends_on: [F.ESC.DEPOSIT, F.TIME.FLAG_ESCROW_RELEASE]
+    rationale: "Раскрытие по очереди; платежи рассрочки после раскрытия проходят «транзитом» и раскрываются в том же месяце"
+    rejected: ["Один общий счёт на все очереди (исходник)"]
+    source_ids: [S_214_ART15_5]
+    legacy: {cells: "CF1!F91:AS94", verdict: fix}
+    status: verified
+
+  - id: F.ESC.COVERAGE
+    module: ESCROW
+    name: "Покрытие долга остатками эскроу"
+    plain:
+      title: "Покрытие долга остатками на эскроу"
+      how: "Средний остаток на эскроу за вычетом резерва банка, делённый на долг по кредиту с процентами. Чем выше покрытие, тем ниже ставка. Пока долга нет, покрытие не считается."
+    unit: доля
+    dims: [t]
+    expr: |
+      coverage[t]  = Σ_p esc_bal_avg[p,t] × (1 − FIN.ESCROW_RESERVE_RATE) / (debt_avg[t] + accrued[t−1])
+      esc_bal_avg  = (esc_bal[t−1] + esc_bal[t]) / 2
+      debt_avg[t]  = debt[t−1] + draw[t] / 2
+      coverage[t]  = пусто, если debt_avg[t] + accrued[t−1] = 0
+    note: "Ставка месяца t берёт покрытие за t−1 (F.FIN.RATE), поэтому покрытие может читать долг того же месяца без цикла. «Как в исходном Excel» — поквартально, как CF1!F120:AS122: остаток эскроу — среднее конца прошлого и текущего квартала (в первом квартале — только конец квартала: ячейка E94 пустая), долг — среднее остатков на конец кварталов, проценты — на конец текущего квартала; знаки — как в CF1 (долг и проценты в исходнике отрицательные)."
+    terms:
+      "coverage[t]": "результат: покрытие долга остатками эскроу, доля"
+      "esc_bal_avg[p,t]": "средний остаток эскроу очереди за месяц"
+      "esc_bal": "остаток эскроу (F.ESC.BALANCE)"
+      "debt_avg[t]": "средний основной долг за месяц: выдача — в середине месяца (F.FIN.DEBT, F.FIN.DRAW)"
+      "accrued[t−1]": "начисленные и не оплаченные проценты на конец прошлого месяца (F.FIN.DEBT)"
+    depends_on: [F.ESC.BALANCE, F.FIN.DEBT, F.FIN.DRAW, FIN.ESCROW_RESERVE_RATE, F.TIME.DATE]
+    rationale: "Коэффициент К1 для ставки ПФ; средние остатки за период — как в методике исходника и кредитных договорах"
+    rejected: []
+    source_ids: [S_BANK_TERMSHEET, S_CBR_PF_STATS]
+    legacy: {cells: "CF1!F120:AS122", verdict: keep}
+    status: verified
+
+  # =====================================================================
+  # FIN — проектное финансирование
+  # Формулы F.FIN.FEES … F.FIN.DEBT и F.ESC.COVERAGE связаны через прошлый месяц (lag_depends_on): ядро считает их
+  # помесячно — месяц t всех формул, затем t + 1. «Как в исходном Excel» — поквартально, как CF1 (значение квартала —
+  # в последнем месяце квартала), вместе с ошибками исходника (предупреждения — во вкладке «Расхождения»).
+  # =====================================================================
+
+  - id: F.FIN.EQUITY_REQUIRED
+    module: FIN
+    name: "Требуемое собственное участие"
+    plain:
+      title: "Требуемое собственное участие, руб"
+      how: "Бюджет проекта × требуемая банком доля собственного участия. Застройщик вносит эти деньги до первой выдачи кредита."
+      example: "В проекте — {=|руб}."
+    unit: руб
+    dims: []
+    expr: "equity_req = FIN.EQUITY_SHARE × capex_total"
+    note: "«Как в исходном Excel» требуемого собственного участия нет: собственные средства в CF1 — 10% расходов каждого квартала (F.FIN.EQUITY_IN); показатель не считается."
+    terms:
+      "equity_req": "результат: требуемое собственное участие, руб"
+      "capex_total": "итого бюджет, включая стоимость участка (F.CAPEX.TOTAL), руб"
+    depends_on: [FIN.EQUITY_SHARE, F.CAPEX.TOTAL]
+    rationale: "Банк требует внести собственные средства ДО первой выборки кредита; земля по условиям банка засчитывается в собственное участие"
+    rejected: ["10% от расходов каждого периода (исходник CF1!G132)"]
+    source_ids: [S_214_ART3, S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!D132:AS132, Бюджет!F65", verdict: fix}
+    status: needs_verification
+
+  - id: F.FIN.LIMIT
+    module: FIN
+    name: "Лимит проектного финансирования"
+    plain:
+      title: "Лимит проектного кредита, руб"
+      how: "Бюджет проекта минус собственное участие. Проценты в лимит не входят: они прибавляются к долгу и гасятся из эскроу."
+      example: "В проекте — {=|руб}."
+    unit: руб
+    dims: []
+    expr: |
+      limit = capex_total − equity_req
+      «Как в исходном Excel»: limit = FIN.LEGACY_LIMIT (Бюджет!F67)
+    note: "Капитализированные проценты в лимит не входят — они учитываются отдельно (PIK)."
+    terms:
+      "limit": "результат: лимит проектного финансирования, руб"
+      "capex_total": "итого бюджет (F.CAPEX.TOTAL), руб"
+      "equity_req": "требуемое собственное участие (F.FIN.EQUITY_REQUIRED)"
+    depends_on: [F.CAPEX.TOTAL, F.FIN.EQUITY_REQUIRED, FIN.LEGACY_LIMIT]
+    rationale: "Лимит покрывает бюджет за вычетом собственного участия; проценты капитализируются и гасятся при раскрытии эскроу — как в исходнике (строки 107–110)"
+    rejected: ["Лимит = СМР + ПИР + участок + коммерческие + налоги (исходник Бюджет!F67) — включает участок, уже оплаченный собственными средствами"]
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "Бюджет!F67, CF1!C98", verdict: fix}
+    status: verified
+
+  - id: F.FIN.FEES
+    module: FIN
+    name: "Комиссии банка"
+    plain:
+      title: "Комиссии банка, руб"
+      how: "Комиссия за выдачу — один раз, в первый месяц после внесения собственного участия, процент от лимита. Комиссия за резервирование — на невыбранную часть лимита, пока кредит открыт."
+      example: "В проекте за весь срок — {=|руб}."
+    unit: руб
+    dims: [t]
+    expr: |
+      open[t]       = 1{ Σ_{τ<t} equity_in[τ] ≥ equity_req } × 1{ t ≤ t_release_last }
+      fee_arr[t]    = FIN.FEE_ARRANGEMENT × limit × 1{ open[t] = 1 и open[t−1] = 0 }
+      fee_commit[t] = FIN.FEE_COMMITMENT × (limit − Σ_{τ<t} draw[τ]) × days[t] / 365 × open[t]
+      fees[t]       = fee_arr[t] + fee_commit[t]
+      «Как в исходном Excel»: fees = FIN.FEE_ARRANGEMENT × limit в первом квартале CF1 (CF1!F111), комиссии за резервирование нет (CF1!F112:AS112 пустые)
+    note: "Комиссии считаются по данным прошлого месяца (взносы и выдачи до t), поэтому их можно включить в потребность месяца t без цикла. Пустая ставка комиссии в расчёт не входит и показывается как «не учтено»."
+    terms:
+      "fees[t]": "результат: комиссии банка в месяце t, руб"
+      "fee_arr[t]": "комиссия за выдачу — в месяц открытия кредита, руб"
+      "fee_commit[t]": "комиссия за неиспользованный лимит, руб"
+      "open[t]": "кредит открыт: собственное участие внесено, месяц не позже раскрытия эскроу последней очереди"
+      "equity_in[τ]": "взнос собственных средств (F.FIN.EQUITY_IN)"
+      "equity_req": "требуемое собственное участие (F.FIN.EQUITY_REQUIRED)"
+      "limit": "лимит кредита (F.FIN.LIMIT)"
+      "draw[τ]": "выдача кредита (F.FIN.DRAW)"
+      "t_release_last": "месяц раскрытия эскроу последней очереди (F.TIME.FLAG_ESCROW_RELEASE)"
+      "days[t]": "дней в месяце (F.TIME.DAYS)"
+    depends_on: [F.FIN.LIMIT, F.FIN.EQUITY_REQUIRED, F.FIN.EQUITY_IN, F.FIN.DRAW, F.TIME.FLAG_ESCROW_RELEASE, F.TIME.DAYS, F.TIME.DATE, FIN.FEE_ARRANGEMENT, FIN.FEE_COMMITMENT]
+    lag_depends_on: [F.FIN.EQUITY_IN, F.FIN.DRAW]
+    rationale: "Стандартные комиссии кредитного договора: за выдачу — при открытии кредита, за резервирование — на невыбранный лимит"
+    rejected: ["«Банковские расходы 15% от ПФ» (исходник Бюджет!F68) — дублирует проценты"]
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F111:AS112, Бюджет!D68:F68", verdict: fix}
+    status: verified
+
+  - id: F.FIN.FUNDING_NEED
+    module: FIN
+    name: "Потребность в финансировании месяца"
+    plain:
+      title: "Потребность в финансировании месяца, руб"
+      how: "Платежи по бюджету и комиссии банку минус свободные деньги проекта на начало месяца. Свободные деньги — это раскрытое эскроу и поступления по договорам купли-продажи, оставшиеся после погашения кредита. Если денег хватает, ноль."
+      example: "В проекте за весь срок — {=.need|руб}."
+    unit: руб
+    dims: [t]
+    expr: |
+      need[t]     = MAX(0, capex_cash[t] + taxes_paid[t] + fees[t] − cash_bop[t])
+      cash_bop[t] = cash_bop[t−1] + equity_in[t−1] + draw[t−1] + Σ_p release[p,t−1] + dkp_cash[t−1]
+                    − repaid[t−1] − capex_cash[t−1] − taxes_paid[t−1] − fees[t−1]
+      «Как в исходном Excel»: need = расходы квартала (CF1!F18:AS18)
+    note: "Налоги появятся с этапом 6 (F.TAX.PAYMENTS); до этого taxes_paid = 0, и это показывается на экране. Свободные деньги проекта cash_bop ведутся здесь же и на этапе 6 совпадут с остатком денег F.CF.CASH_BALANCE. Деньги, пришедшие в месяце, тратятся со следующего месяца."
+    terms:
+      "need[t]": "результат: потребность в финансировании месяца t, руб"
+      "cash_bop[t]": "свободные деньги проекта на начало месяца, руб"
+      "capex_cash[t]": "платежи по бюджету в месяце: Σ_i item_cash[i,t] (F.CAPEX.ITEM_CASH)"
+      "taxes_paid[t]": "налоговые платежи (F.TAX.PAYMENTS, этап 6)"
+      "fees[t]": "комиссии банка (F.FIN.FEES)"
+      "release[p,t]": "раскрытие эскроу очереди (F.ESC.BALANCE)"
+      "dkp_cash[t]": "поступления по договорам купли-продажи, мимо эскроу (F.SALES.CASH_IN)"
+      "equity_in, draw": "взносы застройщика и выдачи кредита (F.FIN.EQUITY_IN, F.FIN.DRAW)"
+      "repaid[t]": "погашение кредита и процентов (F.FIN.REPAYMENT)"
+    depends_on: [F.CAPEX.ITEM_CASH, F.TAX.PAYMENTS, F.ESC.BALANCE, F.SALES.CASH_IN, F.FIN.FEES, F.FIN.EQUITY_IN, F.FIN.DRAW, F.FIN.REPAYMENT, F.TIME.DATE]
+    lag_depends_on: [F.TAX.PAYMENTS, F.FIN.EQUITY_IN, F.FIN.DRAW, F.FIN.REPAYMENT]
+    rationale: "Сначала используются собственные поступления проекта, затем собственный капитал, затем кредит"
+    rejected: ["Кредит на все расходы квартала плюс собственные средства (исходник CF1!F98 = −(F18 + F132)) — выдача больше потребности"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "CF1!F98", verdict: fix}
+    status: verified
+
+  - id: F.FIN.EQUITY_IN
+    module: FIN
+    name: "Взнос собственного капитала"
+    plain:
+      title: "Взнос собственных средств, руб"
+      how: "Сначала застройщик вносит свои деньги до требуемого собственного участия. Дальше — только если месяцу не хватает денег сверх лимита кредита или кредит уже закрыт."
+      example: "В проекте за весь срок — {=.total|руб}."
+    unit: руб
+    dims: [t]
+    expr: |
+      rest_req[t] = MAX(0, equity_req − Σ_{τ<t} equity_in[τ])
+      upfront[t]  = MIN(need[t], rest_req[t])
+      open[t]     = 1{ upfront[t] = rest_req[t] } × 1{ t ≤ t_release_last }
+      credit[t]   = MIN(need[t] − upfront[t], MAX(0, limit − Σ_{τ<t} draw[τ])) × open[t]
+      gap[t]      = need[t] − upfront[t] − credit[t]
+      equity_in[t] = upfront[t] + gap[t]
+      «Как в исходном Excel»: equity_in = комиссия за выдачу в первом квартале CF1, дальше FIN.EQUITY_SHARE × расходы квартала (CF1!F132:AS132)
+    note: "Сначала акционер вносит требуемое собственное участие; после первой выборки кредита — только на покрытие дефицита вне лимита (gap)."
+    terms:
+      "equity_in[t]": "результат: взнос акционера в месяце t, руб (total), из него сверх лимита — gap"
+      "need[t]": "потребность в финансировании (F.FIN.FUNDING_NEED)"
+      "equity_req": "требуемое собственное участие (F.FIN.EQUITY_REQUIRED)"
+      "limit": "лимит кредита (F.FIN.LIMIT)"
+      "draw[τ]": "выдачи кредита до месяца t (F.FIN.DRAW)"
+      "t_release_last": "месяц раскрытия эскроу последней очереди (F.TIME.FLAG_ESCROW_RELEASE): в этот месяц выдача ещё возможна и гасится из раскрытого эскроу"
+      "gap[t]": "дефицит денег сверх лимита кредита, руб"
+    depends_on: [F.FIN.FUNDING_NEED, F.FIN.EQUITY_REQUIRED, F.FIN.LIMIT, F.FIN.DRAW, F.FIN.FEES, F.TIME.FLAG_ESCROW_RELEASE, FIN.EQUITY_SHARE, F.TIME.DATE]
+    lag_depends_on: [F.FIN.DRAW]
+    rationale: "Очерёдность: собственные средства → кредит"
+    rejected: ["10% расходов каждого квартала (исходник CF1!G132) — банк требует внести собственное участие до выдач"]
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F132:AS132", verdict: replace}
+    status: verified
+
+  - id: F.FIN.DRAW
+    module: FIN
+    name: "Выборка кредита"
+    plain:
+      title: "Выдача кредита в месяце, руб"
+      how: "Потребность месяца минус взнос застройщика. Банк выдаёт кредит только после собственного участия, в пределах лимита и до раскрытия эскроу последней очереди."
+      example: "В проекте за весь срок — {=|руб}."
+    unit: руб
+    dims: [t]
+    expr: |
+      draw[t] = need[t] − equity_in[t]
+      «Как в исходном Excel»: draw = (расходы квартала + собственные средства квартала) × флаг продаж на эскроу (CF1!F98 = −(F18 + F132) × F8)
+    note: "Ограничения лимитом, собственным участием и датой раскрытия эскроу считаются в F.FIN.EQUITY_IN: всё, что не покрыл кредит, вносит застройщик."
+    terms:
+      "draw[t]": "результат: выдача кредита в месяце t, руб"
+      "need[t]": "потребность в финансировании (F.FIN.FUNDING_NEED)"
+      "equity_in[t]": "взнос застройщика (F.FIN.EQUITY_IN)"
+    depends_on: [F.FIN.FUNDING_NEED, F.FIN.EQUITY_IN, F.FIN.LIMIT, TIME.LEGACY_ESCROW_DEPOSIT_END, F.TIME.DATE]
+    rationale: "Выборка после внесения собственного участия и в пределах лимита"
+    rejected: ["Выдача на все расходы квартала плюс собственные средства и погашение в том же квартале (исходник CF1!F98:F100) — долг всегда 0"]
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F98:AS98", verdict: fix, issue: "в исходнике зависела от флага эскроу F8, который перебит нулями"}
+    status: verified
+
+  - id: F.FIN.RATE
+    module: FIN
+    name: "Текущая ставка ПФ"
+    plain:
+      title: "Ставка проектного кредита, % годовых"
+      how: "Часть долга, покрытая эскроу за прошлый месяц, идёт по льготной ставке, остальная — по ключевой ставке плюс надбавка банка. Если эскроу больше долга, банк даёт скидку. Ставка не ниже минимальной по договору."
+    unit: "%годовых"
+    dims: [t]
+    expr: |
+      K1[t]          = MIN( coverage[t−1], 1 ), 0 если покрытия нет
+      K2[t]          = 1 − K1[t]
+      base_rate[t]   = FIN.KEY_RATE_PATH[t] + FIN.RATE_BASE_SPREAD
+      SkR[t]         = MAX( (coverage[t−1] − 1) × (FIN.KEY_RATE_PATH[t] + FIN.RATE_DISCOUNT_COEF), 0 ), если FIN.RATE_DISCOUNT_COEF задан; иначе 0
+      rate[t]        = MAX( FIN.RATE_PREFERENTIAL × K1 + base_rate × K2 − SkR, FIN.RATE_MIN )
+    note: "(esc − (debt + accr)) / (debt + accr) = coverage − 1. Ставка скидки = ключевая + FIN.RATE_DISCOUNT_COEF, как в исходнике (CF1!F118 = ключевая − 2 п.п.). «Как в исходном Excel» — поквартально, покрытие за прошлый квартал; ключевая 14,25% на весь срок (FIN.LEGACY_KEY_RATE), базовая = ключевая + спред = 20% (CF1!D117)."
+    terms:
+      "rate[t]": "результат: ставка проектного финансирования в месяце t, % год."
+      "K1[t]": "доля долга, покрытая эскроу (льготная ставка)"
+      "K2[t]": "доля долга, не покрытая эскроу (базовая ставка)"
+      "coverage[t−1]": "покрытие долга эскроу за прошлый месяц (F.ESC.COVERAGE)"
+      "base_rate[t]": "базовая ставка: ключевая + спред"
+      "SkR[t]": "скидка к ставке при избыточном покрытии эскроу"
+    depends_on: [F.ESC.COVERAGE, FIN.KEY_RATE_PATH, FIN.LEGACY_KEY_RATE, FIN.RATE_BASE_SPREAD, FIN.RATE_PREFERENTIAL, FIN.RATE_DISCOUNT_COEF, FIN.RATE_MIN, F.TIME.DATE]
+    lag_depends_on: [F.ESC.COVERAGE]
+    rationale: "Рыночная механика ПФ с эскроу: льготная ставка на покрытую часть, базовая (ключевая + спред) на непокрытую. Покрытие берётся за прошлый месяц — нет циклической ссылки"
+    rejected: ["Фиксированная базовая ставка 20% при ключевой 14,25% (исходник) — сценарий ставки ЦБ не влияет на проект"]
+    source_ids: [S_BANK_TERMSHEET, S_CBR_PF_STATS, S_CBR_KEYRATE]
+    legacy: {cells: "CF1!F115:AS125", verdict: fix}
+    status: verified
+    example: {input: {pref: 0.05, key: 0.14, spread: 0.0575, coverage: 0.4, skr: 0, min: 0.001}, output: 0.1385}
+
+  - id: F.FIN.INTEREST
+    module: FIN
+    name: "Проценты начисленные (капитализируемые)"
+    plain:
+      title: "Проценты по кредиту, руб"
+      how: "Средний долг месяца с начисленными процентами × ставка × дни месяца ÷ 365. Проценты прибавляются к долгу до раскрытия эскроу."
+      example: "В проекте за весь срок — {=|руб}."
+    unit: руб
+    dims: [t]
+    expr: |
+      interest[t] = ( debt[t−1] + draw[t] / 2 + accrued[t−1] ) × rate[t] × days[t] / 365
+      «Как в исходном Excel»: поквартально, interest[q] = ( debt[q−1] + draw[q] / 2 + interest[q−1] ) × rate[q] × days[q] / 365 (CF1!F107; в первом квартале — draw целиком: ячейка F97 пустая)
+    note: "Накопленные проценты accrued[t] = accrued[t−1] + interest[t] − interest_paid[t] считаются в F.FIN.DEBT."
+    terms:
+      "interest[t]": "результат: проценты, начисленные за месяц t, руб"
+      "debt[t−1]": "основной долг на конец прошлого месяца (F.FIN.DEBT)"
+      "accrued[t−1]": "накопленные неоплаченные проценты на конец прошлого месяца (F.FIN.DEBT)"
+      "draw[t]": "выборка (F.FIN.DRAW)"
+      "rate[t]": "ставка (F.FIN.RATE)"
+      "days[t]": "дней в месяце (F.TIME.DAYS)"
+    depends_on: [F.FIN.RATE, F.FIN.DRAW, F.FIN.DEBT, F.TIME.DAYS, F.TIME.DATE]
+    lag_depends_on: [F.FIN.DEBT]
+    rationale: "Методика исходника (строка 107) сохранена: проценты на средний долг + начисленные ранее (сложный процент при капитализации)"
+    rejected: ["Проценты прошлого квартала вместо накопленных (исходник CF1!F107: + E107)"]
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F107:AS110", verdict: keep}
+    status: verified
+
+  - id: F.FIN.REPAYMENT
+    module: FIN
+    name: "Погашение долга и процентов"
+    plain:
+      title: "Погашение кредита, руб"
+      how: "Раскрытое эскроу идёт сначала на проценты, затем на основной долг. После раскрытия на погашение идут и поступления по договорам купли-продажи."
+      example: "В проекте из эскроу — {=.from_escrow|руб}, из договоров купли-продажи — {=.from_dkp|руб}."
+    unit: руб
+    dims: [t]
+    expr: |
+      owed_int[t]    = accrued[t−1] + interest[t]
+      owed_debt[t]   = debt[t−1] + draw[t]
+      int_esc[t]     = MIN( Σ_p release[p,t], owed_int[t] )
+      debt_esc[t]    = MIN( Σ_p release[p,t] − int_esc[t], owed_debt[t] )
+      int_dkp[t]     = MIN( dkp_cash[t], owed_int[t] − int_esc[t] ) × 1{ t > t_release }
+      debt_dkp[t]    = MIN( dkp_cash[t] − int_dkp[t], owed_debt[t] − debt_esc[t] ) × 1{ t > t_release }
+      interest_paid  = int_esc + int_dkp;  principal = debt_esc + debt_dkp
+      «Как в исходном Excel»: principal[q] = MAX( release[q] − Σ_{τ≤q} interest[τ], debt[q−1] + draw[q] ) (CF1!F100, со знаками CF1); interest_paid[q] = Σ_{τ≤q} interest[τ] в квартале раскрытия (CF1!F108); из ДКП — 0 (CF1!F101 × F9)
+    note: "Из раскрытого эскроу сначала гасятся проценты, затем основной долг. После раскрытия эскроу поступления по ДКП полностью идут на погашение (100% sweep). Месяц раскрытия t_release — первый месяц раскрытия эскроу по F.TIME.FLAG_ESCROW_RELEASE (РНВ + TIME.ESCROW_RELEASE_LAG_M), тот же, что в F.ESC.BALANCE: погашение и конец начисления процентов сдвигаются вместе с раскрытием."
+    terms:
+      "interest_paid[t]": "результат: погашенные проценты, руб"
+      "principal[t]": "результат: погашенный основной долг, руб"
+      "release[p,t]": "раскрытие эскроу (F.ESC.BALANCE)"
+      "dkp_cash[t]": "поступления по договорам купли-продажи (F.SALES.CASH_IN)"
+      "debt[t−1], accrued[t−1]": "основной долг и накопленные проценты на конец прошлого месяца (F.FIN.DEBT)"
+      "interest[t]": "проценты месяца (F.FIN.INTEREST)"
+      "draw[t]": "выдача кредита (F.FIN.DRAW)"
+      "t_release": "первый месяц раскрытия эскроу (F.TIME.FLAG_ESCROW_RELEASE)"
+    depends_on: [F.ESC.BALANCE, F.TIME.FLAG_ESCROW_RELEASE, F.FIN.DRAW, F.FIN.INTEREST, F.FIN.DEBT, F.SALES.CASH_IN, FIN.ESCROW_RESERVE_RATE, F.TIME.DATE]
+    lag_depends_on: [F.FIN.DEBT]
+    rationale: "ч.6 ст.15.5 214-ФЗ позволяет направлять средства эскроу в погашение кредита; остаток долга гасится из ДКП"
+    rejected: ["Погашение по залоговой стоимости (исходник строки 102–105) не доведено до формул", "Погашение всей выдачи в том же квартале (исходник CF1!F100 = MAX(…; −F97 − F98)) — долг всегда 0"]
+    source_ids: [S_214_ART15_5, S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F99:AS106, F108:AS109", verdict: fix, issue: "AA109:AB109 ссылаются на соседний столбец (AB85 вместо AA85)"}
+    status: verified
+
+  - id: F.FIN.DEBT
+    module: FIN
+    name: "Остаток основного долга"
+    plain:
+      title: "Остаток основного долга, руб"
+      how: "Долг прошлого месяца плюс выдача минус погашение основного долга. Отдельно — проценты, начисленные и ещё не оплаченные."
+    unit: руб
+    dims: [t]
+    expr: |
+      debt[t]    = debt[t−1] + draw[t] − principal[t]
+      accrued[t] = accrued[t−1] + interest[t] − interest_paid[t]
+    note: "Проверка: на конец расчёта debt = 0 и accrued = 0, иначе — предупреждение «кредит не погашен»."
+    terms:
+      "debt[t]": "результат: остаток основного долга на конец месяца, руб"
+      "accrued[t]": "результат: начисленные и не оплаченные проценты на конец месяца, руб"
+      "draw[t]": "выборка (F.FIN.DRAW)"
+      "interest[t]": "проценты месяца (F.FIN.INTEREST)"
+      "principal[t], interest_paid[t]": "погашение основного долга и процентов (F.FIN.REPAYMENT)"
+    depends_on: [F.FIN.DRAW, F.FIN.INTEREST, F.FIN.REPAYMENT]
+    rationale: "Баланс долга BoP → EoP"
+    rejected: []
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F97:AS97, F106:AS106, F110:AS110", verdict: keep}
+    status: verified
+
+  - id: F.FIN.EFFECTIVE_RATE
+    module: FIN
+    name: "Эффективная стоимость кредита"
+    plain:
+      title: "Полная стоимость кредита, % годовых"
+      how: "Ставка, при которой выдачи кредита и все платежи банку с учётом дат уравновешивают друг друга. Показывает стоимость кредита вместе с комиссиями."
+      example: "В проекте — {=|доля}."
+    unit: "%годовых"
+    dims: []
+    expr: |
+      bank_flow[t] = draw[t] − principal[t] − interest_paid[t] − fees[t]
+      eff_rate     = XIRR( bank_flow[t], date[t] )
+      «Как в исходном Excel»: (1 + IRR(поток по кредиту для банка по кварталам))^4 − 1 (CF1!D128), поток = −(F98 + F99 − F108 − F109)
+    note: "С позиции банка знак потока обратный. Если в потоке нет платежей разного знака, ставка не считается (в исходнике CF1!D128 = #NUM!)."
+    terms:
+      "eff_rate": "результат: эффективная стоимость кредита, % год."
+      "bank_flow[t]": "денежный поток по кредиту в месяце t"
+      "XIRR": "внутренняя норма доходности по датам потоков"
+    depends_on: [F.FIN.DRAW, F.FIN.REPAYMENT, F.FIN.FEES, F.TIME.DATE]
+    rationale: "XIRR по датам — корректен при неравных периодах"
+    rejected: ["(1+IRR квартальный)^4 − 1 (исходник D128) — допустимо только при равных периодах"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "CF1!D128", verdict: fix}
+    status: verified
+
+  # =====================================================================
+  # TAX
+  # =====================================================================
+
+  - id: F.TAX.OUTPUT_VAT
+    module: TAX
+    name: "НДС с реализации"
+    plain:
+      title: "НДС с продаж, руб"
+      how: "Из суммы облагаемых договоров выделяется НДС, включённый в цену. Квартиры по ДДУ не облагаются, ПСН, машино-места и продажи по ДКП — по правилам справочника."
+    unit: руб
+    dims: [k, t]
+    expr: "output_vat[k,t] = value[k,t] × TAX.VAT_RATE / (1 + TAX.VAT_RATE) × taxable(k, channel(t))"
+    terms:
+      "output_vat[k,t]": "результат: НДС с реализации продукта k в месяце t, руб"
+      "value[k,t]": "стоимость договоров (F.SALES.CONTRACT_VALUE)"
+      "taxable(k, channel)": "1, если продажа продукта k по этому каналу облагается НДС (по TAX.VAT_REGIME), иначе 0"
+      "channel(t)": "канал продаж в месяце t: ДДУ или ДКП"
+    depends_on: [F.SALES.CONTRACT_VALUE, TAX.VAT_RATE, TAX.VAT_REGIME]
+    rationale: "Цена в договоре включает НДС → выделение 22/122. Облагаются только продукты/каналы из таблицы режима"
+    rejected: ["22% «сверху» от цены с НДС по всей выручке ПСН+ММ (исходник План продаж!E61)"]
+    source_ids: [S_NK_149, S_NK_164, S_MINFIN_VAT_DDU_2023]
+    legacy: {cells: "План продаж!D60:AM61", verdict: fix}
+    status: needs_verification
+    example: {input: {value: 1220, rate: 0.22}, output: 220}
+
+  - id: F.TAX.INPUT_VAT_SHARE
+    module: TAX
+    name: "Доля входящего НДС к вычету"
+    plain:
+      title: "Доля входящего НДС к вычету"
+      how: "Доля НДС подрядчиков, которую можно принять к вычету: заданная вручную или доля облагаемой выручки во всей выручке без НДС."
+    unit: доля
+    dims: []
+    expr: "input_share = TAX.INPUT_VAT_RECOVERABLE ?? ( taxable_revenue_net / revenue_net )"
+    note: "Знак «??»: если доля задана вручную — берётся она, иначе — пропорция облагаемой выручки."
+    terms:
+      "input_share": "результат: доля входящего НДС к вычету"
+      "taxable_revenue_net": "облагаемая НДС выручка без НДС за весь проект"
+      "revenue_net": "вся выручка без НДС"
+    depends_on: [TAX.INPUT_VAT_RECOVERABLE, F.TAX.OUTPUT_VAT, F.SALES.REVENUE_TOTAL]
+    rationale: "Раздельный учёт (п.4 ст.170 НК РФ): НДС по освобождённым операциям включается в стоимость"
+    rejected: []
+    source_ids: [S_NK_149, S_MINFIN_VAT_DDU_2023]
+    legacy: {cells: null, verdict: new}
+    status: needs_verification
+
+  - id: F.TAX.VAT_PAYABLE
+    module: TAX
+    name: "НДС к уплате / возмещению"
+    plain:
+      title: "НДС к уплате или возмещению, руб"
+      how: "За квартал НДС с продаж минус вычет. Плюс платится равными частями в три месяца после квартала, минус возвращается через три месяца."
+    unit: руб
+    dims: [quarter]
+    expr: "vat_q = Σ_{t∈q} output_vat[t] − Σ_{t∈q} input_vat[t] × input_share"
+    note: "Если vat_q > 0 — НДС уплачивается равными долями в течение трёх месяцев, следующих за кварталом. Если vat_q < 0 — возмещение через три месяца после квартала."
+    terms:
+      "vat_q": "результат: НДС к уплате (+) или возмещению (−) за квартал q, руб"
+      "q": "квартал"
+      "output_vat[t]": "НДС с реализации (F.TAX.OUTPUT_VAT)"
+      "input_vat[t]": "входящий НДС по затратам"
+      "input_share": "доля к вычету (F.TAX.INPUT_VAT_SHARE)"
+    depends_on: [F.TAX.OUTPUT_VAT, F.CAPEX.ITEM_CASH, F.TAX.INPUT_VAT_SHARE]
+    rationale: "Налоговый период по НДС — квартал; порядок уплаты — ст.174 НК РФ"
+    rejected: ["5 млн в квартал вручную (исходник CF1!M85:AA85)"]
+    source_ids: [S_NK_164, S_NK_174]
+    legacy: {cells: "CF1!F85:AS85, Бюджет!F54", verdict: replace}
+    status: needs_verification
+
+  - id: F.TAX.PROFIT_BASE
+    module: TAX
+    name: "Налоговая база по налогу на прибыль"
+    plain:
+      title: "Налоговая база по налогу на прибыль, руб"
+      how: "Экономия по ДДУ признаётся в месяц окончания передачи очереди, прибыль по ДКП — в месяц продажи. Общие затраты делятся между очередями по продаваемой площади."
+    unit: руб
+    dims: [t]
+    expr: |
+      base[t]       = economy[p] × 1{ t = handover_end[p] } + profit_dkp[t] − other_expenses[t]
+      economy[p]    = ddu_funds_net[p] − cost_transferred[p]
+      profit_dkp[t] = dkp_revenue_net[t] − avg_cost_m2 × dkp_sold_area[t]
+    note: "Экономия по ДДУ признаётся в месяце окончания передачи очереди; общие затраты распределяются между очередями пропорционально продаваемой площади. Прибыль по ДКП — в месяце продажи. Прочие расходы, не относящиеся к целевому финансированию, — в периоде возникновения."
+    terms:
+      "base[t]": "результат: налоговая база по налогу на прибыль в месяце t, руб"
+      "economy[p]": "экономия застройщика по ДДУ очереди p"
+      "ddu_funds_net[p]": "средства дольщиков очереди p без НДС"
+      "cost_transferred[p]": "затраты на передаваемые объекты очереди p"
+      "handover_end[p]": "окончание передачи ключей очереди p"
+      "profit_dkp[t]": "прибыль от продаж по ДКП"
+      "dkp_revenue_net[t]": "выручка по ДКП без НДС"
+      "avg_cost_m2": "средняя себестоимость 1 м²"
+      "dkp_sold_area[t]": "площадь, проданная по ДКП"
+      "other_expenses[t]": "прочие расходы вне целевого финансирования"
+    depends_on: [F.SALES.CONTRACT_VALUE, F.CAPEX.TOTAL, F.FIN.INTEREST, TIME.MILESTONES]
+    lag_depends_on: [F.FIN.INTEREST]
+    rationale: "Средства дольщиков — целевое финансирование (пп.14 п.1 ст.251 НК РФ); финрез (экономия) — внереализационный доход в периоде исполнения всех обязательств по ДДУ (письмо Минфина от 28.07.2026 № 03-03-08/65074)"
+    rejected:
+      - "5,7% от выручки (исходник Бюджет!M55)"
+      - "(выручка − расходы − собственный капитал) × 25% (исходник Бюджет!J55:K55) — капитал не уменьшает базу"
+    source_ids: [S_NK_251, S_MINFIN_PROFIT_DDU_2026]
+    legacy: {cells: "Бюджет!F55, J55:M55, CF1!AB86", verdict: replace}
+    status: needs_verification
+
+  - id: F.TAX.PROFIT_TAX
+    module: TAX
+    name: "Налог на прибыль с учётом переноса убытков"
+    plain:
+      title: "Налог на прибыль, руб"
+      how: "База года минус убытки прошлых лет в пределах установленной доли, умноженная на ставку. Платится в марте следующего года."
+    unit: руб
+    dims: [year]
+    expr: |
+      loss_used[y] = MIN( loss_cf[y−1], MAX(base[y], 0) × TAX.LOSS_CARRYFORWARD_LIMIT )
+      tax[y]       = ( MAX(base[y], 0) − loss_used[y] ) × TAX.PROFIT_RATE
+      loss_cf[y]   = loss_cf[y−1] − loss_used[y] + MAX(−base[y], 0)
+    note: "Налог уплачивается в марте следующего года (упрощение; авансовые платежи — опция)."
+    terms:
+      "tax[y]": "результат: налог на прибыль за год y, руб"
+      "base[y]": "налоговая база за год (F.TAX.PROFIT_BASE)"
+      "loss_used[y]": "убытки прошлых лет, зачтённые в году y"
+      "loss_cf[y]": "непогашенные убытки на конец года"
+    depends_on: [F.TAX.PROFIT_BASE, TAX.PROFIT_RATE, TAX.LOSS_CARRYFORWARD_LIMIT]
+    rationale: "Ставка 25% (ст.284), ограничение переноса убытков (ст.283)"
+    rejected: []
+    source_ids: [S_NK_284, S_NK_283]
+    legacy: {cells: "CF1!AB86", verdict: replace, issue: "весь налог одной суммой в квартале AB"}
+    status: needs_verification
+
+  - id: F.TAX.PAYMENTS
+    module: TAX
+    name: "Налоговые платежи месяца"
+    plain:
+      title: "Налоги месяца, руб"
+      how: "НДС к уплате (минус возмещение), налог на прибыль и земельный налог или аренда месяца."
+    unit: руб
+    dims: [t]
+    expr: "taxes_paid[t] = vat_paid[t] − vat_refund[t] + profit_tax_paid[t] + land_pay[t]"
+    terms:
+      "taxes_paid[t]": "результат: налоговые платежи месяца t, руб"
+      "vat_paid, vat_refund": "уплата и возмещение НДС (F.TAX.VAT_PAYABLE)"
+      "profit_tax_paid[t]": "уплата налога на прибыль (F.TAX.PROFIT_TAX)"
+      "land_pay[t]": "земельный налог или аренда (F.LAND.TAX_OR_RENT)"
+    depends_on: [F.TAX.VAT_PAYABLE, F.TAX.PROFIT_TAX, F.LAND.TAX_OR_RENT]
+    rationale: "Единая строка налогов в CF"
+    rejected: ["Налог на имущество 0,2% кадастровой стоимости земли (исходник CF1!84): объект незавершённого строительства и квартиры-товары налогом на имущество по кадастровой стоимости у застройщика в общем случае не облагаются; земля облагается земельным налогом"]
+    source_ids: [S_NK_394]
+    legacy: {cells: "CF1!F81:AS86", verdict: replace}
+    status: needs_verification
+
+  # =====================================================================
+  # CF — денежный поток
+  # =====================================================================
+
+  - id: F.CF.CFADS
+    module: CF
+    name: "Денежный поток проекта до финансирования"
+    plain:
+      title: "Денежный поток проекта до кредита, руб"
+      how: "Раскрытое эскроу и поступления по ДКП минус платежи по бюджету и налоги, без учёта кредита."
+    unit: руб
+    dims: [t]
+    expr: "cfads[t] = Σ_p release[p,t] + dkp_cash[t] − Σ_i item_cash[i,t] − taxes_paid[t]"
+    terms:
+      "cfads[t]": "результат: денежный поток проекта до финансирования, руб"
+      "release[p,t]": "раскрытие эскроу (F.ESC.BALANCE)"
+      "dkp_cash[t]": "поступления по ДКП"
+      "item_cash[i,t]": "платежи по бюджету (F.CAPEX.ITEM_CASH)"
+      "taxes_paid[t]": "налоги (F.TAX.PAYMENTS)"
+    depends_on: [F.ESC.BALANCE, F.SALES.CASH_IN, F.CAPEX.ITEM_CASH, F.TAX.PAYMENTS]
+    rationale: "Деньги дольщиков доступны застройщику только после раскрытия эскроу — поэтому в CFADS входит раскрытие, а не продажи"
+    rejected: ["Выручка по дате продажи (исходник CF1!F133 = F15 − F18 − F81) — завышает CF до РНВ"]
+    source_ids: [S_214_ART15_5]
+    legacy: {cells: "CF1!F133:AS133", verdict: fix}
+    status: verified
+
+  - id: F.CF.FCFE
+    module: CF
+    name: "Денежный поток акционера"
+    plain:
+      title: "Денежный поток акционера, руб"
+      how: "Поток проекта плюс выдачи кредита минус погашение, проценты и комиссии. Минус — деньги застройщика в проект, плюс — деньги ему."
+    unit: руб
+    dims: [t]
+    expr: "fcfe[t] = cfads[t] + draw[t] − principal_repaid[t] − interest_paid[t] − fees[t]"
+    note: "Отрицательные значения — взносы акционера (equity_in и cash gap), положительные — распределения акционеру."
+    terms:
+      "fcfe[t]": "результат: денежный поток акционера, руб"
+      "cfads[t]": "поток проекта (F.CF.CFADS)"
+      "draw[t]": "выборка (F.FIN.DRAW)"
+      "principal_repaid[t], interest_paid[t]": "погашение долга и процентов (F.FIN.REPAYMENT)"
+      "fees[t]": "комиссии (F.FIN.FEES)"
+    depends_on: [F.CF.CFADS, F.FIN.DRAW, F.FIN.REPAYMENT, F.FIN.FEES]
+    rationale: "Стандартное определение FCFE"
+    rejected: ["FCFE = ΔCash − upfront equity (исходник CF1!F138) — зависит от остатка кэша"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "CF1!F138:AS138", verdict: replace}
+    status: verified
+
+  - id: F.CF.CASH_BALANCE
+    module: CF
+    name: "Остаток денежных средств"
+    plain:
+      title: "Остаток денег проекта, руб"
+      how: "Остаток прошлого месяца плюс денежный поток акционера месяца плюс взносы застройщика минус выплаты ему. Остаток не может быть отрицательным: нехватку покрывает застройщик."
+    unit: руб
+    dims: [t]
+    expr: "cash[t] = cash[t−1] + fcfe[t] + equity_in[t] − distributions[t]"
+    note: "Проверка: cash[t] >= 0. Если остаток отрицательный, дефицит cash_gap[t] = −cash[t] покрывает акционер."
+    terms:
+      "cash[t]": "результат: остаток денежных средств на конец месяца, руб"
+      "fcfe[t]": "поток акционера (F.CF.FCFE)"
+      "equity_in[t]": "взнос акционера (F.FIN.EQUITY_IN)"
+      "distributions[t]": "выплаты акционеру"
+    depends_on: [F.CF.FCFE, F.FIN.EQUITY_IN]
+    rationale: "Разрыв ликвидности должен быть виден явно"
+    rejected: []
+    source_ids: [S_EXPERT]
+    legacy: {cells: "CF1!F134:AS137", verdict: fix}
+    status: verified
+
+  - id: F.CF.HORIZON
+    module: CF
+    name: "Горизонт модели"
+    plain:
+      title: "Длина расчёта, месяцев"
+      how: "Расчёт идёт до самого позднего события: последней продажи, раскрытия эскроу, погашения кредита или уплаты налога, плюс запас. Пока модули не готовы, длина предварительная: последняя веха плюс задержка раскрытия эскроу."
+    unit: мес
+    dims: []
+    expr: "T_end = MAX( t_last_sale, t_release_last, t_debt_repaid, t_profit_tax_last ) + TIME.HORIZON_TAIL_M"
+    note: "Горизонт вычисляется, не вводится (решение владельца продукта 27.09.2026). Предупреждение, если T_end > TIME.HORIZON_WARN_M: вероятно, не распродан остаток или не погашен долг. Пока модули SALES, FIN и TAX не реализованы (этапы 4–6), горизонт предварительный: последняя веха + лаг раскрытия эскроу."
+    terms:
+      "T_end": "результат: число месяцев модели от GEN.MODEL_START_DATE"
+      "t_last_sale": "последний месяц с продажами (F.SALES.SOLD_AREA)"
+      "t_release_last": "месяц раскрытия эскроу последней очереди (F.TIME.FLAG_ESCROW_RELEASE)"
+      "t_debt_repaid": "месяц полного погашения долга и процентов (F.FIN.DEBT)"
+      "t_profit_tax_last": "месяц уплаты налога на прибыль за последний год (F.TAX.PROFIT_TAX)"
+    depends_on: [F.SALES.SOLD_AREA, F.TIME.FLAG_ESCROW_RELEASE, F.FIN.DEBT, F.TAX.PROFIT_TAX, TIME.HORIZON_TAIL_M, TIME.HORIZON_WARN_M]
+    rationale: "Срок проекта — следствие вех, продаж, кредита и налогов; ручной срок обрезает хвост продаж, погашение долга и уплату налога"
+    rejected:
+      - "Срок проекта числом (исходник ТЭПы!C5 = 7,25 года) — не связан с датами"
+      - "Последняя веха + фиксированный хвост — не учитывает непроданный остаток и погашение долга"
+    source_ids: [S_EXPERT]
+    legacy: {cells: "ТЭПы!C5", verdict: replace}
+    status: verified
+
+  # =====================================================================
+  # KPI — показатели
+  # =====================================================================
+
+  - id: F.KPI.DISCOUNT_RATE
+    module: KPI
+    name: "Ставка дисконтирования"
+    plain:
+      title: "Ставка дисконтирования, % годовых"
+      how: "Безрисковая ставка плюс премия за риск собственного капитала."
+    unit: "%годовых"
+    dims: []
+    expr: "r = VAL.RISK_FREE + VAL.EQUITY_PREMIUM"
+    terms:
+      "r": "результат: ставка дисконтирования, % год."
+    depends_on: [VAL.RISK_FREE, VAL.EQUITY_PREMIUM]
+    rationale: "Кумулятивный подход: доходность ОФЗ + премия за риск; каждая часть имеет свой источник"
+    rejected: ["Cost of equity 25% одной цифрой (исходник CF1!D139)"]
+    source_ids: [S_CBR_ZCYC, S_EXPERT]
+    legacy: {cells: "CF1!D139", verdict: replace}
+    status: verified
+
+  - id: F.KPI.NPV
+    module: KPI
+    name: "NPV проекта и акционера"
+    plain:
+      title: "Чистая приведённая стоимость (NPV) проекта и акционера, руб"
+      how: "Потоки каждого месяца пересчитываются на дату оценки по ставке дисконтирования и складываются. Считается для проекта и для акционера."
+    unit: руб
+    dims: []
+    expr: |
+      npv_project = Σ_t cfads[t] / (1 + r)^((date[t] − GEN.VALUATION_DATE) / 365)
+      npv_equity  = Σ_t fcfe[t]  / (1 + r)^((date[t] − GEN.VALUATION_DATE) / 365)
+    terms:
+      "npv_project": "результат: NPV проекта, руб"
+      "npv_equity": "результат: NPV акционера, руб"
+      "cfads[t]": "поток проекта (F.CF.CFADS)"
+      "fcfe[t]": "поток акционера (F.CF.FCFE)"
+      "r": "ставка дисконтирования (F.KPI.DISCOUNT_RATE)"
+    depends_on: [F.CF.CFADS, F.CF.FCFE, F.KPI.DISCOUNT_RATE, GEN.VALUATION_DATE]
+    rationale: "Дисконтирование по фактическим датам (XNPV)"
+    rejected: ["NPV = финрез (исходник Бюджет!F63) — без учёта времени"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "Бюджет!F63, Dashboard!C57, CF1!D148", verdict: replace}
+    status: verified
+
+  - id: F.KPI.IRR
+    module: KPI
+    name: "IRR проекта и акционера"
+    plain:
+      title: "Внутренняя норма доходности (IRR) проекта и акционера, % годовых"
+      how: "Ставка, при которой приведённая стоимость потока с учётом дат равна нулю. Считается для проекта и для акционера."
+    unit: "%годовых"
+    dims: []
+    expr: |
+      irr_project = XIRR( cfads[t], date[t] )
+      irr_equity  = XIRR( fcfe[t], date[t] )
+    terms:
+      "irr_project": "результат: IRR проекта"
+      "irr_equity": "результат: IRR акционера"
+      "XIRR": "внутренняя норма доходности по датам потоков"
+    depends_on: [F.CF.CFADS, F.CF.FCFE]
+    rationale: "IRR — ставка, обнуляющая NPV"
+    rejected:
+      - "«IRR» = финрез / затраты (исходник Бюджет!F64, Dashboard!C44) — это ROI"
+      - "«IRR продаж» = прибыль / выручка (Dashboard!C43) — это маржа"
+    source_ids: [S_EXPERT]
+    legacy: {cells: "Бюджет!F64, Dashboard!C43:C45, CF1!C143", verdict: replace}
+    status: verified
+
+  - id: F.KPI.MARGIN
+    module: KPI
+    name: "Прибыль и маржа"
+    plain:
+      title: "Прибыль и рентабельность"
+      how: "Валовая прибыль — выручка без НДС минус бюджет без НДС, чистая — ещё минус проценты, комиссии и налог на прибыль. Рентабельность — прибыль, делённая на выручку без НДС."
+    unit: "руб / доля"
+    dims: []
+    expr: |
+      gross_profit = revenue_net − capex_total_net
+      net_profit   = gross_profit − Σ interest − Σ fees − Σ profit_tax
+      gross_margin = gross_profit / revenue_net
+      net_margin   = net_profit / revenue_net
+      ROI          = net_profit / (capex_total_net + Σ interest)
+    terms:
+      "revenue_net": "выручка без НДС (F.SALES.REVENUE_TOTAL)"
+      "capex_total_net": "бюджет без НДС"
+      "interest": "проценты (F.FIN.INTEREST)"
+      "fees": "комиссии (F.FIN.FEES)"
+      "profit_tax": "налог на прибыль (F.TAX.PROFIT_TAX)"
+    depends_on: [F.SALES.REVENUE_TOTAL, F.CAPEX.TOTAL, F.FIN.INTEREST, F.TAX.PROFIT_TAX]
+    rationale: "Недисконтированные показатели — с корректными названиями"
+    rejected: []
+    source_ids: [S_EXPERT]
+    legacy: {cells: "Бюджет!F61:H61, Dashboard!C33:C42", verdict: fix}
+    status: verified
+
+  - id: F.KPI.COST_PER_M2
+    module: KPI
+    name: "Себестоимость 1 м² продаваемой площади и наценка"
+    plain:
+      title: "Себестоимость 1 м² и наценка"
+      how: "Бюджет без НДС с процентами, делённый на продаваемую площадь. Наценка — средняя цена продаж ÷ себестоимость минус единица."
+    unit: руб/м2
+    dims: []
+    expr: |
+      cost_m2 = (capex_total_net + Σ interest) / F.TEP.SALEABLE_AREA
+      markup  = wavg_price_all / cost_m2 − 1
+    terms:
+      "cost_m2": "результат: себестоимость 1 м² продаваемой площади, руб"
+      "markup": "результат: наценка к себестоимости, доля"
+      "capex_total_net": "бюджет без НДС"
+      "interest": "проценты (F.FIN.INTEREST)"
+      "wavg_price_all": "средневзвешенная цена всех продаж (F.SALES.WAVG_PRICE)"
+    depends_on: [F.CAPEX.TOTAL, F.FIN.INTEREST, F.TEP.SALEABLE_AREA, F.SALES.WAVG_PRICE]
+    rationale: "Делитель — вся продаваемая площадь"
+    rejected: ["Деление на площадь только квартир типа 1 (исходник Бюджет!F69 → 2,96 млн руб/м², наценка −80%)"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "Бюджет!F69:F71, Dashboard!C50", verdict: fix}
+    status: verified
+
+  - id: F.KPI.PEAK_EQUITY
+    module: KPI
+    name: "Пиковая потребность в капитале и срок окупаемости"
+    plain:
+      title: "Пиковые вложения застройщика и срок окупаемости"
+      how: "Самая глубокая точка накопленного потока акционера — наибольшие одновременные вложения. Окупаемость — первый месяц после неё, когда накопленный поток не меньше нуля."
+    unit: "руб / дата"
+    dims: []
+    expr: |
+      peak_equity  = −MIN_t Σ_{τ<=t} fcfe[τ]
+      payback_date = MIN{ date[t] : t > t_peak,  Σ_{τ<=t} fcfe[τ] >= 0 }
+    terms:
+      "peak_equity": "результат: пиковая потребность в капитале акционера, руб"
+      "payback_date": "результат: дата окупаемости"
+      "t_peak": "месяц пика потребности"
+      "fcfe[τ]": "поток акционера (F.CF.FCFE)"
+    depends_on: [F.CF.FCFE]
+    rationale: "Ключевые для инвестора показатели ликвидности"
+    rejected: []
+    source_ids: [S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.KPI.LTC_LTV
+    module: KPI
+    name: "LTC и LTV"
+    plain:
+      title: "Долг к затратам (LTC) и долг к стоимости (LTV)"
+      how: "Долг к затратам — долг с процентами ÷ оплаченный бюджет. Долг к стоимости — долг с процентами ÷ стоимость непроданной площади по текущей цене."
+    unit: доля
+    dims: [t]
+    expr: |
+      LTC[t]                 = (debt[t] + accrued[t]) / Σ_{τ<=t} capex_cash[τ]
+      LTV[t]                 = (debt[t] + accrued[t]) / market_value_unsold[t]
+      market_value_unsold[t] = unsold_area[t] × price[t]
+    terms:
+      "LTC[t]": "результат: долг к понесённым затратам"
+      "LTV[t]": "результат: долг к рыночной стоимости непроданных площадей"
+      "debt[t], accrued[t]": "основной долг и накопленные проценты (F.FIN.DEBT, F.FIN.INTEREST)"
+      "capex_cash[τ]": "платежи по бюджету"
+      "unsold_area[t]": "непроданный остаток площадей"
+      "price[t]": "цена 1 м² (F.SALES.PRICE)"
+    depends_on: [F.FIN.DEBT, F.FIN.INTEREST, F.CAPEX.ITEM_CASH, F.SALES.PRICE]
+    rationale: "LTV — к рыночной стоимости активов (остаток площадей + эскроу), а не к дисконтированной стоимости капитала"
+    rejected: ["LTV к «Market Value of Asset» из DCF по cost of equity (исходник CF1!F144) — зависит от выбранной ставки, max = 0 из-за неработающих флагов"]
+    source_ids: [S_BANK_TERMSHEET]
+    legacy: {cells: "CF1!F144:AS145, Dashboard!C46", verdict: replace}
+    status: verified
+
+  - id: F.KPI.LLCR
+    module: KPI
+    name: "LLCR (коэффициент покрытия долга за срок кредита)"
+    plain:
+      title: "Покрытие долга денежным потоком за срок кредита (LLCR)"
+      how: "Поток проекта до кредита до погашения, приведённый по средней ставке кредита, делённый на долг с процентами. Больше единицы — проект может вернуть кредит."
+    unit: коэф
+    dims: [t]
+    expr: "LLCR[t] = Σ_{τ>=t}^{t_maturity} cfads[τ] / (1 + rate_avg)^((date[τ]−date[t])/365) / (debt[t] + accrued[t])"
+    terms:
+      "LLCR[t]": "результат: коэффициент покрытия долга за срок кредита"
+      "cfads[τ]": "поток проекта (F.CF.CFADS)"
+      "t_maturity": "месяц погашения кредита"
+      "rate_avg": "средняя ставка кредита"
+      "debt[t] + accrued[t]": "долг с процентами"
+    depends_on: [F.CF.CFADS, F.FIN.RATE, F.FIN.DEBT]
+    rationale: "Общепринятое определение в проектном финансировании: приведённый CFADS за оставшийся срок кредита / остаток долга. Минимальное значение по периодам — ковенант"
+    rejected:
+      - "NPV(=FCFE) / проценты (исходник CF1!D150)"
+      - "(Выручка − налоги) / (выборка + %) (исходник CF1!D155)"
+      - "Две разные формулы в Dashboard!C51 и C52 с одинаковым смыслом"
+    source_ids: [S_EXPERT]
+    legacy: {cells: "CF1!D148:D155, Dashboard!C51:C64", verdict: replace}
+    status: verified
+
+  - id: F.KPI.UNFORECASTED_REVENUE
+    module: KPI
+    name: "Выручка после РНВ (продажи по ДКП)"
+    plain:
+      title: "Выручка после разрешения на ввод (продажи по ДКП)"
+      how: "Сумма договоров после разрешения на ввод и её доля во всей выручке. Эти продажи не идут через эскроу и не снижают ставку кредита."
+    unit: "руб / доля"
+    dims: []
+    expr: |
+      dkp_revenue = Σ_t value[t] × flag_dkp[t]
+      dkp_share   = dkp_revenue / revenue_gross
+    terms:
+      "dkp_revenue": "результат: выручка от продаж по ДКП, руб"
+      "dkp_share": "результат: доля выручки после РНВ"
+      "value[t]": "стоимость договоров (F.SALES.CONTRACT_VALUE)"
+      "flag_dkp[t]": "флаг продаж по ДКП (F.TIME.FLAG_POST_RNV)"
+      "revenue_gross": "выручка с НДС (F.SALES.REVENUE_TOTAL)"
+    depends_on: [F.SALES.CONTRACT_VALUE, F.TIME.FLAG_POST_RNV]
+    rationale: "Показатель риска: доля выручки, не участвующей в покрытии кредита эскроу"
+    rejected: ["Сумма фиксированных столбцов Q:S (исходник Бюджет!E73)"]
+    source_ids: [S_EXPERT]
+    legacy: {cells: "Бюджет!C73:E75", verdict: replace}
+    status: verified
+
+  # =====================================================================
+  # CHECK — контрольные проверки (блокируют выпуск отчёта при ошибке)
+  # =====================================================================
+
+  - id: F.CHECK.ALL
+    module: CHECK
+    name: "Свод проверок"
+    plain:
+      title: "Свод проверок модели"
+      how: "Проверки согласованности модели: доли дают 100%, продано не больше построенного, выручка равна поступлениям, эскроу и остаток денег не уходят в минус, долг погашен. Каждая непройденная проверка показывается ошибкой или предупреждением."
+    unit: bool
+    dims: []
+    expr: |
+      PAYMENT_MIX_SUM   : |mortgage + full + installment − 1| < 1e-9
+      SCHEDULE_SUM      : |Σ_t w[i,t] − 1| < 1e-9 для каждой статьи i
+      SOLD_LE_STOCK     : Σ_t sold[k,t] <= stock[k]
+      UNSOLD_AT_END     : remaining[k,T] > 0 → предупреждение
+      REVENUE_EQ_CF     : Σ value = Σ поступлений (эскроу + ДКП) + дебиторка на конец
+      BUDGET_EQ_CF      : Σ бюджета по статьям = Σ затрат в CF
+      ESCROW_NONNEG     : esc_bal >= 0
+      DEBT_LE_LIMIT     : Σ draw <= limit
+      DEBT_REPAID       : debt[T] + accrued[T] = 0
+      CASH_NONNEG       : cash[t] >= 0, иначе cash gap
+      SOURCES_PRESENT   : source_ids ≠ ∅ у каждого параметра и формулы; level 5 → автор и диапазон заданы
+      PARKING_NORM      : parking >= MAX(parking_required, TEP.PARKING_GPZU_COUNT) ИЛИ override с документом
+      NCS_DEVIATION     : |deviation| <= CAPEX.NCS_BENCH_TOLERANCE ИЛИ есть обоснование
+      APT_AREA_MATCH    : |apt_check| <= TEP.APT_AREA_TOLERANCE, иначе предупреждение
+      STAGE_INPUTS      : обязательные входы TEP для GEN.PROJECT_STAGE заполнены и с документом
+      GPZU_LIMITS       : F.CHECK.GPZU_LIMITS без превышений (или есть решение об отклонении)
+      APART_ALLOWED     : F.TEP.APART_AREA > 0 → GPZU.APART_ALLOWED = да
+      GFA_SHARES_SUM    : стадия «оценка участка» → TEP.RES_GFA_SHARE + TEP.APART_GFA_SHARE <= 1
+      UNDERGROUND_CAP   : F.CHECK.UNDERGROUND_CAPACITY (стадия «концепция»)
+      BENCH_MIN_COMPS   : число аналогов >= BENCH.MARKET_MIN_COMPS ИЛИ экспертное обоснование
+      APT_MIX_SHARE_SUM : стадия «оценка участка» → |Σ_k area_share[k] − 1| < 1e-9
+      PARKING_AREA_MIN  : TEP.PARKING_AREA_PER_SPACE >= F.TEP.PARKING_SPACE_MIN_AREA
+      VRI_DATE_REQUIRED : LAND.CADASTRAL_VALUE_AFTER_VRI задана → vri_change_date заполнена
+      LESSOR_REQUIRED   : LAND.TENURE = аренда → LAND.LESSOR_TYPE задан
+      HORIZON_LONG      : F.CF.HORIZON > TIME.HORIZON_WARN_M → предупреждение
+    note: "Свод проверок модели. APART_ALLOWED проверяется по вложенному ГПЗУ; если апартаменты не допускаются, продукт «апартаменты» недоступен. BENCH_MIN_COMPS: если пар «квартиры / апартаменты» меньше BENCH.MIN_PAIRS, скидка апартаментов — экспертная (уровень 5), без блокировки расчёта. UNDERGROUND_CAP даёт ошибку или предупреждение по вместимости подземной части. Проверка, у которой не заполнены входы, не запускается: статус «ждёт данных», в число ошибок не входит (решение владельца продукта 28.09.2026). Незаполненные обязательные поля — метка «Заполните» и счётчик на своей вкладке, не ошибка проверки. T — последний месяц модели."
+    terms:
+      "T": "последний месяц модели"
+      "w[i,t]": "вес месяца в графике статьи (F.CAPEX.SCHEDULE_WEIGHT)"
+      "sold, stock, remaining": "продажи и остатки (F.SALES.SOLD_AREA)"
+      "esc_bal": "остаток эскроу (F.ESC.BALANCE)"
+      "draw, limit, debt, accrued": "кредит (F.FIN.*)"
+      "cash[t]": "остаток денег (F.CF.CASH_BALANCE)"
+      "deviation": "отклонение СМР от НЦС (F.CAPEX.NCS_BENCH)"
+      "apt_check": "расхождение квартирографии и ТЭП (F.TEP.APT_AREA_CHECK)"
+    depends_on: [F.CHECK.GPZU_LIMITS, F.CHECK.UNDERGROUND_CAPACITY, LAND.CADASTRAL_VALUE_AFTER_VRI, LAND.TENURE, LAND.LESSOR_TYPE, TIME.MILESTONES, F.CF.HORIZON, TIME.HORIZON_WARN_M]
+    rationale: "Ни одна из этих ошибок исходника не должна повториться незаметно"
+    rejected: []
+    source_ids: [S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.CHECK.GPZU_LIMITS
+    module: CHECK
+    name: "Проверка проекта по предельным параметрам ГПЗУ"
+    plain:
+      title: "Проверка по предельным параметрам ГПЗУ"
+      how: "Площадь, этажность, высота и процент застройки сравниваются с пределами ГПЗУ или разрешённым отклонением. Пустой предел не проверяется."
+    unit: bool
+    dims: []
+    expr: |
+      limit[x] = GPZU.DEVIATION_PERMIT.permitted_value[x] ?? значение x по ГПЗУ
+
+      F.TEP.GFA_ABOVE                           <= limit[GPZU.MAX_GFA_ABOVE]
+      TEP.MAX_FLOORS ?? TEP.AVG_FLOORS          <= limit[GPZU.MAX_FLOORS]
+      TEP.BUILDING_HEIGHT_M                     <= limit[GPZU.MAX_HEIGHT_M]
+      TEP.FOOTPRINT_AREA / LAND.AREA            <= limit[GPZU.MAX_BUILT_SHARE]
+
+      F.TEP.GFA_ABOVE < BENCH.GPZU_UNDERUSE_SHARE × GPZU.MAX_GFA_ABOVE → информационное сообщение
+    note: "Превышение любого предела — блокирующая ошибка, отчёт не выпускается. Если есть решение об отклонении от предельных параметров, сравнение идёт с разрешённым значением. Если предел в ГПЗУ пустой, сравнение по нему не выполняется. Информационное сообщение — «резерв площади по ГПЗУ»."
+    terms:
+      "limit[x]": "предел по параметру x: из решения об отклонении, если оно есть, иначе из ГПЗУ"
+      "??": "берётся левое значение, если оно задано, иначе правое"
+    depends_on: [F.TEP.GFA_ABOVE, TEP.MAX_FLOORS, TEP.AVG_FLOORS, TEP.BUILDING_HEIGHT_M, TEP.FOOTPRINT_AREA, LAND.AREA, GPZU.MAX_GFA_ABOVE, GPZU.MAX_FLOORS, GPZU.MAX_HEIGHT_M, GPZU.MAX_BUILT_SHARE, GPZU.DEVIATION_PERMIT, BENCH.GPZU_UNDERUSE_SHARE]
+    rationale: "Предельные параметры ГПЗУ (ст.38 ГрК РФ) обязательны: проект сверх них не получит разрешение на строительство, а финмодель на его основе завышает выручку. Сравнивается только сопоставимое: наземная ГНС с наземным пределом, этажность, высота, доля застройки. Снять ошибку можно только решением о разрешении на отклонение от предельных параметров (ст.40 ГрК РФ): однократное отклонение не более 10% — упрощённая процедура без публичных слушаний (ч.1.1); отклонение по этажности и высоте в границах исторических поселений не допускается (ч.2). На стадии «Оценка участка» ГНС берётся из ГПЗУ, поэтому проверка выполняется автоматически. Недоиспользование пределов — не ошибка, но резерв площади показывается"
+    rejected:
+      - "Предупреждение вместо блокирующей ошибки — модель с превышением ГПЗУ ушла бы в банк"
+      - "Сравнивать общую ГНС (с подземной частью) с пределом наземной — несопоставимые величины"
+      - "Автоматически обрезать ГНС до предела — скрывает расхождение ТЭП и ГПЗУ"
+    source_ids: [S_GRK_38, S_GRK_40, S_PROJECT_DOCS]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.CHECK.UNDERGROUND_CAPACITY
+    module: CHECK
+    name: "Вместимость подземной части (стадия «Концепция»)"
+    plain:
+      title: "Помещается ли паркинг в подземную часть"
+      how: "Машино-места минимальной площади и кладовые должны поместиться в подземную часть по ТЭП. Площадь на одно место сравнивается с практикой компании."
+    unit: bool
+    dims: []
+    expr: |
+      ОШИБКА,          если  parking × F.TEP.PARKING_SPACE_MIN_AREA + storage_area > TEP.GFA_BELOW
+      ПРЕДУПРЕЖДЕНИЕ,  если  parking × Q1(BENCH.PARKING_AREA_SAMPLE.area_per_space_m2) + storage_area + TEP.GFA_BELOW × TEP.TECH_ROOMS_SHARE_BELOW > TEP.GFA_BELOW
+      ПРЕДУПРЕЖДЕНИЕ,  если  TEP.PARKING_AREA_TEP / parking вне [Q1; Q3] бенчмарка
+    note: "Последняя проверка выполняется, только если задан TEP.PARKING_AREA_TEP; текст предупреждения — «площадь на место вне диапазона компании». Квартили берутся по F.BENCH.STATS; если в выборке меньше BENCH.COST_MIN_PROJECTS проектов, проверки по бенчмарку не выполняются (сообщение «нет бенчмарка»)."
+    terms:
+      "parking": "количество машино-мест (F.TEP.PARKING_COUNT)"
+      "storage_area": "площадь кладовых (F.TEP.STORAGE): storage_count × TEP.STORAGE_AVG_AREA, на концепции — по ТЭП"
+      "Q1, Q3": "первый и третий квартили выборки (F.BENCH.STATS)"
+    depends_on: [GEN.PROJECT_STAGE, F.TEP.PARKING_COUNT, F.TEP.PARKING_SPACE_MIN_AREA, F.TEP.STORAGE, TEP.GFA_BELOW, TEP.TECH_ROOMS_SHARE_BELOW, TEP.PARKING_AREA_TEP, BENCH.PARKING_AREA_SAMPLE, F.BENCH.STATS, BENCH.COST_MIN_PROJECTS]
+    rationale: "Два уровня: ошибка — если физически не помещаются даже машино-места минимального размера (5,3 × 2,5 м, Приказ Росреестра № П/0316) и кладовые; предупреждение — по реалистичной площади с проездами, пандусами и техпомещениями из бенчмарка компании. Проверка только по 13,25 м² почти никогда не срабатывает, так как не учитывает проезды, пандусы и техпомещения"
+    rejected:
+      - "Только минимальный размер машино-места 13,25 м² — почти никогда не срабатывает"
+      - "Фиксированная площадь на место с проездами одним числом — без связи с фактом компании"
+    source_ids: [S_ROSREESTR_P0316, S_COMPANY_ACTUALS, S_PROJECT_DOCS]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  # =====================================================================
+  # BENCH — статистика бенчмарков (Справочник → Бенчмарки)
+  # Аналоги рынка → стартовая цена и темп продаж; расценки компании → ставки статей бюджета.
+  # Выборка сохраняется в проекте (BENCH.MARKET_SAMPLE, BENCH.COST_SAMPLE) и замораживается в его версии.
+  # Квартили и медиана — линейная интерполяция (как PERCENTILE.INC / QUARTILE.INC в Excel);
+  # стандартное отклонение — выборочное (как STDEV.S), чтобы расчёт повторялся в выгрузке Excel.
+  # =====================================================================
+
+  - id: F.BENCH.WINDOW_FILTER
+    module: BENCH
+    name: "Отбор аналогов: сопоставимость, даты, фазы продаж"
+    plain:
+      title: "Отбор аналогов"
+      how: "Берутся аналоги с тем же продуктом, конструктивом и высотностью, со сделками за последние месяцы, но не раньше перелома рынка. Исключить аналог можно только вручную, с причиной."
+    unit: bool
+    dims: [i]
+    expr: |
+      сопоставимость:  product = продукт проекта;  struct_system = TEP.STRUCTURAL_SYSTEM;  F.BENCH.HEIGHT_BAND аналога = F.BENCH.HEIGHT_BAND проекта;  excluded = нет
+      break   = MAX(BENCH.STRUCTURAL_BREAK_DATES.date)
+      oldest  = EDATE(GEN.VALUATION_DATE, −BENCH.PRICE_MAX_AGE_M)
+
+      цены:   from = MAX( EDATE(GEN.VALUATION_DATE, −BENCH.PRICE_WINDOW_M), oldest, break )
+              ЕСЛИ аналогов со сделками в окне < BENCH.MARKET_MEDIAN_MIN_COMPS:
+                from = MAX( EDATE(GEN.VALUATION_DATE, −BENCH.PRICE_WINDOW_EXT_M), oldest, break )
+              сделка входит, если  from <= дата сделки <= GEN.VALUATION_DATE
+      стартовая цена:  дата сделки < EDATE(first_ddu_date, BENCH.START_PHASE_M)
+
+      фазы:   старт    = первые BENCH.PACE_START_M месяцев от first_ddu_date
+              активная = от конца старта до MIN( дата продажи BENCH.PACE_ACTIVE_END_SHARE × total_saleable_m2, rnv_date )
+              хвост    = после активной фазы до rnv_date
+      темп:   from = MAX( EDATE(GEN.VALUATION_DATE, −BENCH.PACE_WINDOW_M), break )
+    note: "Аналог исключается из выборки только вручную, с причиной. Аналог не используется для темпа, если его активная фаза короче BENCH.PACE_MIN_ACTIVE_M месяцев (для цены — используется). Хвост — пока продажи видны в ЕИСЖС."
+    terms:
+      "break": "последняя дата структурного разрыва рынка"
+      "oldest": "самая ранняя допустимая дата сделки"
+      "from": "начало окна отбора"
+      "EDATE(d, m)": "дата d, сдвинутая на m месяцев"
+      "first_ddu_date": "дата первого ДДУ аналога"
+      "rnv_date": "дата РНВ аналога"
+      "total_saleable_m2": "продаваемая площадь аналога"
+      "excluded": "аналог исключён вручную"
+    depends_on: [BENCH.MARKET_SAMPLE, TEP.STRUCTURAL_SYSTEM, F.BENCH.HEIGHT_BAND, GEN.VALUATION_DATE, BENCH.STRUCTURAL_BREAK_DATES, BENCH.PRICE_MAX_AGE_M, BENCH.PRICE_WINDOW_M, BENCH.PRICE_WINDOW_EXT_M, BENCH.MARKET_MEDIAN_MIN_COMPS, BENCH.START_PHASE_M, BENCH.PACE_WINDOW_M, BENCH.PACE_START_M, BENCH.PACE_ACTIVE_END_SHARE, BENCH.PACE_MIN_ACTIVE_M]
+    rationale: "В расчёт попадает только сопоставимый рынок: тот же продукт, несущая система и группа высотности; свежие сделки после последнего структурного сдвига (01.07.2024). Если свежих аналогов мало, окно расширяется, но не дальше предельной давности. Темп считается по фазам: на старте спрос отложенный, в активной фазе — основной, хвост — неликвидные лоты со скидками; после РНВ продажи идут по ДКП и в ЕИСЖС не видны"
+    rejected:
+      - "Все доступные сделки без окна — смешивает рынки с разной ипотекой и ценами"
+      - "Сделки до 01.07.2024 с индексацией — индекс не компенсирует смену условий ипотеки"
+      - "Стартовая цена по текущим ценам аналогов на поздней стадии — завышает старт"
+      - "Один темп на весь срок продаж — смешивает старт, основную фазу и хвост"
+      - "Конец активной фазы на 90% распроданности — в выборку попадает часть хвоста"
+    source_ids: [S_EISZHS_SALES, S_ERZ_LGOTNAYA_2024, S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: needs_verification
+
+  - id: F.BENCH.COMP_PRICE
+    module: BENCH
+    name: "Цена аналога (средневзвешенная по проданной площади)"
+    plain:
+      title: "Цена аналога, руб/м²"
+      how: "Сумма отобранных сделок аналога, делённая на проданную по ним площадь."
+    unit: руб/м2
+    dims: [i]
+    expr: "comp_price[i] = Σ стоимость сделок[i] / Σ площадь сделок[i]"
+    note: "Учитываются только сделки, прошедшие отбор F.BENCH.WINDOW_FILTER."
+    terms:
+      "comp_price[i]": "результат: средневзвешенная цена аналога i, руб/м²"
+      "i": "аналог из выборки"
+    depends_on: [F.BENCH.WINDOW_FILTER, BENCH.MARKET_SAMPLE]
+    rationale: "Так считается средняя цена ДДУ в ЕИСЖС: крупные лоты весят больше, цена отражает реально проданные метры"
+    rejected: ["Простое среднее цен лотов — дорогие маленькие лоты завышают цену м²"]
+    source_ids: [S_EISZHS_SALES]
+    legacy: {cells: null, verdict: new}
+    status: verified
+    example: {input: {deal_values: [10000000, 15000000], deal_areas: [40, 50]}, output: 277777.78}
+
+  - id: F.BENCH.PRICE_INDEXED
+    module: BENCH
+    name: "Цена аналога на дату оценки"
+    plain:
+      title: "Цена аналога на дату оценки, руб/м²"
+      how: "Цена аналога пересчитывается на дату оценки по индексу цен в новостройках."
+    unit: руб/м2
+    dims: [i]
+    expr: "price_idx[i] = comp_price[i] × BENCH.DDU_PRICE_INDEX[GEN.VALUATION_DATE] / BENCH.DDU_PRICE_INDEX[avg_deal_date[i]]"
+    terms:
+      "price_idx[i]": "результат: цена аналога на дату оценки, руб/м²"
+      "comp_price[i]": "цена аналога (F.BENCH.COMP_PRICE)"
+      "avg_deal_date[i]": "средняя дата сделок аналога, взвешенная по площади"
+    depends_on: [F.BENCH.COMP_PRICE, BENCH.DDU_PRICE_INDEX, GEN.VALUATION_DATE]
+    rationale: "Сделки в окне идут в разные месяцы; приведение к одной дате по индексу цен ДДУ региона делает аналоги сравнимыми"
+    rejected: ["Без индексации — в расширенном окне 12 месяцев разница цен может быть существенной"]
+    source_ids: [S_EISZHS_SERIES]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.PRICE_ADJUSTED
+    module: BENCH
+    name: "Цена аналога после корректировок на отличия от проекта"
+    plain:
+      title: "Цена аналога после поправок, руб/м²"
+      how: "К цене аналога применяются поправки на расположение, класс, отделку и стадию готовности, каждая с обоснованием и источником."
+    unit: руб/м2
+    dims: [i]
+    expr: |
+      price_adj[i] = price_idx[i] × (1 + Σ_j adj[i,j])
+      adj_total[i] = Σ_j |adj[i,j]|
+    note: "Корректировки — строки BENCH.PRICE_ADJUSTMENTS (локация, класс, отделка, стадия готовности); у каждой — величина, обоснование и источник."
+    terms:
+      "price_adj[i]": "результат: цена аналога после корректировок, руб/м²"
+      "adj[i,j]": "корректировка j для аналога i, доля"
+      "adj_total[i]": "сумма модулей корректировок — мера несопоставимости аналога"
+      "price_idx[i]": "цена на дату оценки (F.BENCH.PRICE_INDEXED)"
+    depends_on: [F.BENCH.PRICE_INDEXED, BENCH.PRICE_ADJUSTMENTS]
+    rationale: "Сравнительный подход: цена аналога поправляется на отличия от оцениваемого проекта. Каждая поправка видна и обоснована; сумма модулей поправок показывает, насколько аналог непохож на проект"
+    rejected:
+      - "Одна общая поправка без разбивки по факторам — непроверяемо"
+      - "Суммарная корректировка как алгебраическая сумма — разнонаправленные поправки взаимно гасятся и скрывают непохожесть аналога"
+    source_ids: [S_EISZHS_SALES, S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.MARKET_PRICE
+    module: BENCH
+    name: "Рыночная цена по выборке аналогов"
+    plain:
+      title: "Рыночная цена по аналогам, руб/м²"
+      how: "При достаточном числе аналогов — медиана цен после поправок, при малом — среднее с весами по числу поправок. Если аналогов слишком мало, нужно экспертное обоснование."
+    unit: руб/м2
+    dims: []
+    expr: |
+      ЕСЛИ n >= BENCH.MARKET_MEDIAN_MIN_COMPS:
+        market_price = MEDIAN(price_adj)
+      ЕСЛИ BENCH.MARKET_MIN_COMPS <= n < BENCH.MARKET_MEDIAN_MIN_COMPS:
+        market_price = Σ_i w[i] × price_adj[i]
+        w[i] = (1 / (1 + adj_total[i])) / Σ_i (1 / (1 + adj_total[i]))
+      ЕСЛИ n < BENCH.MARKET_MIN_COMPS:
+        ошибка
+    note: "При нехватке аналогов расчёт можно сохранить только с экспертным обоснованием."
+    terms:
+      "market_price": "результат: рыночная цена по выборке, руб/м²"
+      "n": "число аналогов после F.BENCH.WINDOW_FILTER"
+      "price_adj": "цены аналогов после корректировок (F.BENCH.PRICE_ADJUSTED)"
+      "w[i]": "вес аналога: чем меньше корректировок, тем больше вес"
+      "adj_total[i]": "сумма модулей корректировок аналога"
+    depends_on: [F.BENCH.PRICE_ADJUSTED, F.BENCH.WINDOW_FILTER, BENCH.MARKET_MIN_COMPS, BENCH.MARKET_MEDIAN_MIN_COMPS]
+    rationale: "Медиана устойчива к выбросам (премиальный или демпингующий ЖК). На малой выборке медиана неустойчива, поэтому больший вес получает самый похожий аналог (с наименьшей суммарной корректировкой) — логика сравнительного подхода в оценке. Результат подставляется в SALES.PRODUCTS.start_price как значение уровня 3"
+    rejected: ["Простое среднее по аналогам — один выброс сдвигает цену проекта"]
+    source_ids: [S_EISZHS_SALES, S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+    example: {input: {prices: [300000, 320000, 280000], adj_total: [0.10, 0.0, 0.20]}, output: 301215.47, note: "n = 3 — средневзвешенная, веса 0,331 / 0,365 / 0,304"}
+
+  - id: F.BENCH.COMP_PACE
+    module: BENCH
+    name: "Нормированный темп продаж аналога по фазам"
+    plain:
+      title: "Темп продаж аналога по фазам"
+      how: "Проданная площадь аналога за месяц, делённая на площадь в продаже, в среднем по фазе: старт, активные продажи, хвост."
+    unit: доля
+    dims: [i, phase]
+    expr: |
+      pace_norm[i,m]    = sold_area[i,m] / exposed_area[i,m]
+      comp_pace[i,phase] = AVERAGE_m( pace_norm[i,m] )
+    note: "Среднее берётся по месяцам фазы (старт, активная, хвост), прошедшим отбор F.BENCH.WINDOW_FILTER."
+    terms:
+      "comp_pace[i,phase]": "результат: нормированный темп аналога i в фазе"
+      "pace_norm[i,m]": "доля площади в экспозиции, проданная за месяц m"
+      "sold_area[i,m]": "проданная площадь аналога за месяц"
+      "exposed_area[i,m]": "площадь в экспозиции на начало месяца"
+    depends_on: [F.BENCH.WINDOW_FILTER, BENCH.MARKET_SAMPLE, BENCH.PACE_WINDOW_M]
+    rationale: "Темп в доле от предложения сравним между ЖК разного масштаба; по фазам — потому что старт, основная фаза и хвост продаются с разной скоростью; среднее по месяцам сглаживает сезонность"
+    rejected:
+      - "Абсолютный темп м²/мес — у крупного ЖК он выше просто из-за объёма предложения"
+      - "Один темп на весь срок — хвост со скидками занижает темп основной фазы"
+    source_ids: [S_EISZHS_SALES]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.MARKET_PACE
+    module: BENCH
+    name: "Рыночный темп продаж по фазам"
+    plain:
+      title: "Рыночный темп продаж по фазам"
+      how: "Медиана темпов аналогов по каждой фазе. Если данных по фазе мало, нужно экспертное обоснование."
+    unit: доля
+    dims: [phase]
+    expr: "market_pace[phase] = MEDIAN_i( comp_pace[i,phase] )"
+    note: "Считается отдельно для фаз старт, активная, хвост. Ошибка по фазе, если аналогов с данными по ней меньше BENCH.MARKET_MIN_COMPS (сохранить можно только с экспертным обоснованием)."
+    terms:
+      "market_pace[phase]": "результат: рыночный темп продаж в фазе"
+      "comp_pace[i,phase]": "темп аналога (F.BENCH.COMP_PACE)"
+    depends_on: [F.BENCH.COMP_PACE, BENCH.MARKET_MIN_COMPS]
+    rationale: "Медиана нормированных темпов устойчива к ЖК со случайно высокими или низкими продажами. SALES.PACE проекта может ссылаться на все три фазы (способ «доля от остатка в месяц»), значение — уровень 3"
+    rejected:
+      - "Сравнение абсолютных м²/мес между ЖК разного масштаба"
+      - "Среднее — чувствительно к одному аномальному ЖК"
+    source_ids: [S_EISZHS_SALES]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.COST_UNIT
+    module: BENCH
+    name: "Расценка проекта-аналога на дату договора"
+    plain:
+      title: "Расценка проекта-аналога, руб/м²"
+      how: "Сумма договора аналога без НДС, делённая на его базу, как у статьи бюджета."
+    unit: руб/м2
+    dims: [i]
+    expr: "cost_unit[i] = contract_amount[i] / base_qty[i]"
+    note: "Сумма договора — без НДС. База — по базе статьи бюджета (capex_items.yaml → base): м² ГНС; для паркинга — м² подземной части; для сетей — по типу статьи."
+    terms:
+      "cost_unit[i]": "результат: расценка проекта-аналога i, руб за единицу базы"
+      "contract_amount[i]": "сумма договора без НДС"
+      "base_qty[i]": "объём базы у аналога"
+    depends_on: [BENCH.COST_SAMPLE]
+    rationale: "Ставка на единицу базы статьи — то, что подставляется в бюджет проекта (ставка × база × индекс). Без НДС — как все затраты в модели (docs/00, соглашения)"
+    rejected: ["Сумма договора без деления на базу — не переносится на проект другого размера"]
+    source_ids: [S_COMPANY_ACTUALS]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.COST_INDEXED
+    module: BENCH
+    name: "Расценка аналога на дату оценки и в регионе проекта"
+    plain:
+      title: "Расценка аналога на дату оценки и в регионе проекта, руб/м²"
+      how: "Расценка аналога пересчитывается на дату оценки по индексу цен в строительстве и на регион проекта. Поправка на отличия — только с обоснованием."
+    unit: руб/м2
+    dims: [i]
+    expr: "cost_idx[i] = cost_unit[i] × (1 + adj_value[i]) × BENCH.COST_INDEX_HIST[GEN.VALUATION_DATE] / BENCH.COST_INDEX_HIST[contract_date[i]] × ncs_k_per(GEN.REGION_CODE) / ncs_k_per(region_code[i])"
+    note: "Корректировка adj_value (например, на отличие фасада) — только с обоснованием (BENCH.COST_SAMPLE)."
+    terms:
+      "cost_idx[i]": "результат: расценка аналога на дату оценки в регионе проекта"
+      "cost_unit[i]": "расценка аналога (F.BENCH.COST_UNIT)"
+      "adj_value[i]": "корректировка на отличия аналога, доля"
+      "contract_date[i]": "дата договора аналога"
+      "ncs_k_per(r)": "коэффициент перехода к ценам региона r (regions.yaml, таблица 1 НЦС)"
+      "region_code[i]": "регион аналога"
+    depends_on: [BENCH.COST_SAMPLE, F.BENCH.COST_UNIT, BENCH.COST_INDEX_HIST, GEN.VALUATION_DATE, GEN.REGION_CODE]
+    rationale: "Время приводится официальными индексами изменения сметной стоимости Минстроя, регион — отношением коэффициентов перехода НЦС (регион проекта / регион аналога). Оба показателя — государственные и одинаковы для всех проектов"
+    rejected:
+      - "Индекс потребительских цен — не отражает стоимость строительства"
+      - "Без регионального пересчёта — московская расценка переносится в регион без поправки"
+    source_ids: [S_FGISCS, S_NCS_2026_01]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.COST_BENCH
+    module: BENCH
+    name: "Бенчмарк расценки статьи бюджета"
+    plain:
+      title: "Ориентир расценки статьи бюджета, руб/м²"
+      how: "Медиана расценок сопоставимых проектов: тот же класс, конструктив, высотность и свежие договоры. Если таких мало, предлагается норматив цены строительства как экспертное значение."
+    unit: руб/м2
+    dims: [item]
+    expr: |
+      сопоставимые:  housing_class = GEN.HOUSING_CLASS;  structural_system = TEP.STRUCTURAL_SYSTEM;  F.BENCH.HEIGHT_BAND аналога = группа проекта;
+                     GEN.VALUATION_DATE − contract_date <= BENCH.COST_MAX_AGE_Y лет;  excluded = нет
+      ЕСЛИ n >= BENCH.COST_MIN_PROJECTS:  cost_bench = MEDIAN(cost_idx)
+      ИНАЧЕ:                              cost_bench = значение по НЦС (F.CAPEX.NCS_BENCH)
+    note: "Медиана по сопоставимым проектам — уровень 4. Если проектов меньше порога, предлагается значение по НЦС с пометкой, параметр становится экспертным (уровень 5). Группа высотности — единственный фильтр по высотности; этажность каждого аналога показывается в выборке. Незавершённые проекты (completed = нет) учитываются только по сумме договора, с пометкой."
+    terms:
+      "cost_bench": "результат: бенчмарк расценки статьи"
+      "n": "число сопоставимых проектов"
+      "cost_idx": "расценки аналогов (F.BENCH.COST_INDEXED)"
+    depends_on: [F.BENCH.COST_INDEXED, BENCH.COST_SAMPLE, GEN.HOUSING_CLASS, TEP.STRUCTURAL_SYSTEM, F.BENCH.HEIGHT_BAND, BENCH.COST_MAX_AGE_Y, BENCH.COST_MIN_PROJECTS, GEN.VALUATION_DATE, F.CAPEX.NCS_BENCH]
+    rationale: "При оценке нового участка каждый проект компании — одно наблюдение: крупный проект не должен перевешивать. Медиана устойчива к нетипичному проекту"
+    rejected:
+      - "Средневзвешенная по площади — подходит для портфельного отчёта, не для оценки нового проекта"
+      - "Двойной фильтр «группа высотности + этажность ±30%» — противоречит группам: 18 и 25 этажей из одной группы отсекаются, 10 и 13 из разных групп проходят"
+    source_ids: [S_COMPANY_ACTUALS, S_NCS_2026_01]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.STATS
+    module: BENCH
+    name: "Статистика выборки и предупреждения"
+    plain:
+      title: "Статистика выборки аналогов"
+      how: "Число значений, медиана, среднее, минимум, максимум, квартили и разброс выборки. Выбросы подсвечиваются, но не удаляются."
+    unit: руб/м2
+    dims: []
+    expr: |
+      для выборки x (price_adj, comp_pace, cost_idx):  n, MEDIAN, AVERAGE, MIN, MAX, Q1, Q3 (QUARTILE.INC),  CV = STDEV.S / AVERAGE
+      |AVERAGE / MEDIAN − 1| > BENCH.WARN_MEAN_MEDIAN_GAP  → нужен комментарий аналитика
+      CV > BENCH.WARN_CV                                  → нужен комментарий аналитика
+      IQR = Q3 − Q1
+      x < Q1 − BENCH.OUTLIER_IQR_K × IQR  ИЛИ  x > Q3 + BENCH.OUTLIER_IQR_K × IQR  → выброс
+    note: "Выброс подсвечивается, но НЕ удаляется автоматически; исключить его можно только вручную с причиной (excluded, exclusion_reason), это фиксируется в журнале."
+    terms:
+      "CV": "коэффициент вариации"
+      "Q1, Q3": "первый и третий квартили"
+      "IQR": "межквартильный размах"
+      "STDEV.S": "стандартное отклонение выборки"
+    depends_on: [F.BENCH.PRICE_ADJUSTED, F.BENCH.COMP_PACE, F.BENCH.COST_INDEXED, BENCH.WARN_MEAN_MEDIAN_GAP, BENCH.WARN_CV, BENCH.OUTLIER_IQR_K]
+    rationale: "Аналитик и проверяющий видят не только итог, но и качество выборки: разброс, скошенность, выбросы. Автоматическое удаление выбросов скрыло бы решение, влияющее на цену; ручное исключение с причиной остаётся в журнале"
+    rejected:
+      - "Автоматически удалять выбросы — меняет результат без следа в журнале"
+      - "Показывать только итоговое значение — нельзя оценить надёжность"
+      - "Квартили по методу QUARTILE.EXC — на малых выборках не определены и не совпадают с формулами Excel в выгрузке"
+    source_ids: [S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+
+  - id: F.BENCH.HEIGHT_BAND
+    module: BENCH
+    name: "Группа высотности здания"
+    plain:
+      title: "Группа высотности здания"
+      how: "Группа по наибольшей этажности здания. При высоте больше ста метров — «свыше 100 м»."
+    unit: enum
+    dims: []
+    expr: |
+      ЕСЛИ высота > 100 м (height_max_m группы «26_плюс_до_100м»):  band = «свыше_100м»
+      ИНАЧЕ:  band = строка BENCH.HEIGHT_BAND, где floors_min <= этажность <= floors_max
+    note: "floors_max = пусто — без верхней границы. Этажность — TEP.MAX_FLOORS (у аналога — max_floors), высота — TEP.BUILDING_HEIGHT_M (у аналога — height_m)."
+    terms:
+      "band": "результат: группа высотности здания"
+    depends_on: [BENCH.HEIGHT_BAND, TEP.MAX_FLOORS, TEP.BUILDING_HEIGHT_M]
+    rationale: "Стоимость и цена зависят от высотности скачками (конструктив, лифты, пожарные требования). Здание выше 100 м — уникальный объект (ч.2 ст.48.1 ГрК РФ) и с другими группами не смешивается"
+    rejected: ["Сравнение по средней этажности — у комплекса с башней и малоэтажной частью среднее скрывает башню"]
+    source_ids: [S_GRK_48_1, S_EXPERT, S_NCS_2026_01]
+    legacy: {cells: null, verdict: new}
+    status: needs_verification
+
+  - id: F.BENCH.APART_DISCOUNT
+    module: BENCH
+    name: "Скидка апартаментов к квартирам по парам"
+    plain:
+      title: "Скидка апартаментов к квартирам"
+      how: "Медиана скидки апартаментов к квартирам по парам рядом, одного класса и времени. Если пар мало, экспертная оценка с диапазоном."
+    unit: доля
+    dims: []
+    expr: |
+      discount[j] = 1 − apart_price_m2[j] / flat_price_m2[j]
+      ЕСЛИ пар >= BENCH.MIN_PAIRS:  apart_discount = MEDIAN_j( discount[j] )
+      ИНАЧЕ:                        apart_discount = экспертная оценка
+    note: "Пара j входит, если: один класс; один ЖК или расстояние <= BENCH.PAIR_RADIUS_KM; сделки обеих сторон — в одном окне (BENCH.PRICE_WINDOW_M с учётом BENCH.STRUCTURAL_BREAK_DATES, как в F.BENCH.WINDOW_FILTER); близкая стадия готовности; пара не исключена. Обе цены — для покупателя, как в договоре, средневзвешенные по проданной площади. Медиана по парам — уровень 3; экспертная оценка — уровень 5 (автор, обоснование, диапазон min–max), расчёт не блокируется."
+    terms:
+      "discount[j]": "скидка апартаментов к квартирам в паре j"
+      "apart_price_m2[j], flat_price_m2[j]": "цены апартаментов и квартир в паре"
+      "apart_discount": "результат: скидка апартаментов к квартирам"
+    depends_on: [BENCH.APART_PAIRS_SAMPLE, BENCH.PAIR_RADIUS_KM, BENCH.PRICE_WINDOW_M, BENCH.STRUCTURAL_BREAK_DATES, BENCH.MIN_PAIRS]
+    rationale: "Скидка апартаментов наблюдается напрямую: в одной локации, одном классе и одно время разница цены отражает продукт (без семейной ипотеки, с НДС, нежилой статус), а не место или рынок. Цены берутся такими, как платит покупатель: НДС из выручки апартаментов выделяется отдельно в F.TAX.OUTPUT_VAT и в скидке повторно не учитывается. Медиана по парам устойчива к одной нетипичной паре"
+    rejected:
+      - "Фиксированный процент скидки без выборки — непроверяемое допущение"
+      - "Сравнивать цену апартаментов без НДС с ценой квартир — НДС учитывался бы дважды: в скидке и в F.TAX.OUTPUT_VAT"
+      - "Пары из разных локаций, классов или периодов — в скидку попадает разница места, класса или рынка"
+    source_ids: [S_EISZHS_SALES, S_EXPERT]
+    legacy: {cells: null, verdict: new}
+    status: verified
+    example: {input: {apart_prices: [270000, 255000, 290000], flat_prices: [300000, 300000, 310000]}, output: 0.1, note: "скидки пар 0,10 / 0,15 / 0,0645 → медиана 0,10"}
+
+  - id: F.BENCH.APART_PRICE
+    module: BENCH
+    name: "Цена апартаментов"
+    plain:
+      title: "Цена апартаментов, руб/м²"
+      how: "Рыночная цена по аналогам-апартаментам, а если их мало — цена квартир минус скидка апартаментов."
+    unit: руб/м2
+    dims: []
+    expr: |
+      ЕСЛИ аналогов-апартаментов >= BENCH.MARKET_MIN_COMPS:  apart_price = F.BENCH.MARKET_PRICE (по аналогам-апартаментам)
+      ИНАЧЕ:  apart_price = F.BENCH.MARKET_PRICE (квартиры) × (1 − F.BENCH.APART_DISCOUNT)
+    note: "Во втором случае цена помечается «скидка по парам» (или «экспертная», если пар меньше BENCH.MIN_PAIRS). Цена — для покупателя (с НДС, как в договоре); НДС выделяется в F.TAX.OUTPUT_VAT."
+    terms:
+      "apart_price": "результат: цена апартаментов, руб/м²"
+    depends_on: [F.BENCH.MARKET_PRICE, F.BENCH.APART_DISCOUNT, BENCH.MARKET_MIN_COMPS]
+    rationale: "Апартаменты — отдельный продукт: без семейной ипотеки, с НДС, с другим спросом. Цена — по прямым аналогам; если их мало — через наблюдаемую скидку к квартирам в той же локации (уровень 3), а не по допущению"
+    rejected: ["Фиксированный процент скидки к квартирам без выборки — непроверяемое допущение"]
+    source_ids: [S_EISZHS_SALES]
+    legacy: {cells: null, verdict: new}
+    status: verified

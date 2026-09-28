@@ -1,0 +1,1263 @@
+# Справочник регионов (89 субъектов РФ, коды ФНС).
+# Заполнение: Москва и Санкт-Петербург — эталон; остальные субъекты имеют структуру и официальную точку входа
+# (сервис ФНС по ставкам, таблица 1 НЦС для Кпер), а конкретные акты вносятся при первом проекте в регионе.
+# Правило: пока поле region-параметра = null, модель требует ручной ввод с документом (status: project_input).
+#
+# ncs_k_per — коэффициент перехода от базового района (Московская обл.) к субъекту, таблица 1 НЦС 81-02-01-2026 (S_NCS_2026_01).
+# land_tax_rate — ставка задаётся муниципалитетом по ОКТМО: брать через fns_rates_url (S_FNS_RATES), не на уровне субъекта.
+
+regions:
+  - code: "01"
+    name: "Республика Адыгея"
+    fns_rates_url: "https://www.nalog.gov.ru/rn01/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "02"
+    name: "Республика Башкортостан"
+    fns_rates_url: "https://www.nalog.gov.ru/rn02/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "03"
+    name: "Республика Бурятия"
+    fns_rates_url: "https://www.nalog.gov.ru/rn03/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "04"
+    name: "Республика Алтай"
+    fns_rates_url: "https://www.nalog.gov.ru/rn04/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "05"
+    name: "Республика Дагестан"
+    fns_rates_url: "https://www.nalog.gov.ru/rn05/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "06"
+    name: "Республика Ингушетия"
+    fns_rates_url: "https://www.nalog.gov.ru/rn06/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "07"
+    name: "Кабардино-Балкарская Республика"
+    fns_rates_url: "https://www.nalog.gov.ru/rn07/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "08"
+    name: "Республика Калмыкия"
+    fns_rates_url: "https://www.nalog.gov.ru/rn08/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "09"
+    name: "Карачаево-Черкесская Республика"
+    fns_rates_url: "https://www.nalog.gov.ru/rn09/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "10"
+    name: "Республика Карелия"
+    fns_rates_url: "https://www.nalog.gov.ru/rn10/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "11"
+    name: "Республика Коми"
+    fns_rates_url: "https://www.nalog.gov.ru/rn11/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "12"
+    name: "Республика Марий Эл"
+    fns_rates_url: "https://www.nalog.gov.ru/rn12/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "13"
+    name: "Республика Мордовия"
+    fns_rates_url: "https://www.nalog.gov.ru/rn13/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "14"
+    name: "Республика Саха (Якутия)"
+    fns_rates_url: "https://www.nalog.gov.ru/rn14/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "15"
+    name: "Республика Северная Осетия — Алания"
+    fns_rates_url: "https://www.nalog.gov.ru/rn15/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "16"
+    name: "Республика Татарстан"
+    fns_rates_url: "https://www.nalog.gov.ru/rn16/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "17"
+    name: "Республика Тыва"
+    fns_rates_url: "https://www.nalog.gov.ru/rn17/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "18"
+    name: "Удмуртская Республика"
+    fns_rates_url: "https://www.nalog.gov.ru/rn18/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "19"
+    name: "Республика Хакасия"
+    fns_rates_url: "https://www.nalog.gov.ru/rn19/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "20"
+    name: "Чеченская Республика"
+    fns_rates_url: "https://www.nalog.gov.ru/rn20/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "21"
+    name: "Чувашская Республика"
+    fns_rates_url: "https://www.nalog.gov.ru/rn21/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "22"
+    name: "Алтайский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn22/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "23"
+    name: "Краснодарский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn23/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "24"
+    name: "Красноярский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn24/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "25"
+    name: "Приморский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn25/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "26"
+    name: "Ставропольский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn26/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "27"
+    name: "Хабаровский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn27/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "28"
+    name: "Амурская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn28/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "29"
+    name: "Архангельская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn29/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "30"
+    name: "Астраханская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn30/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "31"
+    name: "Белгородская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn31/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "32"
+    name: "Брянская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn32/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "33"
+    name: "Владимирская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn33/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "34"
+    name: "Волгоградская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn34/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "35"
+    name: "Вологодская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn35/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "36"
+    name: "Воронежская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn36/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "37"
+    name: "Ивановская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn37/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "38"
+    name: "Иркутская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn38/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "39"
+    name: "Калининградская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn39/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "40"
+    name: "Калужская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn40/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "41"
+    name: "Камчатский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn41/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "42"
+    name: "Кемеровская область — Кузбасс"
+    fns_rates_url: "https://www.nalog.gov.ru/rn42/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "43"
+    name: "Кировская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn43/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "44"
+    name: "Костромская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn44/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "45"
+    name: "Курганская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn45/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "46"
+    name: "Курская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn46/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "47"
+    name: "Ленинградская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn47/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "48"
+    name: "Липецкая область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn48/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "49"
+    name: "Магаданская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn49/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "50"
+    name: "Московская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn50/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "51"
+    name: "Мурманская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn51/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "52"
+    name: "Нижегородская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn52/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "53"
+    name: "Новгородская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn53/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "54"
+    name: "Новосибирская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn54/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "55"
+    name: "Омская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn55/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "56"
+    name: "Оренбургская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn56/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "57"
+    name: "Орловская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn57/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "58"
+    name: "Пензенская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn58/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "59"
+    name: "Пермский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn59/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "60"
+    name: "Псковская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn60/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "61"
+    name: "Ростовская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn61/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "62"
+    name: "Рязанская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn62/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "63"
+    name: "Самарская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn63/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "64"
+    name: "Саратовская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn64/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "65"
+    name: "Сахалинская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn65/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "66"
+    name: "Свердловская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn66/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "67"
+    name: "Смоленская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn67/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "68"
+    name: "Тамбовская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn68/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "69"
+    name: "Тверская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn69/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "70"
+    name: "Томская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn70/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "71"
+    name: "Тульская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn71/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "72"
+    name: "Тюменская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn72/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "73"
+    name: "Ульяновская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn73/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "74"
+    name: "Челябинская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn74/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "75"
+    name: "Забайкальский край"
+    fns_rates_url: "https://www.nalog.gov.ru/rn75/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "76"
+    name: "Ярославская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn76/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "77"
+    name: "г. Москва"
+    fns_rates_url: "https://www.nalog.gov.ru/rn77/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: город федерального значения (ставка — закон города)
+    land_tax_source_ids: [S_MSK_LANDTAX_74, S_FNS_RATES]
+    land_rent_source_ids: [S_MSK_RENT_273PP]
+    vri_fee: {exists: true, source_ids: [S_MSK_VRI_593PP], formula: "F.LAND.VRI_FEE"}
+    parking_norm:
+      source_ids: [S_MSK_PARKING_2118PP, S_MSK_NGP_TRANSPORT_945PP]
+      rule: by_apartment_area
+      values: [{max_area: 70, per_apt: 0.8}, {max_area: 100, per_apt: 1.2}, {max_area: null, per_apt: 1.6}]
+      status: verified
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: [S_MSK_NGP_TRANSPORT_945PP]
+    status: reference_filled
+  - code: "78"
+    name: "г. Санкт-Петербург"
+    fns_rates_url: "https://www.nalog.gov.ru/rn78/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: город федерального значения (ставка — закон города)
+    land_tax_source_ids: [S_SPB_LANDTAX_617, S_FNS_RATES]
+    land_rent_source_ids: [S_SPB_RENT_608, S_SPB_RENT_1379]
+    vri_fee: {exists: null, source_ids: [], formula: null, note: "наличие платы за изменение ВРИ в СПб проверить; до проверки — ввод вручную с документом"}
+    parking_norm:
+      source_ids: [S_SPB_NGP_257]
+      rule: to_fill
+      values: null
+      status: needs_verification
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: [S_SPB_NGP_257]
+    status: reference_partially_filled
+  - code: "79"
+    name: "Еврейская автономная область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn79/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "83"
+    name: "Ненецкий автономный округ"
+    fns_rates_url: "https://www.nalog.gov.ru/rn83/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "86"
+    name: "Ханты-Мансийский автономный округ — Югра"
+    fns_rates_url: "https://www.nalog.gov.ru/rn86/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "87"
+    name: "Чукотский автономный округ"
+    fns_rates_url: "https://www.nalog.gov.ru/rn87/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "89"
+    name: "Ямало-Ненецкий автономный округ"
+    fns_rates_url: "https://www.nalog.gov.ru/rn89/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "90"
+    name: "Запорожская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn90/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "91"
+    name: "Республика Крым"
+    fns_rates_url: "https://www.nalog.gov.ru/rn91/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "92"
+    name: "г. Севастополь"
+    fns_rates_url: "https://www.nalog.gov.ru/rn92/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: город федерального значения (ставка — закон города)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "93"
+    name: "Донецкая Народная Республика"
+    fns_rates_url: "https://www.nalog.gov.ru/rn93/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "94"
+    name: "Луганская Народная Республика"
+    fns_rates_url: "https://www.nalog.gov.ru/rn94/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only
+  - code: "95"
+    name: "Херсонская область"
+    fns_rates_url: "https://www.nalog.gov.ru/rn95/service/tax/"
+    ncs_k_per: null  # таблица 1 НЦС 81-02-01-2026
+    ncs_k_per_source_ids: [S_NCS_2026_01]
+    tariff_authority: null  # орган регулирования тарифов на техприсоединение
+    land_tax_level: муниципалитет (по ОКТМО)
+    land_tax_source_ids: [S_FNS_RATES, S_NK_394]
+    land_rent_source_ids: []
+    vri_fee: {exists: null, source_ids: [], formula: null}
+    parking_norm: {source_ids: [], rule: to_fill, values: null, status: to_fill}
+    parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
+    ngp_source_ids: []
+    status: structure_only

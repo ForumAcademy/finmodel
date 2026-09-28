@@ -1,0 +1,519 @@
+# Справочник статей бюджета (значения по умолчанию для шаблона).
+# Сумма статьи всегда считается F.CAPEX.ITEM_AMOUNT = rate × base_qty × index (× (1+НДС), если ставка без НДС и НДС не вычитается).
+# Ручной ввод суммы запрещён — только ставки. Для фиксированных сумм base = фикс, base_qty = 1.
+# vat_rate — ставка НДС статьи: TAX.VAT_RATE (0,22) или значение из TAX.VAT_RATE_OPTIONS (0 / 0,05 / 0,07 / 0,22; 5% и 7% — подрядчик на УСН);
+#   vat_rules — условные ставки (первое правило, у которого выполнены все условия when); vat_taxable_share — облагаемая доля смешанной статьи.
+# index_type — индекс пересчёта цен: investment — дефлятор инвестиций (CAPEX.COST_INDEX), cpi — ИПЦ (CAPEX.OPEX_INDEX), none — не индексируется.
+#   Статьи с базой «доля от другой суммы» (от выручки или от СМР) — всегда none: база уже в ценах своего месяца, иначе двойной счёт.
+# Решения владельца продукта 27.09.2026.
+#
+# legacy.budget_row — строка листа «Бюджет » исходника; legacy.cf_rows — строки суммы/распределения на листе «CF1 ».
+# legacy.amount — сумма, вбитая в исходнике (сохраняется в tests/cases/derbenevskaya_legacy.yaml для сверки).
+
+items:
+
+  # ---------------- Правообладание ----------------
+  - item_id: LAND_PURCHASE
+    name: "Покупка участка / прав"
+    group: правообладание
+    base: фикс
+    rate_param: LAND.PURCHASE_PRICE
+    schedule_rule: at_milestone
+    schedule_from: land_acquired
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Сумма по договору купли-продажи / уступки"
+    vat_rate: 0
+    vat_rules:
+      - {when: {LAND.TENURE: "аренда"}, vat_rate: TAX.VAT_RATE, source_ids: [S_NK_146, S_NK_164], verified: false, note: "приобретение права аренды (уступка) — облагается по общей ставке; подтвердить налоговым консультантом"}
+    vat_source_ids: [S_NK_146]
+    vat_basis: "реализация земельных участков не является объектом НДС (пп.6 п.2 ст.146 НК РФ)"
+    index_type: none  # цена по договору — номинальная
+    legacy: {budget_row: 17, cf_rows: [21, 22], amount: "=2440190898-F22", issue: "число зашито в формулу"}
+
+  - item_id: LAND_LEGAL
+    name: "Юридические расходы, due diligence"
+    group: правообладание
+    base: фикс
+    rate_param: LAND.LEGAL_COSTS
+    schedule_rule: at_milestone
+    schedule_from: land_acquired
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Договоры консультантов"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: cpi
+    legacy: {budget_row: 18, cf_rows: [21], amount: 0}
+
+  - item_id: LAND_AGENT
+    name: "Агентское вознаграждение за участок"
+    group: правообладание
+    base: LAND.PURCHASE_PRICE
+    rate_param: LAND.AGENT_FEE_RATE
+    schedule_rule: at_milestone
+    schedule_from: land_acquired
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Агентский договор"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от цены участка — номинальная
+    legacy: {budget_row: 19, cf_rows: [21], amount: 0, issue: "ставка 2% не участвует — сумма вбита 0"}
+
+  - item_id: LAND_TAX_OR_RENT
+    name: "Земельный налог или арендная плата"
+    group: правообладание
+    base: формула
+    formula: F.LAND.TAX_OR_RENT
+    schedule_rule: formula
+    source_ids: [S_NK_394, S_NK_396, S_FNS_RATES]
+    basis: "Считается помесячно от кадастровой стоимости и статуса строительства (коэф. 2/4); для аренды — по методике региона"
+    vat_rate: 0
+    vat_rules:
+      - {when: {LAND.TENURE: "аренда", LAND.LESSOR_TYPE: "частная"}, vat_rate: TAX.VAT_RATE, source_ids: [S_NK_164], verified: true, note: "аренда у частного собственника — НДС по общей ставке"}
+    vat_source_ids: [S_NK_149, S_MINFIN_03_07_07_12728]
+    vat_basis: "земельный налог — вне НДС; аренда государственной / муниципальной земли — без НДС (пп.17 п.2 ст.149 НК РФ); аренда у частного собственника — общая ставка"
+    index_type: none  # считается своей формулой (F.LAND.TAX_OR_RENT)
+    legacy: {budget_row: 21, cf_rows: [24, 84], amount: 825124525.273, issue: "две строки: «Аренда/налог ЗУ» (CF1!24) и «Налог на имущество» 0,2% (CF1!84) — возможен двойной счёт; обе делятся на 7,25 года равномерно"}
+
+  - item_id: LAND_VRI
+    name: "Плата за изменение ВРИ"
+    group: правообладание
+    base: формула
+    formula: F.LAND.VRI_FEE
+    schedule_rule: at_milestone
+    schedule_from: vri_change_date
+    source_ids: [S_MSK_VRI_593PP]
+    basis: "По региональному акту; для регионов без платы — 0"
+    vat_rate: 0
+    vat_source_ids: [S_NK_146, S_MSK_VRI_593PP]
+    vat_basis: "плата за изменение ВРИ — обязательный платёж в бюджет, не реализация; НДС нет"
+    index_type: none  # считается своей формулой (F.LAND.VRI_FEE)
+    legacy: {budget_row: 22, cf_rows: [25, 26], amount: "=5000 × ТЭПы!C19", issue: "ставка 5 000 руб/м² без источника; ряд распределения CF1!K26 = 1"}
+
+  # Обязательства перед городом разделены: у денежной компенсации и строительства объектов разный НДС (решение владельца продукта 27.09.2026).
+  # Бюджет!F24 «Компенсация городу» — целиком денежная компенсация (решение владельца продукта 27.09.2026).
+  - item_id: CITY_CASH_COMPENSATION
+    name: "Обязательства перед городом: денежная компенсация"
+    group: правообладание
+    base: фикс
+    rate_param: LAND.CITY_CASH_COMPENSATION
+    schedule_rule: manual
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Договор о КРТ / соглашение с городом: сумма, перечисляемая в бюджет"
+    vat_rate: 0
+    vat_source_ids: [S_NK_146, S_PROJECT_DOCS]
+    vat_basis: "денежная компенсация — платёж в бюджет, не реализация; НДС нет"
+    index_type: none  # сумма по договору — номинальная
+    legacy: {budget_row: 24, cf_rows: [28, 29], amount: 1260033986.66, issue: "«Компенсация городу» — стояла в ПиР одной суммой; комментарий автора «перенести в правообладание». В расчёте «как в исходном Excel» вся сумма — здесь (решение владельца продукта 27.09.2026): строительство объектов для города уже есть статьями SOCIAL_OBJECTS и ROADS_UDS. Уточнить у авторов, нет ли внутри суммы строительства объектов"}
+
+  - item_id: CITY_OBJECTS_CONSTRUCTION
+    name: "Обязательства перед городом: строительство и передача объектов"
+    group: правообладание
+    base: фикс
+    rate_param: LAND.CITY_OBJECTS_COST
+    schedule_rule: manual
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Договор о КРТ / соглашение с городом: объекты, которые застройщик строит и передаёт городу"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: null, cf_rows: [], amount: null, issue: "в исходнике отдельной строки нет; Бюджет!F24 «Компенсация городу» — денежный платёж (см. CITY_CASH_COMPENSATION), объекты для города — SOCIAL_OBJECTS и ROADS_UDS"}
+
+  # ---------------- ПИР и ИРД ----------------
+  - item_id: IRD
+    name: "Получение ИРД (ППТ, ГПЗУ, ТУ)"
+    group: ПИР
+    base: фикс
+    schedule_rule: uniform
+    schedule_from: land_acquired
+    schedule_to: rns_date
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Договоры с консультантами по ИРД"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 25, cf_rows: [30, 31], amount: "пусто (D25×E25, обе пустые)"}
+
+  - item_id: PREDESIGN
+    name: "Предпроектные проработки (концепция)"
+    group: ПИР
+    base: фикс
+    schedule_rule: at_milestone
+    schedule_from: land_acquired
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Договор с архитектором"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 29, cf_rows: [38, 39], amount: 2000000, issue: "комментарий «уточнить у Елены расценку»"}
+
+  - item_id: SURVEYS
+    name: "Инженерные изыскания"
+    group: ПИР
+    base: фикс
+    schedule_rule: uniform
+    schedule_from: design_start
+    schedule_to: expertise_done
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Договоры на изыскания"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 28, cf_rows: [36, 37], amount: "пусто"}
+
+  - item_id: DESIGN_P
+    name: "Проектирование, стадия П"
+    group: ПИР
+    base: F.TEP.GFA_TOTAL
+    schedule_rule: uniform
+    schedule_from: design_start
+    schedule_to: expertise_done
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Руб/м² ГНС по договорам генпроектировщика. Если СМР берутся по НЦС — ПИР уже внутри НЦС (S_NCS_TECHPART п.14): статью обнулить, чтобы не было двойного счёта"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 26, cf_rows: [32, 33], amount: 751140673, issue: "комментарий «уточнить у Елены расценку»; база — продаваемая площадь"}
+
+  - item_id: DESIGN_RD
+    name: "Проектирование, стадия РД"
+    group: ПИР
+    base: F.TEP.GFA_TOTAL
+    schedule_rule: uniform
+    schedule_from: expertise_done
+    schedule_to: construction_end
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Как DESIGN_P"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 27, cf_rows: [34, 35], amount: "пусто"}
+
+  - item_id: EXPERTISE
+    name: "Экспертиза проектной документации"
+    group: ПИР
+    base: фикс
+    schedule_rule: at_milestone
+    schedule_from: expertise_done
+    source_ids: [S_PP_145]
+    basis: "Госэкспертиза — по разд. VIII ПП РФ № 145; негосударственная — по договору"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: null, cf_rows: [], amount: null, issue: "статья отсутствовала"}
+
+  # ---------------- СМР ----------------
+  - item_id: SITE_PREP
+    name: "Подготовка площадки (включая снос)"
+    group: СМР
+    base: LAND.AREA
+    schedule_rule: uniform
+    schedule_from: rns_date
+    schedule_to: construction_start
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Смета на снос/вынос сетей"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 31, cf_rows: [41, 42], amount: 141554585, issue: "комментарий «какая единица изм?»"}
+
+  - item_id: SMR_ABOVE
+    name: "СМР надземной части (в т.ч. стилобат)"
+    group: СМР
+    base: F.TEP.GFA_ABOVE
+    schedule_rule: s_curve
+    schedule_from: construction_start
+    schedule_to: construction_end
+    source_ids: [S_COMPANY_ACTUALS, S_NCS_2026_01]
+    basis: "Ставка — по договорам генподряда/факту компании (уровень 4); контроль — НЦС 81-02-01-2026 × Кпер региона × индекс (F.CAPEX.NCS_BENCH). База — ГНС наземная, а не продаваемая площадь"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 32, cf_rows: [43, 44], amount: 52782616084, issue: "база изменена на продаваемую площадь (комментарий H32); расценка = F/E ≈ 353 579 руб/м²"}
+
+  - item_id: SMR_BELOW
+    name: "СМР подземной части (паркинг)"
+    group: СМР
+    base: F.TEP.GFA_BELOW
+    schedule_rule: s_curve
+    schedule_from: construction_start
+    schedule_to: construction_end
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "НЦС жилых зданий подземные стоянки не включают (S_NCS_TECHPART п.21) — отдельная расценка"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 33, cf_rows: [45, 46], amount: "D33 = 400000*0.22, E33 = 0 → 0", issue: "объём 0 — подземная часть не построена в модели"}
+
+  - item_id: MOP_FINISH
+    name: "Отделка МОП"
+    group: СМР
+    base: TEP.MOP_AREA
+    schedule_rule: uniform
+    schedule_from: construction_end
+    schedule_to: rnv_date
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Руб/м² МОП по классу"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 34, cf_rows: [47, 48], amount: "D34 = 400000*0.12, E34 = 0 → 0", issue: "объём 0"}
+
+  - item_id: OTHER_SMR
+    name: "Прочие СМР"
+    group: СМР
+    base: F.TEP.GFA_TOTAL
+    schedule_rule: follow_smr
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Указать состав"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 39, cf_rows: [55, 56], amount: 16904952.57}
+
+  - item_id: COMMISSIONING
+    name: "Расходы по вводу в эксплуатацию"
+    group: СМР
+    base: F.TEP.SALEABLE_AREA
+    schedule_rule: uniform
+    schedule_from: construction_end
+    schedule_to: rnv_date
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Обмеры БТИ, техпланы, приёмка"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 41, cf_rows: [59, 60], amount: 0, issue: "ставка 1 000 руб/м², сумма вбита 0"}
+
+  # ---------------- Сети ----------------
+  - item_id: UTILITY_CONNECTION
+    name: "ТУ и плата за технологическое присоединение"
+    group: сети
+    base: фикс
+    schedule_rule: manual
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Плата за техприсоединение — по тарифным решениям регионального органа регулирования (regions.yaml → tariff_authority) и договорам с ресурсоснабжающими организациями"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 35, cf_rows: [49, 50], amount: "=2295331433.88/2", issue: "сумма поделена пополам между ТУ и сетями без обоснования; «что обозначает объем (цифра 5)?»"}
+
+  - item_id: EXTERNAL_NETWORKS
+    name: "Наружные сети и сооружения"
+    group: сети
+    base: фикс
+    schedule_rule: uniform
+    schedule_from: construction_start
+    schedule_to: construction_end
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Вне НЦС (S_NCS_TECHPART п.16) — отдельная смета"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 36, cf_rows: [51, 52], amount: "=F35"}
+
+  # ---------------- Благоустройство, дороги ----------------
+  - item_id: LANDSCAPING
+    name: "Благоустройство"
+    group: благоустройство
+    base: F.TEP.LANDSCAPE_AREA
+    schedule_rule: uniform
+    schedule_from: construction_end
+    schedule_to: rnv_date
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Руб/м² благоустройства; вне НЦС"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 37, cf_rows: [53, 54], amount: 1355940, issue: "≈ 47 руб/м² при 28 972 м² — вероятно, ошибка порядка"}
+
+  - item_id: ROADS_UDS
+    name: "Улично-дорожная сеть"
+    group: благоустройство
+    base: фикс
+    schedule_rule: uniform
+    schedule_from: construction_start
+    schedule_to: rnv_date
+    source_ids: [S_PROJECT_DOCS]
+    basis: "По ППТ / соглашению с городом"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 38, cf_rows: [], amount: 535620851, issue: "статья есть в бюджете, но НЕ перенесена в CF1 — 535,6 млн выпадают из денежного потока"}
+
+  # ---------------- Соцобъекты ----------------
+  - item_id: SOCIAL_OBJECTS
+    name: "Социальные объекты (отдельно стоящие)"
+    group: соцобъекты
+    base: фикс
+    schedule_rule: uniform
+    schedule_from: construction_start
+    schedule_to: rnv_date
+    source_ids: [S_PROJECT_DOCS, S_SPB_NGP_257]
+    basis: "Объём — по ППТ и нормативам обеспеченности (РНГП региона); стоимость — НЦС соответствующего сборника или договор"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 47, cf_rows: [71, 72], amount: 5128070146.9}
+
+  # ---------------- Управление строительством ----------------
+  - item_id: CONTINGENCY
+    name: "Непредвиденные расходы"
+    group: управление
+    base: F.CAPEX.SMR_TOTAL  # за вычетом статей, взятых по НЦС (резерв уже внутри НЦС)
+    rate_param: CAPEX.CONTINGENCY_RATE
+    schedule_rule: follow_smr
+    source_ids: [S_MINSTROY_421]
+    basis: "Доля от СМР, не взятых по НЦС"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от СМР — СМР уже проиндексированы, индексация = двойной счёт
+    legacy: {budget_row: 42, cf_rows: [61, 62], amount: "=E42+D42", issue: "сложены площадь и ставка → 202 840 руб"}
+
+  - item_id: TECH_CUSTOMER
+    name: "Услуги технического заказчика"
+    group: управление
+    base: F.CAPEX.SMR_TOTAL
+    schedule_rule: follow_smr
+    source_ids: [S_MINSTROY_297, S_COMPANY_ACTUALS]
+    basis: "% от стоимости строительства по шкале Методики 297/пр или по договору"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от СМР — СМР уже проиндексированы, индексация = двойной счёт
+    legacy: {budget_row: 43, cf_rows: [63, 64], amount: 2383139493, issue: "база — выручка (E43 = План продаж!D25)"}
+
+  - item_id: AUTHOR_SUPERVISION
+    name: "Авторский надзор"
+    group: управление
+    base: F.CAPEX.SMR_TOTAL
+    schedule_rule: follow_smr
+    source_ids: [S_MINSTROY_421, S_COMPANY_ACTUALS]
+    basis: "Договор с генпроектировщиком"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от СМР — СМР уже проиндексированы, индексация = двойной счёт
+    legacy: {budget_row: 44, cf_rows: [65, 66], amount: "пусто"}
+
+  - item_id: TECH_SUPERVISION
+    name: "Строительный контроль (технадзор)"
+    group: управление
+    base: F.CAPEX.SMR_TOTAL
+    schedule_rule: follow_smr
+    source_ids: [S_PP_468]
+    basis: "Нормативы расходов на строительный контроль (ПП РФ № 468) как ориентир; фактически — договор. Если СМР по НЦС — уже внутри показателя"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от СМР — СМР уже проиндексированы, индексация = двойной счёт
+    legacy: {budget_row: 46, cf_rows: [69, 70], amount: "пусто"}
+
+  - item_id: MONITORING
+    name: "Мониторинг окружающей застройки"
+    group: управление
+    base: фикс
+    schedule_rule: uniform
+    schedule_from: construction_start
+    schedule_to: construction_end
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Договор"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: investment
+    legacy: {budget_row: 45, cf_rows: [67, 68], amount: 88670039, issue: "комментарий «операц расходы из ФМ»"}
+
+  - item_id: SITE_SECURITY
+    name: "Охрана и содержание площадки"
+    group: управление
+    base: фикс_в_месяц
+    schedule_rule: uniform
+    schedule_from: land_acquired
+    schedule_to: rnv_date
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Руб/мес × длительность"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: cpi
+    legacy: {budget_row: 40, cf_rows: [57, 58], amount: 56837555.65}
+
+  - item_id: DEV_FEE
+    name: "Вознаграждение за управление проектом"
+    group: управление
+    base: F.SALES.REVENUE_TOTAL
+    rate_param: OPEX.DEV_FEE_RATE
+    schedule_rule: follow_smr
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "По договору управления"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от выручки — выручка уже в ценах своего месяца, индексация = двойной счёт роста цен
+    legacy: {budget_row: 48, cf_rows: [73, 74], amount: 1850054797}
+
+  - item_id: DEVELOPER_OVERHEAD
+    name: "Содержание застройщика (СЗ)"
+    group: управление
+    base: фикс_в_месяц
+    schedule_rule: uniform
+    schedule_from: land_acquired
+    schedule_to: handover_end
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Штат, аренда, аудит СЗ"
+    vat_rate: TAX.VAT_RATE
+    vat_taxable_share: OPEX.OVERHEAD_VAT_SHARE
+    vat_source_ids: [S_NK_164, S_COMPANY_ACTUALS]
+    vat_basis: "смешанная статья: ФОТ — без НДС, аренда офиса и услуги — с НДС; облагаемая доля — OPEX.OVERHEAD_VAT_SHARE (уровень 4)"
+    index_type: cpi
+    legacy: {budget_row: 49, cf_rows: [75, 76], amount: 14454850.84}
+
+  # ---------------- Коммерческие ----------------
+  - item_id: MARKETING
+    name: "Маркетинг"
+    group: коммерческие
+    base: F.SALES.REVENUE_TOTAL
+    rate_param: OPEX.MARKETING_RATE
+    schedule_rule: follow_sales
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Доля выручки месяца"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от выручки — выручка уже в ценах своего месяца, индексация = двойной счёт роста цен
+    legacy: {budget_row: 51, cf_rows: [79], amount: "=8389618415.5/2"}
+
+  - item_id: BROKERAGE
+    name: "Брокеридж"
+    group: коммерческие
+    base: F.SALES.REVENUE_TOTAL
+    rate_param: OPEX.BROKERAGE_RATE
+    schedule_rule: follow_sales
+    source_ids: [S_COMPANY_ACTUALS]
+    basis: "Доля выручки месяца, платится в месяц сделки"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
+    index_type: none  # доля от выручки — выручка уже в ценах своего месяца, индексация = двойной счёт роста цен
+    legacy: {budget_row: 52, cf_rows: [78], amount: "=F12*3.5%", issue: "в CF1 M78:AA78 ссылки сдвинуты на 7 кварталов назад, с AB78 — на 1 квартал: часть продаж без брокериджа"}

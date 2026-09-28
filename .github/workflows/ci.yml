@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Установка зависимостей Python
+        run: pip install pyyaml openpyxl
+      - name: Проверка спецификации (validate_spec.py)
+        run: python scripts/validate_spec.py
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Установка зависимостей
+        run: pnpm install --frozen-lockfile
+      - name: Справочник собран и актуален (packages/spec)
+        run: pnpm spec:check
+      - name: Карта исходного Excel актуальна (packages/excel-import)
+        run: pnpm map:check
+      - name: Проверка типов
+        run: pnpm typecheck
+      - name: Линтер
+        run: pnpm lint
+      - name: Тесты
+        run: pnpm test
+      - name: Сборка веб-приложения
+        run: pnpm build
