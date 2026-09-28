@@ -1,5 +1,5 @@
 sheet,row,row_label,range,cells,sample_formula,r1c1_pattern,target_id,verdict
-ТЭПы,20,Площадь жилой застройки,C20:C20,1,=210038+420,=210038+420,TEP.RES_GFA,keep
+ТЭПы,20,Площадь жилой застройки,C20:C20,1,=210038+420,=210038+420,TEP.RES_GFA,clarify
 ТЭПы,20,Площадь жилой застройки,D20:D20,1,=C20/C19,=R[0]C[-1]/R[-1]C[-1],TEP.RES_GFA,keep
 ТЭПы,21,Площадь нежилой застройки,D21:D21,1,=C21/C19,=R[0]C[-1]/R[-2]C[-1],TEP.NONRES_GFA,keep
 ТЭПы,22,Площадь Квартир (продаваемая?),D22:D22,1,=C22/C20,=R[0]C[-1]/R[-2]C[-1],TEP.APT_EFFICIENCY,keep

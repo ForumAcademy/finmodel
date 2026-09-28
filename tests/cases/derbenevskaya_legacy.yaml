@@ -1781,6 +1781,10 @@ legacy_checks:
     psn_stock_C48: 10332
     psn_lot_D48: 80
     escrow_release_C12: 2 кв 2032
+    gfa_above_C19: 221967
+    res_gfa_C20: 210458
+    res_gfa_C20_formula: =210038+420
+    nonres_gfa_C21: 19009
   sales_plan:
     revenue_row25_from_1q2026:
     - 4184396165.448

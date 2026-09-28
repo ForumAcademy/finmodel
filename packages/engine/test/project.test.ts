@@ -191,10 +191,10 @@ describe("расчёт сервиса без Excel: пробелы Дербен�
     expect(m.horizon).toBeGreaterThanOrEqual(f["F.CF.HORIZON"]?.value as number);
   });
 
-  it("проверки модели: ГНС по частям больше наземной на 7 500 м², очереди 1 и 2 без продуктов, выручка = поток", () => {
+  it("проверки модели: ГНС по частям больше наземной на 7 500 м² — предупреждение без ГПЗУ, ошибка с ГПЗУ; очереди 1 и 2 без продуктов; выручка = поток", () => {
     const checks = Object.fromEntries((m.result.formulas["F.CHECK.ALL"]?.value as { id: string; status: string }[]).map((c) => [c.id, c.status]));
     expect(checks).toMatchObject({
-      GFA_SPLIT_LE_ABOVE: "ошибка",
+      GFA_SPLIT_LE_ABOVE: "предупреждение",
       DDU_AFTER_RNS: "сходится",
       PHASE_WINDOWS: "предупреждение",
       REVENUE_EQ_CF: "сходится",
@@ -204,6 +204,9 @@ describe("расчёт сервиса без Excel: пробелы Дербен�
     });
     const gfa = m.result.messages.find((x) => x.key === "CHECK.GFA_SPLIT_LE_ABOVE");
     expect(gfa?.text).toMatch(/229\s467\sм² — больше наземной ГНС 221\s967\sм² на 7\s500\sм²/);
+    expect(gfa?.severity).toBe("warning");
+    const withGpzu = computeProject({ ...normal, input: { ...normal.input, values: { ...normal.input.values, "GPZU.MAX_GFA_ABOVE": 221967 } } });
+    expect(withGpzu.result.messages.find((x) => x.key === "CHECK.GFA_SPLIT_LE_ABOVE")?.severity).toBe("error");
     expect(m.missing.has("TEP.GFA_ABOVE")).toBe(false);
     // В расчёте «как в исходном Excel» найденное — справка, не ошибка
     const legacy = computeProject(demo).result.messages.filter((x) => x.key?.startsWith("CHECK."));

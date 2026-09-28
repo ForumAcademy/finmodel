@@ -76,6 +76,8 @@ const NUMBERS: Record<string, number> = {
   "LEGACY.FIN_EQUITY": 17,
   "LEGACY.FIN_FEE_BASE": 18,
   "LEGACY.FIN_EFF_RATE": 19,
+  "LEGACY.NONRES_GFA": 20,
+  "LEGACY.RES_GFA_TYPED": 21,
 };
 
 /** Последний постоянный номер пункта по исходному Excel: номера следующих вопросов (стандарт компании) идут после него. */
@@ -189,6 +191,33 @@ export function dataQuestions(c: LegacyCase, input: ProjectInput, result: Result
           ? { amount: diff.abs().mul(price), kind: "выручка", text: `выручка: ±~${fmtRub(diff.abs().mul(price))} в зависимости от ответа; продаваемая площадь в суммы не входит` }
           : { amount: null, kind: "выручка", text: "зависит от ответа" },
         recommendation: `В модели площадь ПСН к продаже = ${fmt(t.psn_stock_C23)} м² (ТЭПы!C23), продаваемая площадь считается как квартиры + ПСН. Подтвердите площадь ПСН.`,
+      };
+    }
+    const gfa = lc && typeof lc.tep.gfa_above_C19 === "number" && typeof lc.tep.res_gfa_C20 === "number" && typeof lc.tep.nonres_gfa_C21 === "number" ? { above: lc.tep.gfa_above_C19, res: lc.tep.res_gfa_C20, nonres: lc.tep.nonres_gfa_C21 } : null;
+    if (kind === "LEGACY.NONRES_GFA" && gfa) {
+      const over = new Decimal(gfa.res).add(gfa.nonres).sub(gfa.above);
+      const aboveNonres = new Decimal(gfa.nonres).sub(over);
+      return {
+        compared: `Жилая ГНС ${fmt(gfa.res)} м² и нежилая ${fmt(gfa.nonres)} м² вместе на ${fmt(over)} м² больше наземной ГНС ${fmt(gfa.above)} м² (ТЭПы!C19, C20, C21).`,
+        threat: "На бюджет и выручку не влияет: они считаются от наземной ГНС и продаваемых площадей.",
+        block: "sales",
+        question: `Включены ли в нежилую ГНС подземные или стилобатные помещения на ${fmt(over)} м²?`,
+        explanation: `Наземная ГНС ${fmt(gfa.above)} м² принята как предел. Если в нежилую ${fmt(gfa.nonres)} м² вошли подземные или стилобатные помещения на ${fmt(over)} м², наземная нежилая — ${fmt(aboveNonres)} м² (ТЭПы!C19, C21).`,
+        impact: { amount: null, kind: "нет", text: "на суммы не влияет: бюджет и выручка — от наземной ГНС и продаваемых площадей" },
+        recommendation: `Наземная ГНС ${fmt(gfa.above)} м² — предел. Подтвердите состав нежилой ГНС; до ответа или до ГПЗУ в документах проекта проверка ГНС — предупреждение.`,
+      };
+    }
+    if (kind === "LEGACY.RES_GFA_TYPED" && lc && typeof lc.tep.res_gfa_C20_formula === "string") {
+      const typed = lc.tep.res_gfa_C20_formula;
+      const [a = "", b = ""] = typed.replace("=", "").split("+");
+      return {
+        compared: `Жилая ГНС в файле — ${fmt(lc.tep.res_gfa_C20 ?? 0)} м²: к ${fmt(Number(a))} м² вручную добавлено ${fmt(Number(b))} м² без пояснения (ТЭПы!C20).`,
+        threat: "Бюджет и выручка от жилой ГНС не зависят, суммы не меняются.",
+        block: "sales",
+        question: `Что означают +${fmt(Number(b))} м² в жилой ГНС?`,
+        explanation: `Ячейка жилой ГНС содержит формулу ${typed}: откуда слагаемое ${fmt(Number(b))} м², в файле не сказано (ТЭПы!C20).`,
+        impact: { amount: null, kind: "нет", text: "на суммы не влияет" },
+        recommendation: `В модели жилая ГНС = ${fmt(lc.tep.res_gfa_C20 ?? 0)} м², как в файле. Подтвердите слагаемое ${fmt(Number(b))} м² или уберите его.`,
       };
     }
     if (kind === "LEGACY.MARKETING_F51" && lc) {

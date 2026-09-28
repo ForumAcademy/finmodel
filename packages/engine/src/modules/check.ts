@@ -53,10 +53,13 @@ function gfaSplit(ctx: FormulaContext): Found[] {
   const above = ctx.formula<Decimal>("F.TEP.GFA_ABOVE");
   const parts = split.res.add(split.apart).add(split.nonres);
   if (parts.sub(above).lte(ONE)) return [];
+  // Пока предел не подтверждён ГПЗУ проекта, расхождение — предупреждение: разбивку уточняют у автора ТЭП
+  // (решение владельца продукта 28.09.2026); с ГПЗУ в проекте — ошибка
+  const gpzu = ctx.num("GPZU.MAX_GFA_ABOVE") !== null;
   return [
     {
-      severity: "error",
-      text: `Жилая, апартаментная и нежилая ГНС вместе ${fmt(parts)} м² — больше наземной ГНС ${fmt(above)} м² на ${fmt(parts.sub(above))} м². Проверьте разбивку ГНС в ТЭП`,
+      severity: gpzu ? "error" : "warning",
+      text: `Жилая, апартаментная и нежилая ГНС вместе ${fmt(parts)} м² — больше наземной ГНС ${fmt(above)} м² на ${fmt(parts.sub(above))} м². ${gpzu ? "Проверьте разбивку ГНС в ТЭП" : "Уточните у автора ТЭП, что входит в нежилую ГНС, или приложите ГПЗУ"}`,
       param: "TEP.GFA_ABOVE",
     },
   ];

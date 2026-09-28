@@ -142,7 +142,9 @@ case = {
     "legacy_checks": {
         "tep": {"apt_area_C22": t["C22"].value, "psn_stock_C23": t["C23"].value, "saleable_area_C35": t["C35"].value,
                 "saleable_area_C35_formula": wf["ТЭПы"]["C35"].value if str(wf["ТЭПы"]["C35"].value).startswith("=") else None,
-                "psn_stock_C48": t["C48"].value, "psn_lot_D48": t["D48"].value, "escrow_release_C12": t["C12"].value},
+                "psn_stock_C48": t["C48"].value, "psn_lot_D48": t["D48"].value, "escrow_release_C12": t["C12"].value,
+                "gfa_above_C19": t["C19"].value, "res_gfa_C20": num(t["C20"].value), "res_gfa_C20_formula": wf["ТЭПы"]["C20"].value,
+                "nonres_gfa_C21": t["C21"].value},
         "sales_plan": {"revenue_row25_from_1q2026": series(ps, 25, 5, 40), "psn_lots_row43_sum": num(ps["D43"].value)},
         "budget": {"marketing_rate_D51": b["D51"].value, "marketing_F51": num(b["F51"].value), "marketing_F51_formula": wf["Бюджет "]["F51"].value,
                    "brokerage_rate_D52": b["D52"].value, "brokerage_F52": num(b["F52"].value),
