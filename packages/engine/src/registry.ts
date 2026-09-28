@@ -1,10 +1,13 @@
 import type { FormulaId } from "@fm/spec";
 import type { FormulaFn, StepFormulaFn } from "./context";
 import { CAPEX_FORMULAS } from "./modules/capex";
+import { CF_FORMULAS } from "./modules/cf";
 import { ESCROW_FORMULAS } from "./modules/escrow";
 import { FIN_FORMULAS } from "./modules/fin";
+import { KPI_FORMULAS } from "./modules/kpi";
 import { LAND_FORMULAS } from "./modules/land";
 import { SALES_FORMULAS } from "./modules/sales";
+import { TAX_FORMULAS } from "./modules/tax";
 import { TEP_FORMULAS } from "./modules/tep";
 import { TIME_FORMULAS } from "./modules/time";
 
@@ -17,7 +20,10 @@ export const FORMULAS: Partial<Record<FormulaId, FormulaFn | StepFormulaFn>> = {
   ...SALES_FORMULAS,
   ...ESCROW_FORMULAS,
   ...FIN_FORMULAS,
+  ...TAX_FORMULAS,
+  ...CF_FORMULAS,
+  ...KPI_FORMULAS,
 };
 
 /** Модули, реализованные полностью: для них тест требует функцию на каждую формулу YAML. */
-export const IMPLEMENTED_MODULES = ["TIME", "TEP", "LAND", "CAPEX", "SALES", "ESCROW", "FIN"] as const;
+export const IMPLEMENTED_MODULES = ["TIME", "TEP", "LAND", "CAPEX", "SALES", "ESCROW", "FIN", "TAX", "CF", "KPI"] as const;

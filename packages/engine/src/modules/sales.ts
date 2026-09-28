@@ -8,7 +8,7 @@
  */
 import Decimal from "decimal.js";
 import type { FormulaContext } from "../context";
-import { CalcError } from "../context";
+import { CalcError, DependencyError } from "../context";
 import { isIsoDate, monthDiff, yearOf, type IsoDate } from "../lib/dates";
 import { fmt, fmtQuarter, parsePercent } from "../lib/format";
 import { growth } from "./capex";
@@ -407,7 +407,7 @@ export function F_SALES_END_PRICE(ctx: FormulaContext): Record<string, Decimal |
   return out;
 }
 
-/** Выручка: с НДС — сейчас; без НДС — с модулем налогов (этап 6). */
+/** Выручка с НДС и без НДС (null — НДС с продаж не посчитан). */
 export interface Revenue {
   gross: Decimal;
   net: Decimal | null;
@@ -417,8 +417,16 @@ export interface Revenue {
 export function F_SALES_REVENUE_TOTAL(ctx: FormulaContext): Revenue {
   const value = ctx.formula<RowSeries>("F.SALES.CONTRACT_VALUE");
   const byRow = Object.fromEntries(Object.entries(value).map(([k, s]) => [k, sum(s)]));
-  ctx.message("info", "Выручка без НДС появится с расчётом налогов (этап 6)");
-  return { gross: Object.values(byRow).reduce((s, x) => s.add(x), ZERO), net: null, byRow };
+  const gross = Object.values(byRow).reduce((s, x) => s.add(x), ZERO);
+  // Выручка — база статей-долей бюджета: без НДС с продаж она всё равно считается, net остаётся пустым
+  let net: Decimal | null = null;
+  try {
+    const vat = ctx.formula<{ byRow: RowSeries }>("F.TAX.OUTPUT_VAT");
+    net = gross.sub(Object.values(vat.byRow).reduce((s, xs) => s.add(sum(xs)), ZERO));
+  } catch (e) {
+    if (!(e instanceof DependencyError)) throw e;
+  }
+  return { gross, net, byRow };
 }
 
 export const SALES_FORMULAS = {

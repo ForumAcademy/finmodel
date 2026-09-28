@@ -198,7 +198,15 @@ export function projectHorizon(project: CalcProject, versions: AssumptionVersion
   const lag = Number(projectValue(project, "TIME.ESCROW_RELEASE_LAG_M", versions) ?? 0);
   const capexEnd = manualEnd(project.input.values["CAPEX.ITEMS"], "schedule_manual", "weights", monthsTo);
   const salesEnd = manualEnd(project.input.values["SALES.PACE"], "manual", "values", monthsTo);
-  return Math.max(monthsTo(last) + 1 + lag, capexEnd + 1, salesEnd + 1, 1);
+  const base = Math.max(monthsTo(last) + 1 + lag, capexEnd + 1, salesEnd + 1, 1);
+  if (project.input.mode === "legacy") return base;
+  // Расчёт сервиса: до уплаты налога на прибыль за последний год (месяц TAX.PROFIT_TAX_PAY_MONTH следующего года)
+  // плюс запас TIME.HORIZON_TAIL_M. В расчёте «как в исходном Excel» налоги не считаются — горизонт как в CF1.
+  const payMonth = Number(projectValue(project, "TAX.PROFIT_TAX_PAY_MONTH", versions) ?? 0);
+  const tail = Number(projectValue(project, "TIME.HORIZON_TAIL_M", versions) ?? 0);
+  const endYear = Number(start.slice(...YEAR)) + Math.floor((Number(start.slice(...MONTH)) - 1 + base - 1) / MONTHS_PER_YEAR);
+  const payment = monthsTo(`${endYear + 1}-${String(payMonth).padStart(2, "0")}-01`);
+  return Math.max(base, payment + 1 + tail);
 }
 
 /**

@@ -1561,6 +1561,39 @@ parameters:
     status: needs_verification
     legacy: [{cell: null, verdict: new}]
 
+  - id: TAX.VAT_PAY_MONTHS
+    name: "НДС за квартал: число месяцев уплаты равными долями"
+    unit: мес
+    kind: scalar
+    scope: template
+    default: 3
+    source_ids: [S_NK_174]
+    basis: "п.1 ст.174 НК РФ: равными долями не позднее 28-го числа каждого из трёх месяцев, следующих за кварталом"
+    status: verified
+    legacy: [{cell: null, verdict: new}]
+
+  - id: TAX.VAT_REFUND_LAG_M
+    name: "Возмещение НДС: месяцев после окончания квартала"
+    unit: мес
+    kind: scalar
+    scope: template
+    default: 4
+    source_ids: [S_NK_176, S_NK_174]
+    basis: "Декларация — до 25-го числа месяца после квартала (п.5 ст.174), камеральная проверка — два месяца (ст.88), решение о возмещении — 7 дней (п.2 ст.176), возврат — после решения: деньги приходят на четвёртый месяц после квартала (квартал до 31.03 → июль). Общий порядок, без заявительного (ст.176.1)"
+    status: verified
+    legacy: [{cell: null, verdict: new}]
+
+  - id: TAX.PROFIT_TAX_PAY_MONTH
+    name: "Месяц уплаты налога на прибыль за год"
+    unit: мес
+    kind: scalar
+    scope: template
+    default: 3
+    source_ids: [S_NK_287]
+    basis: "п.1 ст.287 НК РФ: не позднее 28 марта года, следующего за налоговым периодом. Авансовые платежи в течение года не моделируются (упрощение F.TAX.PROFIT_TAX)"
+    status: verified
+    legacy: [{cell: null, verdict: new}]
+
   - id: TAX.PROFIT_RATE
     name: "Ставка налога на прибыль"
     unit: доля

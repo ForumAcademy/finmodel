@@ -137,7 +137,24 @@ describe("расчёт сервиса без Excel: пробелы Дербен�
     expect(m.missing.has("TEP.PARKING_NORM")).toBe(false);
   });
 
-  it("без Excel расчёт останавливают только земельный налог и плата за ВРИ", () => {
-    expect([...m.missing].sort()).toEqual(["LAND.VRI_FEE", "TAX.LAND_RATE"]);
+  it("без Excel не хватает только ставки земельного налога, платы за ВРИ, облагаемой доли содержания застройщика и безрисковой ставки", () => {
+    expect([...m.missing].sort()).toEqual(["LAND.VRI_FEE", "OPEX.OVERHEAD_VAT_SHARE", "TAX.LAND_RATE", "VAL.RISK_FREE"]);
+  });
+
+  it("цепочка до показателей: налоги в потребности в кредите, поток акционера, IRR, прибыль", () => {
+    const f = m.result.formulas;
+    const taxes = f["F.TAX.PAYMENTS"]?.value as { total: Decimal[]; profit_tax_paid: Decimal[] };
+    const sum = (xs: Decimal[]) => xs.reduce((a, b) => a.add(b), new Decimal(0));
+    expect(sum(taxes.profit_tax_paid).gt(0)).toBe(true);
+    const tax = f["F.TAX.PROFIT_TAX"]?.value as { tax: Decimal[] };
+    expect(sum(taxes.profit_tax_paid).toNumber()).toBeCloseTo(sum(tax.tax).toNumber(), 2);
+    const margin = f["F.KPI.MARGIN"]?.value as { net_profit: Decimal; gross_profit: Decimal };
+    const fcfe = f["F.CF.FCFE"]?.value as Decimal[];
+    // Без выплат акционеру накопленный поток акционера = чистая прибыль (НДС к уплате за последний квартал — в пределах расчёта)
+    expect(sum(fcfe).toNumber()).toBeCloseTo(margin.net_profit.toNumber(), -3);
+    expect((f["F.KPI.IRR"]?.value as { irr_equity: Decimal | null }).irr_equity).not.toBeNull();
+    const cash = f["F.CF.CASH_BALANCE"]?.value as Decimal[];
+    expect(cash.every((x) => x.gte(-1))).toBe(true);
+    expect(m.horizon).toBeGreaterThanOrEqual(f["F.CF.HORIZON"]?.value as number);
   });
 });

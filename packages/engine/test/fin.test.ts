@@ -36,11 +36,11 @@ function fin(r: ReturnType<typeof calculate>): Fin {
 }
 
 describe("ядро: формулы, связанные через прошлый месяц, считаются помесячно", () => {
-  it("кредит и покрытие эскроу — одна группа; внутри месяца зависимости без циклов", () => {
+  it("кредит, покрытие эскроу и налоги — одна группа; внутри месяца зависимости без циклов", () => {
     const groups = stepGroups(Object.keys(FORMULAS) as FormulaId[]);
     const g = groups.get("F.FIN.RATE") ?? [];
     expect(new Set(g)).toEqual(
-      new Set(["F.FIN.FEES", "F.FIN.FUNDING_NEED", "F.FIN.EQUITY_IN", "F.FIN.DRAW", "F.FIN.RATE", "F.FIN.INTEREST", "F.FIN.REPAYMENT", "F.FIN.DEBT", "F.ESC.COVERAGE"]),
+      new Set(["F.FIN.FEES", "F.FIN.FUNDING_NEED", "F.FIN.EQUITY_IN", "F.FIN.DRAW", "F.FIN.RATE", "F.FIN.INTEREST", "F.FIN.REPAYMENT", "F.FIN.DEBT", "F.ESC.COVERAGE", "F.TAX.PROFIT_TAX", "F.TAX.PAYMENTS"]),
     );
     // порядок: каждая формула после всех своих зависимостей того же месяца
     g.forEach((id, i) => {

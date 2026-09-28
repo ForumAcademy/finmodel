@@ -1129,7 +1129,7 @@ formulas:
     expr: |
       revenue_gross = Σ_{k,t} value[k,t]
       revenue_net   = revenue_gross − Σ output_vat
-    note: "Выручка без НДС считается с модулем налогов (этап 6, F.TAX.OUTPUT_VAT); до этого — только выручка с НДС. База статей-долей выручки бюджета (маркетинг, брокеридж, вознаграждение девелопера) — выручка с НДС."
+    note: "База статей-долей выручки бюджета (маркетинг, брокеридж, вознаграждение девелопера) — выручка с НДС."
     terms:
       "revenue_gross": "результат: выручка с НДС, руб"
       "revenue_net": "результат: выручка без НДС, руб"
@@ -1319,19 +1319,19 @@ formulas:
       cash_bop[t] = cash_bop[t−1] + equity_in[t−1] + draw[t−1] + Σ_p release[p,t−1] + dkp_cash[t−1]
                     − repaid[t−1] − capex_cash[t−1] − taxes_paid[t−1] − fees[t−1]
       «Как в исходном Excel»: need = расходы квартала (CF1!F18:AS18)
-    note: "Налоги появятся с этапом 6 (F.TAX.PAYMENTS); до этого taxes_paid = 0, и это показывается на экране. Свободные деньги проекта cash_bop ведутся здесь же и на этапе 6 совпадут с остатком денег F.CF.CASH_BALANCE. Деньги, пришедшие в месяце, тратятся со следующего месяца."
+    note: "Налоги месяца (F.TAX.PAYMENTS) считаются раньше потребности в том же месяце: налог на прибыль платится за прошлый год, НДС — за прошлый квартал. Свободные деньги проекта cash_bop совпадают с остатком денег F.CF.CASH_BALANCE прошлого месяца. Деньги, пришедшие в месяце, тратятся со следующего месяца."
     terms:
       "need[t]": "результат: потребность в финансировании месяца t, руб"
       "cash_bop[t]": "свободные деньги проекта на начало месяца, руб"
       "capex_cash[t]": "платежи по бюджету в месяце: Σ_i item_cash[i,t] (F.CAPEX.ITEM_CASH)"
-      "taxes_paid[t]": "налоговые платежи (F.TAX.PAYMENTS, этап 6)"
+      "taxes_paid[t]": "налоговые платежи (F.TAX.PAYMENTS)"
       "fees[t]": "комиссии банка (F.FIN.FEES)"
       "release[p,t]": "раскрытие эскроу очереди (F.ESC.BALANCE)"
       "dkp_cash[t]": "поступления по договорам купли-продажи, мимо эскроу (F.SALES.CASH_IN)"
       "equity_in, draw": "взносы застройщика и выдачи кредита (F.FIN.EQUITY_IN, F.FIN.DRAW)"
       "repaid[t]": "погашение кредита и процентов (F.FIN.REPAYMENT)"
     depends_on: [F.CAPEX.ITEM_CASH, F.TAX.PAYMENTS, F.ESC.BALANCE, F.SALES.CASH_IN, F.FIN.FEES, F.FIN.EQUITY_IN, F.FIN.DRAW, F.FIN.REPAYMENT, F.TIME.DATE]
-    lag_depends_on: [F.TAX.PAYMENTS, F.FIN.EQUITY_IN, F.FIN.DRAW, F.FIN.REPAYMENT]
+    lag_depends_on: [F.FIN.EQUITY_IN, F.FIN.DRAW, F.FIN.REPAYMENT]
     rationale: "Сначала используются собственные поступления проекта, затем собственный капитал, затем кредит"
     rejected: ["Кредит на все расходы квартала плюс собственные средства (исходник CF1!F98 = −(F18 + F132)) — выдача больше потребности"]
     source_ids: [S_EXPERT]
@@ -1553,13 +1553,17 @@ formulas:
       how: "Из суммы облагаемых договоров выделяется НДС, включённый в цену. Квартиры по ДДУ не облагаются, ПСН, машино-места и продажи по ДКП — по правилам справочника."
     unit: руб
     dims: [k, t]
-    expr: "output_vat[k,t] = value[k,t] × TAX.VAT_RATE / (1 + TAX.VAT_RATE) × taxable(k, channel(t))"
+    expr: |
+      output_vat[k,t] = value[k,t] × TAX.VAT_RATE / (1 + TAX.VAT_RATE) × taxable(k, channel(k,t))
+      channel(k,t)    = ДДУ, если договор до РНВ очереди продукта и продукт продаётся по ДДУ с эскроу; иначе ДКП
+      расчёт «как в исходном Excel»: output_vat = 0 — налоги исходника переносятся вместе с разделом «Расхождения»
+    note: "Строка режима ищется по продукту и каналу; если строки нет — ошибка «нет правила НДС» (значение не придумывается)."
     terms:
       "output_vat[k,t]": "результат: НДС с реализации продукта k в месяце t, руб"
       "value[k,t]": "стоимость договоров (F.SALES.CONTRACT_VALUE)"
       "taxable(k, channel)": "1, если продажа продукта k по этому каналу облагается НДС (по TAX.VAT_REGIME), иначе 0"
-      "channel(t)": "канал продаж в месяце t: ДДУ или ДКП"
-    depends_on: [F.SALES.CONTRACT_VALUE, TAX.VAT_RATE, TAX.VAT_REGIME]
+      "channel(k,t)": "канал продаж договора месяца t: ДДУ или ДКП"
+    depends_on: [F.SALES.CONTRACT_VALUE, TAX.VAT_RATE, TAX.VAT_REGIME, SALES.PRODUCTS, F.TIME.FLAG_POST_RNV, TIME.MILESTONES]
     rationale: "Цена в договоре включает НДС → выделение 22/122. Облагаются только продукты/каналы из таблицы режима"
     rejected: ["22% «сверху» от цены с НДС по всей выручке ПСН+ММ (исходник План продаж!E61)"]
     source_ids: [S_NK_149, S_NK_164, S_MINFIN_VAT_DDU_2023]
@@ -1581,7 +1585,7 @@ formulas:
       "input_share": "результат: доля входящего НДС к вычету"
       "taxable_revenue_net": "облагаемая НДС выручка без НДС за весь проект"
       "revenue_net": "вся выручка без НДС"
-    depends_on: [TAX.INPUT_VAT_RECOVERABLE, F.TAX.OUTPUT_VAT, F.SALES.REVENUE_TOTAL]
+    depends_on: [TAX.INPUT_VAT_RECOVERABLE, F.TAX.OUTPUT_VAT, F.SALES.REVENUE_TOTAL, TAX.VAT_RATE]
     rationale: "Раздельный учёт (п.4 ст.170 НК РФ): НДС по освобождённым операциям включается в стоимость"
     rejected: []
     source_ids: [S_NK_149, S_MINFIN_VAT_DDU_2023]
@@ -1596,18 +1600,25 @@ formulas:
       how: "За квартал НДС с продаж минус вычет. Плюс платится равными частями в три месяца после квартала, минус возвращается через три месяца."
     unit: руб
     dims: [quarter]
-    expr: "vat_q = Σ_{t∈q} output_vat[t] − Σ_{t∈q} input_vat[t] × input_share"
-    note: "Если vat_q > 0 — НДС уплачивается равными долями в течение трёх месяцев, следующих за кварталом. Если vat_q < 0 — возмещение через три месяца после квартала."
+    expr: |
+      vat_q         = Σ_{t∈q} output_vat[t] − Σ_{t∈q} input_vat[t] × input_share
+      input_vat[t]  = Σ_i item_cash[i,t] × r[i] / (1 + r[i]),   r[i] = ставка НДС статьи × облагаемая доля статьи
+      vat_paid[t]   = vat_q / TAX.VAT_PAY_MONTHS  в каждом из TAX.VAT_PAY_MONTHS месяцев после квартала q, если vat_q > 0
+      vat_refund[t] = −vat_q  в месяце q_end + TAX.VAT_REFUND_LAG_M, если vat_q < 0
+      расчёт «как в исходном Excel»: 0
+    note: "Квартал — календарный, по датам модели. Невозмещаемый входящий НДС (input_vat × (1 − input_share)) остаётся в стоимости и уменьшает прибыль. Платежи за последние кварталы, выходящие за горизонт, в денежный поток не попадают — горизонт расчёта продлевается до уплаты налога на прибыль за последний год."
     terms:
       "vat_q": "результат: НДС к уплате (+) или возмещению (−) за квартал q, руб"
       "q": "квартал"
       "output_vat[t]": "НДС с реализации (F.TAX.OUTPUT_VAT)"
       "input_vat[t]": "входящий НДС по затратам"
       "input_share": "доля к вычету (F.TAX.INPUT_VAT_SHARE)"
-    depends_on: [F.TAX.OUTPUT_VAT, F.CAPEX.ITEM_CASH, F.TAX.INPUT_VAT_SHARE]
-    rationale: "Налоговый период по НДС — квартал; порядок уплаты — ст.174 НК РФ"
+      "r[i]": "ставка НДС статьи бюджета с учётом облагаемой доли (как в F.CAPEX.ITEM_CASH)"
+      "vat_paid, vat_refund": "результат: уплата и возмещение НДС по месяцам, руб"
+    depends_on: [F.TAX.OUTPUT_VAT, F.CAPEX.ITEM_CASH, F.TAX.INPUT_VAT_SHARE, CAPEX.ITEMS, TAX.VAT_RATE, TAX.VAT_RATE_OPTIONS, TAX.VAT_PAY_MONTHS, TAX.VAT_REFUND_LAG_M, F.TIME.DATE, LAND.TENURE, LAND.LESSOR_TYPE, OPEX.OVERHEAD_VAT_SHARE]
+    rationale: "Налоговый период по НДС — квартал; уплата — тремя равными долями в месяцы после квартала (п.1 ст.174 НК РФ); возмещение — после камеральной проверки (ст.88, ст.176 НК РФ)"
     rejected: ["5 млн в квартал вручную (исходник CF1!M85:AA85)"]
-    source_ids: [S_NK_164, S_NK_174]
+    source_ids: [S_NK_164, S_NK_174, S_NK_176]
     legacy: {cells: "CF1!F85:AS85, Бюджет!F54", verdict: replace}
     status: needs_verification
 
@@ -1616,29 +1627,34 @@ formulas:
     name: "Налоговая база по налогу на прибыль"
     plain:
       title: "Налоговая база по налогу на прибыль, руб"
-      how: "Экономия по ДДУ признаётся в месяц окончания передачи очереди, прибыль по ДКП — в месяц продажи. Общие затраты делятся между очередями по продаваемой площади."
+      how: "Экономия по ДДУ признаётся в месяц окончания передачи очереди, прибыль по ДКП — в месяц продажи. Затраты делятся между договорами пропорционально их стоимости. Проценты и комиссии банка вычитаются в налоге за год."
     unit: руб
     dims: [t]
     expr: |
-      base[t]       = economy[p] × 1{ t = handover_end[p] } + profit_dkp[t] − other_expenses[t]
-      economy[p]    = ddu_funds_net[p] − cost_transferred[p]
-      profit_dkp[t] = dkp_revenue_net[t] − avg_cost_m2 × dkp_sold_area[t]
-    note: "Экономия по ДДУ признаётся в месяце окончания передачи очереди; общие затраты распределяются между очередями пропорционально продаваемой площади. Прибыль по ДКП — в месяце продажи. Прочие расходы, не относящиеся к целевому финансированию, — в периоде возникновения."
+      base[t]            = Σ_p economy[p] × 1{ t = recognition[p] } + profit_dkp[t]
+      economy[p]         = ddu_funds_net[p] − cost × ddu_value[p] / value_total
+      profit_dkp[t]      = dkp_revenue_net[t] − cost × dkp_value[t] / value_total
+      cost               = capex_total − input_vat_recoverable
+      recognition[p]     = handover_end[p];  если пусто — rnv_date[p] и предупреждение «дата окончания передачи не задана»
+      расчёт «как в исходном Excel»: 0
+    note: "Экономия по ДДУ признаётся в месяце окончания передачи очереди. Затраты (бюджет без возмещаемого НДС) распределяются между договорами пропорционально стоимости договоров: продаваемая площадь квартир и ПСН в м², а машино-места — в штуках, их нельзя сложить. Проценты и комиссии банка вычитаются из базы года в F.TAX.PROFIT_TAX: они считаются помесячно вместе с кредитом."
     terms:
       "base[t]": "результат: налоговая база по налогу на прибыль в месяце t, руб"
       "economy[p]": "экономия застройщика по ДДУ очереди p"
-      "ddu_funds_net[p]": "средства дольщиков очереди p без НДС"
-      "cost_transferred[p]": "затраты на передаваемые объекты очереди p"
-      "handover_end[p]": "окончание передачи ключей очереди p"
+      "ddu_funds_net[p]": "средства дольщиков очереди p без НДС: договоры до РНВ по ДДУ за вычетом НДС (F.TAX.OUTPUT_VAT)"
+      "ddu_value[p], dkp_value[t]": "стоимость договоров ДДУ очереди p и ДКП месяца t с НДС"
+      "value_total": "стоимость всех договоров проекта с НДС"
+      "cost": "затраты проекта: бюджет (F.CAPEX.TOTAL) без возмещаемого входящего НДС (F.TAX.VAT_PAYABLE)"
+      "recognition[p]": "месяц признания экономии очереди p"
+      "handover_end[p]": "окончание передачи ключей очереди p (TIME.MILESTONES)"
+      "rnv_date[p]": "дата РНВ очереди p (TIME.MILESTONES)"
       "profit_dkp[t]": "прибыль от продаж по ДКП"
       "dkp_revenue_net[t]": "выручка по ДКП без НДС"
-      "avg_cost_m2": "средняя себестоимость 1 м²"
-      "dkp_sold_area[t]": "площадь, проданная по ДКП"
-      "other_expenses[t]": "прочие расходы вне целевого финансирования"
-    depends_on: [F.SALES.CONTRACT_VALUE, F.CAPEX.TOTAL, F.FIN.INTEREST, TIME.MILESTONES]
-    lag_depends_on: [F.FIN.INTEREST]
+    depends_on: [F.SALES.CONTRACT_VALUE, F.TAX.OUTPUT_VAT, F.TAX.VAT_PAYABLE, F.CAPEX.TOTAL, SALES.PRODUCTS, F.TIME.FLAG_POST_RNV, TIME.MILESTONES, F.TIME.DATE]
     rationale: "Средства дольщиков — целевое финансирование (пп.14 п.1 ст.251 НК РФ); финрез (экономия) — внереализационный доход в периоде исполнения всех обязательств по ДДУ (письмо Минфина от 28.07.2026 № 03-03-08/65074)"
     rejected:
+      - "Затраты по продаваемой площади (прежняя редакция) — машино-места в штуках не складываются с м²"
+      - "Проценты в базе месяца (прежняя редакция) — проценты считаются помесячно вместе с кредитом, а налоговые платежи входят в потребность в кредите: получался цикл"
       - "5,7% от выручки (исходник Бюджет!M55)"
       - "(выручка − расходы − собственный капитал) × 25% (исходник Бюджет!J55:K55) — капитал не уменьшает базу"
     source_ids: [S_NK_251, S_MINFIN_PROFIT_DDU_2026]
@@ -1654,16 +1670,20 @@ formulas:
     unit: руб
     dims: [year]
     expr: |
+      base[y]      = Σ_{t∈y} F.TAX.PROFIT_BASE[t] − Σ_{t∈y} interest[t] − Σ_{t∈y} fees[t]
       loss_used[y] = MIN( loss_cf[y−1], MAX(base[y], 0) × TAX.LOSS_CARRYFORWARD_LIMIT )
       tax[y]       = ( MAX(base[y], 0) − loss_used[y] ) × TAX.PROFIT_RATE
       loss_cf[y]   = loss_cf[y−1] − loss_used[y] + MAX(−base[y], 0)
-    note: "Налог уплачивается в марте следующего года (упрощение; авансовые платежи — опция)."
+      расчёт «как в исходном Excel»: 0
+    note: "Налог за год считается в первом месяце следующего года (помесячно вместе с кредитом: проценты и комиссии года к этому месяцу известны) и уплачивается в месяце TAX.PROFIT_TAX_PAY_MONTH (F.TAX.PAYMENTS). Авансовые платежи в течение года не моделируются (упрощение)."
     terms:
       "tax[y]": "результат: налог на прибыль за год y, руб"
-      "base[y]": "налоговая база за год (F.TAX.PROFIT_BASE)"
+      "base[y]": "налоговая база за год: F.TAX.PROFIT_BASE минус проценты и комиссии банка года"
+      "interest[t], fees[t]": "проценты и комиссии по кредиту (F.FIN.INTEREST, F.FIN.FEES)"
       "loss_used[y]": "убытки прошлых лет, зачтённые в году y"
       "loss_cf[y]": "непогашенные убытки на конец года"
-    depends_on: [F.TAX.PROFIT_BASE, TAX.PROFIT_RATE, TAX.LOSS_CARRYFORWARD_LIMIT]
+    depends_on: [F.TAX.PROFIT_BASE, F.FIN.INTEREST, F.FIN.FEES, TAX.PROFIT_RATE, TAX.LOSS_CARRYFORWARD_LIMIT, F.TIME.DATE]
+    lag_depends_on: [F.FIN.INTEREST, F.FIN.FEES]
     rationale: "Ставка 25% (ст.284), ограничение переноса убытков (ст.283)"
     rejected: []
     source_ids: [S_NK_284, S_NK_283]
@@ -1675,19 +1695,24 @@ formulas:
     name: "Налоговые платежи месяца"
     plain:
       title: "Налоги месяца, руб"
-      how: "НДС к уплате (минус возмещение), налог на прибыль и земельный налог или аренда месяца."
+      how: "НДС к уплате (минус возмещение) и налог на прибыль за прошлый год в марте. Земельный налог или аренда — в бюджете, отдельной статьёй."
     unit: руб
     dims: [t]
-    expr: "taxes_paid[t] = vat_paid[t] − vat_refund[t] + profit_tax_paid[t] + land_pay[t]"
+    expr: |
+      taxes_paid[t]      = vat_paid[t] − vat_refund[t] + profit_tax_paid[t]
+      profit_tax_paid[t] = tax[год(t) − 1] × 1{ месяц(t) = TAX.PROFIT_TAX_PAY_MONTH }
+      расчёт «как в исходном Excel»: 0
+    note: "Земельный налог или аренда в эту строку не входят: они уже в бюджете статьёй LAND_TAX_OR_RENT (F.CAPEX.ITEM_CASH) — иначе двойной счёт."
     terms:
       "taxes_paid[t]": "результат: налоговые платежи месяца t, руб"
       "vat_paid, vat_refund": "уплата и возмещение НДС (F.TAX.VAT_PAYABLE)"
       "profit_tax_paid[t]": "уплата налога на прибыль (F.TAX.PROFIT_TAX)"
-      "land_pay[t]": "земельный налог или аренда (F.LAND.TAX_OR_RENT)"
-    depends_on: [F.TAX.VAT_PAYABLE, F.TAX.PROFIT_TAX, F.LAND.TAX_OR_RENT]
-    rationale: "Единая строка налогов в CF"
-    rejected: ["Налог на имущество 0,2% кадастровой стоимости земли (исходник CF1!84): объект незавершённого строительства и квартиры-товары налогом на имущество по кадастровой стоимости у застройщика в общем случае не облагаются; земля облагается земельным налогом"]
-    source_ids: [S_NK_394]
+      "tax[y]": "налог на прибыль за год y (F.TAX.PROFIT_TAX)"
+    depends_on: [F.TAX.VAT_PAYABLE, F.TAX.PROFIT_TAX, TAX.PROFIT_TAX_PAY_MONTH, F.TIME.DATE]
+    lag_depends_on: [F.TAX.PROFIT_TAX]
+    rationale: "Единая строка налогов в CF; сроки — п.1 ст.174 и п.1 ст.287 НК РФ"
+    rejected: ["Земельный налог и в бюджете, и в налогах (прежняя редакция) — двойной счёт", "Налог на имущество 0,2% кадастровой стоимости земли (исходник CF1!84): объект незавершённого строительства и квартиры-товары налогом на имущество по кадастровой стоимости у застройщика в общем случае не облагаются; земля облагается земельным налогом"]
+    source_ids: [S_NK_174, S_NK_287]
     legacy: {cells: "CF1!F81:AS86", verdict: replace}
     status: needs_verification
 
@@ -1710,7 +1735,7 @@ formulas:
       "dkp_cash[t]": "поступления по ДКП"
       "item_cash[i,t]": "платежи по бюджету (F.CAPEX.ITEM_CASH)"
       "taxes_paid[t]": "налоги (F.TAX.PAYMENTS)"
-    depends_on: [F.ESC.BALANCE, F.SALES.CASH_IN, F.CAPEX.ITEM_CASH, F.TAX.PAYMENTS]
+    depends_on: [F.ESC.BALANCE, F.SALES.CASH_IN, F.CAPEX.ITEM_CASH, F.TAX.PAYMENTS, F.TIME.DATE]
     rationale: "Деньги дольщиков доступны застройщику только после раскрытия эскроу — поэтому в CFADS входит раскрытие, а не продажи"
     rejected: ["Выручка по дате продажи (исходник CF1!F133 = F15 − F18 − F81) — завышает CF до РНВ"]
     source_ids: [S_214_ART15_5]
@@ -1749,13 +1774,13 @@ formulas:
     unit: руб
     dims: [t]
     expr: "cash[t] = cash[t−1] + fcfe[t] + equity_in[t] − distributions[t]"
-    note: "Проверка: cash[t] >= 0. Если остаток отрицательный, дефицит cash_gap[t] = −cash[t] покрывает акционер."
+    note: "Проверка: cash[t] >= 0. Если остаток отрицательный, дефицит cash_gap[t] = −cash[t] покрывает акционер. Выплаты акционеру до конца расчёта не моделируются (distributions = 0): свободные деньги остаются в проекте и видны в остатке."
     terms:
       "cash[t]": "результат: остаток денежных средств на конец месяца, руб"
       "fcfe[t]": "поток акционера (F.CF.FCFE)"
       "equity_in[t]": "взнос акционера (F.FIN.EQUITY_IN)"
       "distributions[t]": "выплаты акционеру"
-    depends_on: [F.CF.FCFE, F.FIN.EQUITY_IN]
+    depends_on: [F.CF.FCFE, F.FIN.EQUITY_IN, F.TIME.DATE]
     rationale: "Разрыв ликвидности должен быть виден явно"
     rejected: []
     source_ids: [S_EXPERT]
@@ -1778,7 +1803,7 @@ formulas:
       "t_release_last": "месяц раскрытия эскроу последней очереди (F.TIME.FLAG_ESCROW_RELEASE)"
       "t_debt_repaid": "месяц полного погашения долга и процентов (F.FIN.DEBT)"
       "t_profit_tax_last": "месяц уплаты налога на прибыль за последний год (F.TAX.PROFIT_TAX)"
-    depends_on: [F.SALES.SOLD_AREA, F.TIME.FLAG_ESCROW_RELEASE, F.FIN.DEBT, F.TAX.PROFIT_TAX, TIME.HORIZON_TAIL_M, TIME.HORIZON_WARN_M]
+    depends_on: [F.SALES.SOLD_AREA, F.TIME.FLAG_ESCROW_RELEASE, F.FIN.DEBT, F.TAX.PROFIT_TAX, TIME.HORIZON_TAIL_M, TIME.HORIZON_WARN_M, TAX.PROFIT_TAX_PAY_MONTH]
     rationale: "Срок проекта — следствие вех, продаж, кредита и налогов; ручной срок обрезает хвост продаж, погашение долга и уплату налога"
     rejected:
       - "Срок проекта числом (исходник ТЭПы!C5 = 7,25 года) — не связан с датами"
@@ -1826,7 +1851,7 @@ formulas:
       "cfads[t]": "поток проекта (F.CF.CFADS)"
       "fcfe[t]": "поток акционера (F.CF.FCFE)"
       "r": "ставка дисконтирования (F.KPI.DISCOUNT_RATE)"
-    depends_on: [F.CF.CFADS, F.CF.FCFE, F.KPI.DISCOUNT_RATE, GEN.VALUATION_DATE]
+    depends_on: [F.CF.CFADS, F.CF.FCFE, F.KPI.DISCOUNT_RATE, GEN.VALUATION_DATE, F.TIME.DATE]
     rationale: "Дисконтирование по фактическим датам (XNPV)"
     rejected: ["NPV = финрез (исходник Бюджет!F63) — без учёта времени"]
     source_ids: [S_EXPERT]
@@ -1848,7 +1873,7 @@ formulas:
       "irr_project": "результат: IRR проекта"
       "irr_equity": "результат: IRR акционера"
       "XIRR": "внутренняя норма доходности по датам потоков"
-    depends_on: [F.CF.CFADS, F.CF.FCFE]
+    depends_on: [F.CF.CFADS, F.CF.FCFE, F.TIME.DATE]
     rationale: "IRR — ставка, обнуляющая NPV"
     rejected:
       - "«IRR» = финрез / затраты (исходник Бюджет!F64, Dashboard!C44) — это ROI"
@@ -1873,11 +1898,11 @@ formulas:
       ROI          = net_profit / (capex_total_net + Σ interest)
     terms:
       "revenue_net": "выручка без НДС (F.SALES.REVENUE_TOTAL)"
-      "capex_total_net": "бюджет без НДС"
+      "capex_total_net": "бюджет без возмещаемого НДС: невозмещаемый НДС — часть затрат (п.2 ст.170 НК РФ)"
       "interest": "проценты (F.FIN.INTEREST)"
       "fees": "комиссии (F.FIN.FEES)"
       "profit_tax": "налог на прибыль (F.TAX.PROFIT_TAX)"
-    depends_on: [F.SALES.REVENUE_TOTAL, F.CAPEX.TOTAL, F.FIN.INTEREST, F.TAX.PROFIT_TAX]
+    depends_on: [F.SALES.REVENUE_TOTAL, F.CAPEX.TOTAL, F.TAX.VAT_PAYABLE, F.FIN.INTEREST, F.FIN.FEES, F.TAX.PROFIT_TAX]
     rationale: "Недисконтированные показатели — с корректными названиями"
     rejected: []
     source_ids: [S_EXPERT]
@@ -1898,10 +1923,10 @@ formulas:
     terms:
       "cost_m2": "результат: себестоимость 1 м² продаваемой площади, руб"
       "markup": "результат: наценка к себестоимости, доля"
-      "capex_total_net": "бюджет без НДС"
+      "capex_total_net": "бюджет без возмещаемого НДС (невозмещаемый НДС — часть затрат)"
       "interest": "проценты (F.FIN.INTEREST)"
-      "wavg_price_all": "средневзвешенная цена всех продаж (F.SALES.WAVG_PRICE)"
-    depends_on: [F.CAPEX.TOTAL, F.FIN.INTEREST, F.TEP.SALEABLE_AREA, F.SALES.WAVG_PRICE]
+      "wavg_price_all": "средневзвешенная цена продаж в м² (F.SALES.WAVG_PRICE); машино-места и кладовые продаются штуками и не входят"
+    depends_on: [F.CAPEX.TOTAL, F.FIN.INTEREST, F.TEP.SALEABLE_AREA, F.SALES.WAVG_PRICE, F.TAX.VAT_PAYABLE, F.SALES.CONTRACT_VALUE, F.SALES.SOLD_AREA, SALES.PRODUCTS, TIME.MILESTONES]
     rationale: "Делитель — вся продаваемая площадь"
     rejected: ["Деление на площадь только квартир типа 1 (исходник Бюджет!F69 → 2,96 млн руб/м², наценка −80%)"]
     source_ids: [S_EXPERT]
@@ -1924,7 +1949,7 @@ formulas:
       "payback_date": "результат: дата окупаемости"
       "t_peak": "месяц пика потребности"
       "fcfe[τ]": "поток акционера (F.CF.FCFE)"
-    depends_on: [F.CF.FCFE]
+    depends_on: [F.CF.FCFE, F.TIME.DATE]
     rationale: "Ключевые для инвестора показатели ликвидности"
     rejected: []
     source_ids: [S_EXPERT]
@@ -1950,7 +1975,7 @@ formulas:
       "capex_cash[τ]": "платежи по бюджету"
       "unsold_area[t]": "непроданный остаток площадей"
       "price[t]": "цена 1 м² (F.SALES.PRICE)"
-    depends_on: [F.FIN.DEBT, F.FIN.INTEREST, F.CAPEX.ITEM_CASH, F.SALES.PRICE]
+    depends_on: [F.FIN.DEBT, F.FIN.INTEREST, F.CAPEX.ITEM_CASH, F.SALES.PRICE, F.SALES.SOLD_AREA, SALES.PRODUCTS, F.TIME.DATE, TIME.MILESTONES]
     rationale: "LTV — к рыночной стоимости активов (остаток площадей + эскроу), а не к дисконтированной стоимости капитала"
     rejected: ["LTV к «Market Value of Asset» из DCF по cost of equity (исходник CF1!F144) — зависит от выбранной ставки, max = 0 из-за неработающих флагов"]
     source_ids: [S_BANK_TERMSHEET]
@@ -1972,7 +1997,7 @@ formulas:
       "t_maturity": "месяц погашения кредита"
       "rate_avg": "средняя ставка кредита"
       "debt[t] + accrued[t]": "долг с процентами"
-    depends_on: [F.CF.CFADS, F.FIN.RATE, F.FIN.DEBT]
+    depends_on: [F.CF.CFADS, F.FIN.RATE, F.FIN.DEBT, F.TIME.DATE]
     rationale: "Общепринятое определение в проектном финансировании: приведённый CFADS за оставшийся срок кредита / остаток долга. Минимальное значение по периодам — ковенант"
     rejected:
       - "NPV(=FCFE) / проценты (исходник CF1!D150)"
@@ -1999,7 +2024,7 @@ formulas:
       "value[t]": "стоимость договоров (F.SALES.CONTRACT_VALUE)"
       "flag_dkp[t]": "флаг продаж по ДКП (F.TIME.FLAG_POST_RNV)"
       "revenue_gross": "выручка с НДС (F.SALES.REVENUE_TOTAL)"
-    depends_on: [F.SALES.CONTRACT_VALUE, F.TIME.FLAG_POST_RNV]
+    depends_on: [F.SALES.CONTRACT_VALUE, F.TIME.FLAG_POST_RNV, SALES.PRODUCTS, TIME.MILESTONES]
     rationale: "Показатель риска: доля выручки, не участвующей в покрытии кредита эскроу"
     rejected: ["Сумма фиксированных столбцов Q:S (исходник Бюджет!E73)"]
     source_ids: [S_EXPERT]

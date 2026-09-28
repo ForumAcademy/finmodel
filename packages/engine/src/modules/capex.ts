@@ -410,6 +410,27 @@ function vatRate(ctx: FormulaContext, item: Item): Decimal {
   return numOrParam(ctx, item.catalogue.vat_rate);
 }
 
+/** Ставка НДС статьи с учётом облагаемой доли — как в F.CAPEX.ITEM_CASH. */
+function effectiveVat(ctx: FormulaContext, item: Item): Decimal {
+  return vatRate(ctx, item).mul(item.catalogue.vat_taxable_share === undefined ? ONE : numOrParam(ctx, item.catalogue.vat_taxable_share));
+}
+
+/**
+ * Входящий НДС в платежах статей по месяцам: item_cash × r / (1 + r) (F.TAX.VAT_PAYABLE). Статьи, которые не
+ * посчитались в F.CAPEX.ITEM_CASH или у которых не определяется ставка НДС, здесь отсутствуют (весь платёж — затраты).
+ */
+export function inputVat(ctx: FormulaContext, cash: Series): Series {
+  const out: Series = {};
+  for (const item of items(ctx)) {
+    const c = cash[item.id];
+    if (!c) continue;
+    // Ставка статьи не определяется (не заполнена облагаемая доля) — сообщение, входящий НДС статьи не выделяется
+    const r = guard(ctx, item, () => effectiveVat(ctx, item));
+    if (r) out[item.id] = c.map((x) => x.mul(r).div(ONE.add(r)));
+  }
+  return out;
+}
+
 export function F_CAPEX_ITEM_CASH(ctx: FormulaContext): Series {
   const totals = ctx.formula<Amounts>("F.CAPEX.ITEM_TOTAL");
   const weights = ctx.formula<Series>("F.CAPEX.SCHEDULE_WEIGHT");
@@ -421,7 +442,7 @@ export function F_CAPEX_ITEM_CASH(ctx: FormulaContext): Series {
     const k = index[item.id];
     if (total === undefined || !w || !k) continue;
     const v = guard(ctx, item, () => {
-      const vatK = item.vatIncluded ? ONE : ONE.add(vatRate(ctx, item).mul(item.catalogue.vat_taxable_share === undefined ? ONE : numOrParam(ctx, item.catalogue.vat_taxable_share)));
+      const vatK = item.vatIncluded ? ONE : ONE.add(effectiveVat(ctx, item));
       return w.map((x, t) => total.mul(x).mul(k[t] as Decimal).mul(vatK));
     });
     if (v) out[item.id] = v;
