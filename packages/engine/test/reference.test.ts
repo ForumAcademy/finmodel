@@ -27,7 +27,8 @@ describe("справочник для экрана", () => {
     expect(reference.standardTabs().map((t) => t.title)).toEqual(["Продажи", "Бюджет", "Эскроу", "Финансирование", "Налоги и ставки"]);
     expect(reference.regionTabs().map((t) => t.title)).toEqual(["г. Москва", "Московская область"]);
     expect(reference.sourceTabs().map((t) => t.title)).toEqual(["Законодательство", "Статистика и аналитика", "Документы компании", "Экспертные данные"]);
-    const all = JSON.stringify([reference.standardTabs(), reference.regionTabs(), reference.formulaTabs(), reference.sourceTabs()]);
+    // param — ключ строки для правки, на экран не выводится
+    const all = JSON.stringify([reference.standardTabs(), reference.regionTabs(), reference.formulaTabs(), reference.sourceTabs()], (k, v: unknown) => (k === "param" ? undefined : v));
     // в интерфейсе нет ID параметров, формул и источников
     expect(all).not.toMatch(/\b(?:F\.)?(?:GEN|LAND|TEP|CAPEX|SALES|FIN|TAX|TIME|OPEX|BENCH|VAL|GPZU)\.[A-Z0-9_]+\b|\bS_[A-Z0-9_]+\b/);
   });

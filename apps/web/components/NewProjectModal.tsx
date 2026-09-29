@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { plot } from "@fm/engine";
 import { EGRN_ACCEPT, foundSummary, type EgrnResult } from "@fm/egrn-import";
 import { readEgrn } from "@/lib/egrn";
-import { newId, nowIso, saveFile, saveProject } from "@/lib/store";
+import { getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
 import { Modal } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
 
@@ -64,7 +64,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
       egrn: egrnForm,
       documents: [...(egrn && !egrnForm ? [egrn.doc] : []), ...(excel ? [excel.doc] : [])],
     };
-    const r = plot.createProject(form, id, at);
+    const r = plot.createProject(form, id, at, (await getReference()).at(-1)?.version);
     setErrors(r.errors);
     if (!r.project) return;
     setSaving(true);

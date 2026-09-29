@@ -4,6 +4,7 @@
  */
 import {
   ASSUMPTION_GROUPS,
+  type SpecAssumptionVersion as AssumptionVersion,
   getParameter,
   spec,
   type ParameterId,
@@ -32,6 +33,8 @@ export interface RefValue {
 }
 
 export interface RefRow {
+  /** Параметр стандартного значения (справочник допущений компании) — такие строки можно править. */
+  param?: ParameterId;
   name: string;
   /** null — значения нет («нужно значение»). */
   value: RefValue | null;
@@ -178,10 +181,11 @@ function paramStatus(p: SpecParameter, value: unknown): RefRow["status"] {
   return { text: "не проверено", tone: "gry" };
 }
 
-export const CURRENT_VERSION = SPEC_ASSUMPTIONS.at(-1) ?? null;
+/** Текущая (последняя) версия справочника допущений. versions — справочник этого браузера, по умолчанию — из спецификации. */
+export const currentVersion = (versions: readonly AssumptionVersion[] = SPEC_ASSUMPTIONS): AssumptionVersion | null => versions.at(-1) ?? null;
 
-export function standardTabs(): RefTab[] {
-  const items = CURRENT_VERSION?.items ?? [];
+export function standardTabs(versions: readonly AssumptionVersion[] = SPEC_ASSUMPTIONS): RefTab[] {
+  const items = currentVersion(versions)?.items ?? [];
   const tabs: RefTab[] = ASSUMPTION_GROUPS.map((g) => ({
     id: g,
     title: GROUP_TITLE[g],
@@ -190,6 +194,7 @@ export function standardTabs(): RefTab[] {
       .map((i) => {
         const p = getParameter(i.param);
         return {
+          param: i.param,
           name: p.name,
           value: formatValue(p, i.value),
           status: assumptionStatus(i.status, i.check, i.value),
@@ -361,8 +366,8 @@ export interface VersionRow {
   note: string;
 }
 
-export function versionRows(): VersionRow[] {
-  return [...SPEC_ASSUMPTIONS].reverse().map((v) => ({ version: v.version, date: date(v.date), author: v.author, note: humanize(v.note) }));
+export function versionRows(versions: readonly AssumptionVersion[] = SPEC_ASSUMPTIONS): VersionRow[] {
+  return [...versions].reverse().map((v) => ({ version: v.version, date: date(v.date), author: v.author, note: humanize(v.note) }));
 }
 
 export interface ReferenceSummary {
@@ -372,11 +377,12 @@ export interface ReferenceSummary {
   recheckSources: number;
 }
 
-export function referenceSummary(): ReferenceSummary {
-  const need = [...standardTabs(), ...regionTabs()].flatMap((t) => t.rows).filter((r) => r.status.tone === "yel").length;
+export function referenceSummary(versions: readonly AssumptionVersion[] = SPEC_ASSUMPTIONS): ReferenceSummary {
+  const cur = currentVersion(versions);
+  const need = [...standardTabs(versions), ...regionTabs()].flatMap((t) => t.rows).filter((r) => r.status.tone === "yel").length;
   return {
-    version: CURRENT_VERSION?.version ?? null,
-    date: CURRENT_VERSION ? date(CURRENT_VERSION.date) : null,
+    version: cur?.version ?? null,
+    date: cur ? date(cur.date) : null,
     needValue: need,
     recheckSources: sourceTabs().reduce((a, t) => a + t.recheck, 0),
   };

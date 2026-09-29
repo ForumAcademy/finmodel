@@ -25,6 +25,7 @@ export { assumptionValueProblem, checkAssumptions, checkSpec, type SpecCheckResu
 export {
   ASSUMPTION_GROUPS,
   ASSUMPTION_STATUSES,
+  assumptionVersionSchema,
   CAPEX_SCHEDULE_RULES,
   FORMULA_MODULES,
   MILESTONE_KEYS,

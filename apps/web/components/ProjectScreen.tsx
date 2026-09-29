@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { plot, text } from "@fm/engine";
+import { book, plot, projectFile, text } from "@fm/engine";
 import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
-import { getFile, getProject, newId, nowIso, saveFile, saveProject } from "@/lib/store";
+import { saveProjectFile } from "@/lib/files";
+import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
 import { Chip, Modal, OriginTag, Toast } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
 
@@ -183,9 +184,13 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
   const egrnInput = useRef<HTMLInputElement>(null);
   const docInput = useRef<HTMLInputElement>(null);
   const [docKind, setDocKind] = useState<plot.DocumentKind>("other");
+  const [versions, setVersions] = useState<book.AssumptionVersion[]>([]);
+  const [updating, setUpdating] = useState(false);
+  const [missingDocs, setMissingDocs] = useState<string[]>([]);
 
   useEffect(() => {
     getProject(id).then(setProject, () => setProject(null));
+    getReference().then(setVersions, () => setVersions([]));
     try {
       setCollapsed(localStorage.getItem("menuCollapsed") === "1");
     } catch {
@@ -212,6 +217,10 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
   const view = pending.length ? plot.applyChanges(p, pending, p.updatedAt) : p;
   const status = plot.projectStatus(view);
   const hasEgrn = p.documents.some((d) => d.kind === "egrn");
+  const ref = versions.length ? book.projectReference(p, versions) : null;
+  const own = projectFile.projectReferenceVersion(p, versions);
+  const latest = versions.at(-1) ?? null;
+  const refChanges = ref?.updateTo && own && latest ? book.itemChanges(own.items, latest.items) : [];
 
   async function persist(next: LandProject) {
     await saveProject(next);
@@ -242,6 +251,18 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
     } finally {
       setReading(false);
     }
+  }
+
+  async function toFile() {
+    const missing = await saveProjectFile(p);
+    setMissingDocs(missing);
+    if (!missing.length) flash("Файл проекта сохранён в папку загрузок");
+  }
+
+  async function updateRef() {
+    await persist(book.updateReference(p, versions, nowIso()));
+    setUpdating(false);
+    flash(`Проект переведён на версию ${latest?.version ?? ""} справочника`);
   }
 
   async function save() {
@@ -280,8 +301,24 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
               </Chip>
             </Link>
           )}
+          <button className="btn sm hbtn" onClick={() => void toFile()}>
+            Сохранить проект в файл
+          </button>
         </div>
-        <div className="sub2">{plot.projectSubtitle(view)}</div>
+        <div className="sub2">
+          {plot.projectSubtitle(view)}
+          {ref && (
+            <>
+              {" · "}
+              <Link href="/reference/history">{ref.text}</Link>
+              {ref.updateTo && (
+                <button className="btn sm" style={{ marginLeft: 8 }} onClick={() => setUpdating(true)}>
+                  Обновить до версии {ref.updateTo}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
       <div className="shell">
         <aside className={`side ${collapsed ? "col" : ""}`}>
@@ -496,6 +533,68 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
           </div>
         </div>
       )}
+      {updating && latest && (
+        <Modal
+          title={`Перейти на версию ${latest.version} справочника?`}
+          onClose={() => setUpdating(false)}
+          wide
+          footer={
+            <>
+              <button className="btn" onClick={() => setUpdating(false)} style={{ marginRight: "auto" }}>
+                Отмена
+              </button>
+              <button className="btn pri" onClick={() => void updateRef()}>
+                Обновить
+              </button>
+            </>
+          }
+        >
+          <p>
+            Версия {latest.version} от {text.date(latest.date)}, {latest.author}: {latest.note}
+          </p>
+          {refChanges.length ? (
+            <div className="tw">
+              <table className="t">
+                <thead>
+                  <tr>
+                    <th>Показатель</th>
+                    <th className="l">Было</th>
+                    <th className="l">Стало</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refChanges.map((c) => (
+                    <tr key={`${c.param}-${c.what}`}>
+                      <td>
+                        {c.name}
+                        {c.what !== "Значение" && <div className="small muted">{c.what}</div>}
+                      </td>
+                      <td className="l">{c.from}</td>
+                      <td className="l">{c.to}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="small muted">Стандартные значения в этих версиях одинаковые.</p>
+          )}
+          <p className="small muted">Значения, которые вы задали в проекте сами, не изменятся. Переход запишется в историю проекта.</p>
+        </Modal>
+      )}
+      {missingDocs.length > 0 && (
+        <Modal
+          title="Проект сохранён без части документов"
+          onClose={() => setMissingDocs([])}
+          footer={
+            <button className="btn pri" onClick={() => setMissingDocs([])}>
+              Понятно
+            </button>
+          }
+        >
+          <p>В этом браузере нет файлов: {missingDocs.join(", ")}. Остальное сохранено. Загрузите эти документы в проект заново и сохраните файл ещё раз.</p>
+        </Modal>
+      )}
       <Toast text={toast} />
     </>
   );
@@ -542,7 +641,7 @@ function HistoryTab({ p }: { p: LandProject }) {
         <tbody>
           {[...p.history].reverse().map((h, i) => (
             <tr key={i}>
-              <td>{plot.plotField(h.field).label}</td>
+              <td>{plot.historyLabel(h.field)}</td>
               <td className="l">{text.date(h.at.slice(0, 10))}</td>
               <td className="l">{h.from}</td>
               <td className="l">{h.to}</td>
