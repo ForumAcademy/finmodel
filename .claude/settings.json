@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(packages/spec/src/generated/**)",
+      "Read(packages/excel-import/src/generated/**)",
+      "Read(docs/03_formulas.md)",
+      "Read(docs/04_parameters.md)",
+      "Read(docs/05_sources.md)"
+    ]
+  }
+}

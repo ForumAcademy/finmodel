@@ -15,7 +15,7 @@
 - `data/sources.yaml` — источники (уровень 1–5, URL, дата проверки).
 - `data/parameters.yaml`, `data/capex_items.yaml`, `data/regions.yaml`, `data/company_assumptions.yaml` — исходные параметры.
 - `data/formulas.yaml` — формулы: `expr`, `depends_on`, `rationale`, `rejected`, `source_ids`, `example`.
-- `docs/03–05` генерируются командой `python scripts/render_docs.py`. **Не редактируй их вручную.**
+- `docs/03–05` генерируются командой `python scripts/render_docs.py` и в git не хранятся (`.gitignore`). CI собирает их на каждом прогоне и выкладывает артефактом `docs-03-05`. **Не редактируй и не коммить их.**
 - `docs/00_principles.md`, `01_architecture.md`, `02_legacy_audit.md` — пишутся руками.
 - `legacy/` — исходный Excel и полная карта его ячеек. Ни одно значение не удалять.
 
@@ -68,11 +68,17 @@
 
 После PR, в которых менялись экраны, тексты или выгрузка, запусти быструю проверку скиллом finmodel-cleanup-loop (только изменённое, один проход). Полная проверка — только перед показом руководителю, перед релизом или по просьбе пользователя.
 
+## Работа агента с репозиторием
+
+- **Данные читать точечно.** `data/*.yaml` и `legacy/*.csv` не читать целиком: найти нужный ID через `grep -n` и читать ±40 строк вокруг (`sed -n`/`Read` с `offset` и `limit`).
+- Сгенерированное не читать: `packages/spec/src/generated/**`, `packages/excel-import/src/generated/**`, `docs/03–05`. Чтение запрещено в `.claude/settings.json`; смотреть надо исходные `data/*.yaml` и `legacy/*.csv`.
+- **Не запускать много субагентов параллельно.** Каждый заново загружает CLAUDE.md и заново ищет по тем же большим YAML и CSV. Работу этапа вести в одной сессии; субагент — только для действительно независимой задачи, и тогда передать ему в задании уже найденные ID, файлы и строки.
+
 ## Команды
 
 ```bash
 python scripts/validate_spec.py      # проверка реестров, ссылок, графа формул, карты legacy — должна быть 0 ошибок
-python scripts/render_docs.py        # пересборка docs/03–05 из YAML
+python scripts/render_docs.py        # сборка docs/03–05 из YAML локально (в git не коммитятся, в CI собираются сами)
 python scripts/build_legacy_map.py   # пересборка карты исходного Excel (код выхода 0 = всё сопоставлено)
 python scripts/build_legacy_case.py  # пересборка tests/cases/derbenevskaya_legacy.yaml
 pnpm spec:build                      # data/*.yaml → packages/spec/src/generated (после любого изменения data/)
@@ -86,6 +92,6 @@ pnpm build                           # сборка интерфейса
 
 - [ ] `validate_spec.py` — 0 ошибок; новых предупреждений `needs_verification` нет или они объяснены в описании PR.
 - [ ] Для каждой изменённой формулы: обновлены `expr`, `rationale`, `example`; тест на `example` проходит.
-- [ ] `render_docs.py` запущен, `docs/03–05` закоммичены.
+- [ ] CI зелёный: `render_docs.py` отработал без ошибок (docs/03–05 в PR не входят).
 - [ ] Сверка с `tests/cases/derbenevskaya_legacy.yaml → reconciliation_targets` проходит в расчёте «как в исходном Excel».
 - [ ] У каждого показанного значения есть метка происхождения и цепочка до источников со ссылками.

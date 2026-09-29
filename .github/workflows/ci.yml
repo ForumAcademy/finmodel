@@ -18,6 +18,16 @@ jobs:
         run: pip install pyyaml openpyxl
       - name: Проверка спецификации (validate_spec.py)
         run: python scripts/validate_spec.py
+      - name: Каталоги формул, параметров и источников (render_docs.py)
+        run: python scripts/render_docs.py
+      - name: Выгрузка каталогов docs/03–05
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-03-05
+          path: |
+            docs/03_formulas.md
+            docs/04_parameters.md
+            docs/05_sources.md
 
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
