@@ -117,7 +117,7 @@ export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
   if (ctx.param<boolean>("LAND.VRI_CHANGE") === false) return ZERO;
   const region = ctx.region();
   if (region.vri_fee.exists === false) return ZERO;
-  // Формула региона (например, Москва — 593-ПП) в спецификацию не выписана: обязательный ручной ввод с документом (CLAUDE.md, правило 8).
+  // Формула региона (например, Москва — 593-ПП) в спецификацию не выписана: обязательный ручной ввод с документом (CLAUDE.md, правило 7).
   const fee = ctx.requireNum("LAND.VRI_FEE");
   ctx.message("info", `Плата за изменение ВРИ введена вручную по документу: формула региона «${region.name}» ещё не выписана в справочник`, "LAND.VRI_FEE");
   return fee;
