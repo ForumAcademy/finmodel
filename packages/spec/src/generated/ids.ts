@@ -1,7 +1,7 @@
 // Файл сгенерирован packages/spec/scripts/build-spec.ts из data/*.yaml. Не редактировать вручную.
 
 /** Версия справочника: хеш содержимого data/*.yaml. Сохраняется в каждой версии расчёта. */
-export const SPEC_VERSION = "1304d5e07104";
+export const SPEC_VERSION = "fcf24124044e";
 /** Дата актуализации справочника: самая поздняя дата проверки источника. */
 export const SPEC_ACTUALIZED_AT = "2026-09-29";
 
@@ -144,6 +144,8 @@ export const PARAMETER_IDS = [
   "TIME.CONSTRUCTION_M",
   "TIME.SALES_AFTER_RNS_M",
   "CAPEX.ESTIMATE_RATES",
+  "CAPEX.CLASS_RATIO",
+  "BENCH.NCS_RATES",
   "TEP.FOOTPRINT_AREA",
   "TEP.AVG_FLOORS",
   "TEP.MAX_FLOORS",
@@ -376,6 +378,7 @@ export const FORMULA_IDS = [
   "F.VAR.MILESTONES",
   "F.VAR.PRODUCTS",
   "F.VAR.CAPEX",
+  "F.VAR.NCS_CHECK",
   "F.VAR.BEST",
 ] as const;
 export type FormulaId = (typeof FORMULA_IDS)[number];

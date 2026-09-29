@@ -35,7 +35,7 @@ describe("справочник для экрана", () => {
 
   it("шапка: пустые значения и источники на перепроверку", () => {
     const s = reference.referenceSummary();
-    expect(s.version).toBe(3);
+    expect(s.version).toBe(4);
     expect(s.needValue).toBeGreaterThan(0);
     expect(s.recheckSources).toBeGreaterThan(0);
   });

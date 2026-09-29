@@ -13,7 +13,7 @@ import type { MaxGfa } from "./modules/site";
 import type { Margin, RiskFree } from "./modules/kpi";
 import type { Debt } from "./modules/fin";
 import type { Revenue, RowSeries } from "./modules/sales";
-import type { BestChoice, Variant, VariantResult, VariantSales } from "./modules/variant";
+import type { BestChoice, NcsCheck, Variant, VariantResult, VariantSales } from "./modules/variant";
 import type { CalcMessage, ProjectInput, ResultSet } from "./types";
 
 export type { BestChoice, Variant, VariantResult } from "./modules/variant";
@@ -81,7 +81,8 @@ function variantOverrides(v: Variant): ProjectInput["values"] {
   };
 }
 
-const VARIANT_TARGETS: FormulaId[] = ["F.VAR.PHASES", "F.VAR.MILESTONES", "F.VAR.PRODUCTS", "F.VAR.CAPEX"];
+const VARIANT_TARGETS: FormulaId[] = ["F.VAR.PHASES", "F.VAR.MILESTONES", "F.VAR.PRODUCTS", "F.VAR.CAPEX", "F.VAR.NCS_CHECK"];
+const NCS_CHECK: FormulaId = "F.VAR.NCS_CHECK";
 
 /** Вариант как проект: вводные для полного расчёта и что из вводных не построилось. */
 export interface VariantProject {
@@ -91,6 +92,8 @@ export interface VariantProject {
   phases: number | null;
   footprint: Decimal | null;
   sales: VariantSales | null;
+  /** Контроль ставки СМР по НЦС; null — не посчитан (нет коэффициента региона или ставки). */
+  ncs: NcsCheck | null;
 }
 
 /**
@@ -101,15 +104,17 @@ export function variantProject(project: CalcProject, v: Variant, versions: Assum
   const own = variantOverrides(v);
   const first = new Engine(engineInput(project, versions, own), ANALYSIS_FORMULAS).run(["F.SITE.FOOTPRINT"]);
   const footprint = value<Decimal>(first, "F.SITE.FOOTPRINT");
-  if (footprint === null) return { project: null, messages: first.messages, phases: null, footprint: null, sales: null };
+  if (footprint === null) return { project: null, messages: first.messages, phases: null, footprint: null, sales: null, ncs: null };
   const tep = { ...own, "TEP.FOOTPRINT_AREA": footprint.toNumber(), "TEP.AVG_FLOORS": v.floors, "GPZU.MAX_GFA_ABOVE": null };
   const second = new Engine(engineInput(project, versions, tep), ANALYSIS_FORMULAS).run(VARIANT_TARGETS);
   const milestones = value<unknown[]>(second, "F.VAR.MILESTONES");
   const sales = value<VariantSales>(second, "F.VAR.PRODUCTS");
   const capex = value<unknown[]>(second, "F.VAR.CAPEX");
   const phases = value<Decimal>(second, "F.VAR.PHASES");
-  const messages = [...first.messages, ...second.messages];
-  if (!milestones || !sales || !capex) return { project: null, messages, phases: phases?.toNumber() ?? null, footprint, sales };
+  const ncs = value<NcsCheck>(second, NCS_CHECK);
+  // Контроль по НЦС — подсказка, а не условие расчёта: его сообщения показываются через ncs
+  const messages = [...first.messages, ...second.messages.filter((x) => x.formulaId !== NCS_CHECK)];
+  if (!milestones || !sales || !capex) return { project: null, messages, phases: phases?.toNumber() ?? null, footprint, sales, ncs };
   const values = {
     ...project.input.values,
     ...tep,
@@ -124,6 +129,7 @@ export function variantProject(project: CalcProject, v: Variant, versions: Assum
     phases: phases?.toNumber() ?? null,
     footprint,
     sales,
+    ncs,
   };
 }
 
@@ -148,6 +154,8 @@ export interface VariantSummary {
   /** Ставка дисконтирования и её безрисковая часть в точке срока варианта. */
   discountRate: Decimal | null;
   riskFree: RiskFree | null;
+  /** Контроль ставки СМР надземной части по НЦС. */
+  ncs: NcsCheck | null;
   peakDebt: Decimal | null;
   peakEquity: Decimal | null;
   salesMonths: number | null;
@@ -209,6 +217,7 @@ export function computeVariant(project: CalcProject, v: Variant, versions: Assum
     npv: null,
     discountRate: null,
     riskFree: null,
+    ncs: vp.ncs,
     peakDebt: null,
     peakEquity: null,
     salesMonths: null,

@@ -271,6 +271,23 @@ export function variantFacts(s: VariantSummary): Fact[] {
   ];
 }
 
+const THOUSAND = 1000;
+const thous = (d: Decimal): string => num(d.div(THOUSAND), 1);
+
+/**
+ * Контроль ставки СМР надземной части по НЦС 81-02-01-2026 той же этажности (руб/м² наземной площади с НДС).
+ * Красный — ставка ниже норматива; null — норматив для региона или ставка не заданы.
+ */
+export function ncsLine(s: VariantSummary): { text: string; tone: Tone } | null {
+  const c = s.ncs;
+  if (!c || c.min === null || c.max === null || c.rate === null) return null;
+  const norm = c.min.eq(c.max) ? thous(c.min) : `${thous(c.min)}–${thous(c.max)}`;
+  const head = `Ставка СМР надземной части ${thous(c.rate)} тыс. руб/м², норматив цены строительства той же этажности ${norm} тыс. руб/м² (с НДС)`;
+  return c.below
+    ? { text: `${head}: ставка ниже норматива, проверьте долю от ставки бизнес-класса в справочнике.`, tone: "red" }
+    : { text: `${head}: не ниже норматива.`, tone: "grn" };
+}
+
 /** Почему вариант не посчитан полностью: первые ошибки, по одной на параметр. */
 export function variantProblems(s: VariantSummary, limit = 3): string[] {
   const seen = new Set<string>();

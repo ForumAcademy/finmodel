@@ -746,6 +746,7 @@ export function VariantsSection({ p, state, onSave, compareHref }: { p: LandProj
         {state.summaries.map((s) => {
           const best = state.choice?.best === s.variant.id;
           const problems = siteView.variantProblems(s);
+          const ncs = siteView.ncsLine(s);
           return (
             <div key={s.variant.id} className={`card vcard ${best ? "best" : ""}`}>
               <div className="vh">
@@ -771,6 +772,7 @@ export function VariantsSection({ p, state, onSave, compareHref }: { p: LandProj
                   </div>
                 ))}
               </div>
+              {ncs && <div className={`check ${ncs.tone === "red" ? "bad" : "ok"}`}>{ncs.text}</div>}
               {!s.computed && problems.length > 0 && (
                 <div className="check bad">
                   <div>Вариант не посчитан полностью: {problems.join(" ")}</div>

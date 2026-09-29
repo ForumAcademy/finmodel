@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { getFormula, type FormulaId, type ParameterId } from "@fm/spec";
 import { ANALYSIS_FORMULAS, Engine, SPEC_ASSUMPTIONS, type CalcProject } from "../src";
 import { analyzeSite, chooseBest, computeVariant, salesMonths, variantProject } from "../src/analysis";
-import { compareTable, commonNotCounted, criterionMissing, marketRows, rateRows, rateText, riskFreeMissing, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
+import { compareTable, commonNotCounted, criterionMissing, marketRows, ncsLine, rateRows, rateText, riskFreeMissing, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
 import { analogFromForm, analogToForm, customVariant, emptySite, parseSite, siteCalcProject, siteText, variantTitle, applySiteChange, siteChange } from "../src/site";
 import { createProject, type LandProject } from "../src/plot";
-import type { BestChoice, Variant, VariantResult } from "../src/modules/variant";
+import { ncsRange, type BestChoice, type NcsRow, type Variant, type VariantResult } from "../src/modules/variant";
 import type { MaxGfa } from "../src/modules/site";
 import type { MarketPrice } from "../src/modules/market";
 import { curveAt } from "../src/modules/kpi";
@@ -349,5 +349,45 @@ describe("участок проекта: ограничения и аналог�
     const sa = analyzeSite(siteCalcProject(withSite, "2026-09-29"));
     expect(marketRows(withSite, sa)).toMatchObject([{ product: "квартиры", housingClass: "комфорт", analogs: 2, enough: false }]);
     expect(potentialRows(withSite, sa)[0]?.value.replace(/\s/g, " ")).toBe("32 000 м²");
+  });
+});
+
+describe("ставка СМР комфорта: доля от бизнеса и контроль по НЦС", () => {
+  it("пример формулы: норматив той же этажности × Кпер × квартиры / наземная площадь × (1 + НДС)", () => {
+    const { input, output } = example("F.VAR.NCS_CHECK");
+    const rows: NcsRow[] = (input.ncs as [number | null, number | null, number][]).map(([a, b, rate]) => ({ code: "", floors_min: a, floors_max: b, design: "", apt_area: null, rate }));
+    const k = new Decimal(input.k_per as number).mul(input.apt_area as number).div(input.gfa_above as number).mul(1 + (input.vat as number));
+    const range = ncsRange(rows, input.floors as number, k);
+    const out = output as { min: number; max: number; below: boolean };
+    expect(range?.min.toDecimalPlaces(1).toNumber()).toBe(out.min);
+    expect(range?.max.toDecimalPlaces(1).toNumber()).toBe(out.max);
+    expect(range !== null && new Decimal(input.rate as number).lt(range.min)).toBe(out.below);
+    // Этажность вне групп — норматива нет
+    expect(ncsRange(rows, 12, k)).toBeNull();
+  });
+
+  it("справочник версии 4: доля задана — у комфорта есть ставка СМР и строка контроля по НЦС", () => {
+    const sa = analyzeSite(MSK);
+    const v = sa.variants.find((x) => x.floors === 24 && x.housing_class === "комфорт") as Variant;
+    const ratio = (r: number | null) => [{ item: "СМР надземной части (в т.ч. стилобат)", housing_class: "комфорт", base_class: "бизнес", ratio: r }];
+    const v4 = (r: number | null): CalcProject => ({ assumptionsVersion: 4, input: { ...MSK.input, values: { ...MSK.input.values, "CAPEX.CLASS_RATIO": ratio(r) } } });
+    const smr = (p: CalcProject, cls: Variant) =>
+      (variantProject(p, cls).project?.input.values["CAPEX.ITEMS"] as { item_id: string; rate: number }[] | undefined)?.find((x) => x.item_id === "SMR_ABOVE")?.rate ?? null;
+    const business = smr(v4(null), { ...v, housing_class: "бизнес", id: "бизнес-24" });
+    expect(business).not.toBeNull();
+    expect(smr(v4(null), v)).toBeNull();
+    expect(smr(v4(0.6), v)).toBeCloseTo((business as number) * 0.6, 6);
+
+    const low = computeVariant(v4(0.2), v);
+    expect(low.ncs?.below).toBe(true);
+    expect(ncsLine(low)?.tone).toBe("red");
+    expect(ncsLine(low)?.text).toMatch(/^Ставка СМР надземной части [\d\s ]+,\d тыс\. руб\/м², норматив цены строительства той же этажности [\d\s ]+,\d(–[\d\s ]+,\d)? тыс\. руб\/м² \(с НДС\): ставка ниже норматива/);
+    const ok = computeVariant(v4(0.6), v);
+    expect(ok.ncs?.below).toBe(false);
+    expect(ncsLine(ok)?.tone).toBe("grn");
+    // Нет ставки — нет строки контроля, и расчёт варианта из-за контроля не останавливается
+    const none = computeVariant(v4(null), v);
+    expect(ncsLine(none)).toBeNull();
+    expect(none.errors.some((e) => e.text.includes("НЦС"))).toBe(false);
   });
 });
