@@ -243,7 +243,7 @@ export function dataQuestions(c: LegacyCase, input: ProjectInput, result: Result
         question: "Правильно ли посчитан резерв на непредвиденные расходы?",
         explanation: `Площадь сложена со ставкой вместо умножения: ${fmt(Math.round(b.contingency_E42))} + ${fmt(Math.round(b.contingency_D42))} = ${fmt(Math.round(b.contingency_F42))} ₽. При умножении получается ${fmtRub(product)} (Бюджет!F42).`,
         impact: signed(new Decimal(b.contingency_F42).sub(product), "расходы", "завышены", "занижены"),
-        recommendation: "Подтвердить, что резерв — площадь × ставку, а ставка — 10% от ставок СМР. В расчёте сервиса резерв — 2% стоимости СМР по методике Минстроя 421/пр.",
+        recommendation: "Подтвердить, что резерв — площадь × ставку, а ставка — 10 % от ставок СМР. В расчёте сервиса резерв — 2 % стоимости СМР по методике Минстроя 421/пр.",
       };
     }
     if (kind === "CAPEX.SCHEDULE_SUM") {
@@ -258,7 +258,7 @@ export function dataQuestions(c: LegacyCase, input: ProjectInput, result: Result
           compared,
           block: "cf",
           question: "Какую сумму маркетинга считать верной: из бюджета или из CF?",
-          explanation: `В бюджете маркетинг ${fmtRub(amount)}, а в CF1 платежи считаются как 3,5% от выручки по кварталам и дают ${fmtRub(inCf)} — ${fmtShare(share)} бюджета. Связано с №3 и №11 (${cells(arg)}).`,
+          explanation: `В бюджете маркетинг ${fmtRub(amount)}, а в CF1 платежи считаются как 3,5 % от выручки по кварталам и дают ${fmtRub(inCf)} — ${fmtShare(share)} бюджета. Связано с №3 и №11 (${cells(arg)}).`,
           impact,
           recommendation: "В расчёте сервиса бюджет и CF совпадают: маркетинг — доля выручки, платежи идут вместе с продажами.",
         };
@@ -289,9 +289,9 @@ export function dataQuestions(c: LegacyCase, input: ProjectInput, result: Result
         compared,
         block: "cf",
         question: `Почему «${name}» в денежном потоке ${share.gt(1) ? "больше" : "меньше"}, чем в бюджете?`,
-        explanation: `Доли графика в CF1 в сумме дают ${fmtShare(share)}, а не 100%: в CF попадает ${fmtRub(inCf)} при бюджете ${fmtRub(amount)}${arg === "CONTINGENCY" ? "; сама сумма резерва тоже под вопросом, см. №4" : ""} (${cells(arg)}).`,
+        explanation: `Доли графика в CF1 в сумме дают ${fmtShare(share)}, а не 100 %: в CF попадает ${fmtRub(inCf)} при бюджете ${fmtRub(amount)}${arg === "CONTINGENCY" ? "; сама сумма резерва тоже под вопросом, см. №4" : ""} (${cells(arg)}).`,
         impact,
-        recommendation: "В расчёте сервиса доли графика равны 100%, и в CF попадает ровно сумма бюджета.",
+        recommendation: "В расчёте сервиса доли графика равны 100 %, и в CF попадает ровно сумма бюджета.",
       };
     }
     if (kind === "SALES.CASH_IN_CUT" && lc && revenue) {
@@ -419,7 +419,7 @@ function finQuestion(kind: string, c: LegacyCase, result: ResultSet): FinBuilt |
     const max = rate.reduce((m, x) => Decimal.max(m, x), ZERO);
     const tMax = rate.findIndex((x) => x.eq(max));
     return {
-      compared: `Ставка кредита в CF1 доходит до ${fmtShare(max)} годовых${date[tMax] ? ` в ${fmtQuarter(date[tMax] as IsoDate)}` : ""}, хотя должна быть между льготной 5% и базовой 20% (CF1 строки 122, 125).`,
+      compared: `Ставка кредита в CF1 доходит до ${fmtShare(max)} годовых${date[tMax] ? ` в ${fmtQuarter(date[tMax] as IsoDate)}` : ""}, хотя должна быть между льготной 5 % и базовой 20 % (CF1 строки 122, 125).`,
       threat: "Проценты в Excel посчитаны по ставке, которой не бывает в кредитном договоре.",
       block: "fin",
       question: "Какой знак у долга и процентов в расчёте покрытия эскроу?",
@@ -442,7 +442,7 @@ function finQuestion(kind: string, c: LegacyCase, result: ResultSet): FinBuilt |
   if (kind === "LEGACY.FIN_EQUITY") {
     const total = sum(equity?.total);
     return {
-      compared: `Собственные средства в CF1 — 10% расходов каждого квартала, всего ${fmtRub(total)}; в первом квартале — только комиссия за выдачу (CF1 строка 132).`,
+      compared: `Собственные средства в CF1 — 10 % расходов каждого квартала, всего ${fmtRub(total)}; в первом квартале — только комиссия за выдачу (CF1 строка 132).`,
       threat: "Кредит в Excel начинает выдаваться раньше, чем застройщик внёс собственное участие, поэтому сроки и сумма долга занижены.",
       block: "fin",
       question: "Какое собственное участие требует банк и когда его вносить?",

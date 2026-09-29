@@ -5,6 +5,7 @@ import { ANALYSIS_FORMULAS, Engine, SPEC_ASSUMPTIONS, type CalcProject } from ".
 import { analyzeSite, chooseBest, computeVariant, salesMonths, variantProject } from "../src/analysis";
 import { compareTable, commonNotCounted, criterionMissing, marketRows, ncsLine, rateRows, rateText, riskFreeMissing, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
 import { analogFromForm, analogToForm, customVariant, emptySite, parseSite, siteCalcProject, siteText, variantTitle, applySiteChange, siteChange } from "../src/site";
+import * as plot from "../src/plot";
 import { createProject, type LandProject } from "../src/plot";
 import { ncsRange, type BestChoice, type NcsRow, type Variant, type VariantResult } from "../src/modules/variant";
 import type { MaxGfa } from "../src/modules/site";
@@ -243,7 +244,13 @@ describe("анализ участка: варианты освоения", () =>
     const best = chooseBest(withRates, rated).choice;
     expect(best?.best).toBe("бизнес-24");
     expect(compareTable(rated, best).why).toContain("«Бизнес, 24 этажа»");
-    expect(snapshotText(snapshotOf(rated, best, "2026-09-29T10:00:00Z"))).toMatch(/^Лучший вариант: Бизнес, 24 этажа · прибыль -?[\d\s ]+,\d млн руб$/);
+    expect(snapshotText(snapshotOf(rated, best, "2026-09-29T10:00:00Z"))).toMatch(/^Лучший вариант: Бизнес, 24 этажа · NPV акционера -?[\d\s ]+(,\d)? млн руб · прибыль -?[\d\s ]+(,\d)? млн руб$/);
+    const t = compareTable(rated, best);
+    expect(t.why).toMatch(/^Лучший — «Бизнес, 24 этажа»: NPV акционера -?[\d\s ]+(,\d)? млн руб/);
+    expect(t.why).toContain("руководитель ещё не утвердил");
+    expect(compareTable(rated, best, true).why).not.toContain("не утвердил");
+    // Прошедшие отбор, но уступившие лучшему — с разницей в млн руб
+    for (const r of t.reasons.filter((x) => x.title !== "Комфорт, 24 этажа")) expect(r.text).toMatch(/меньше, чем у лучшего$/);
   });
 
   it("справочник версии 3 и кривая ОФЗ: безрисковая ставка в точке срока варианта, премия 9 п.п., лучший выбран", () => {
@@ -389,5 +396,25 @@ describe("ставка СМР комфорта: доля от бизнеса и 
     const none = computeVariant(v4(null), v);
     expect(ncsLine(none)).toBeNull();
     expect(none.errors.some((e) => e.text.includes("НЦС"))).toBe(false);
+  });
+});
+
+describe("основание Экспертного значения: автор и диапазон", () => {
+  const num = { value: "24", parse: (t: string) => ({ value: t.trim() }), show: (x: string) => `${x} эт.` };
+  const form = { title: "Письмо архитектора", url: "", author: "Иванова", min: "20", max: "25" };
+  it("нужны основание, автор и диапазон, в который попадает значение", () => {
+    expect(plot.expertBasis({ ...form, author: "" }, "2026-09-29", num)).toEqual({ error: expect.stringContaining("кто задал") });
+    expect(plot.expertBasis({ ...form, min: "" }, "2026-09-29", num)).toEqual({ error: expect.stringContaining("диапазон") });
+    expect(plot.expertBasis({ ...form, min: "25", max: "20" }, "2026-09-29", num)).toEqual({ error: expect.stringContaining("больше") });
+    expect(plot.expertBasis({ ...form, max: "22" }, "2026-09-29", num)).toEqual({ error: "Значение 24 эт. вне диапазона 20 эт.–22 эт.: проверьте значение или диапазон." });
+    const ok = plot.expertBasis(form, "2026-09-29", num);
+    expect(ok).toEqual({ basis: { title: "Письмо архитектора", url: null, date: "2026-09-29", author: "Иванова", min: "20", max: "25" } });
+    // Текстовое значение — без диапазона
+    expect(plot.expertBasis({ ...form, min: "", max: "" }, "2026-09-29")).toHaveProperty("basis");
+    if ("basis" in ok) {
+      expect(plot.basisText(ok.basis)).toBe("Письмо архитектора, 29.09.2026, задал(а) Иванова");
+      expect(plot.basisNote(ok.basis, num.show)).toBe("Диапазон 20 эт.–25 эт.");
+      expect(plot.expertForm(ok.basis)).toEqual(form);
+    }
   });
 });

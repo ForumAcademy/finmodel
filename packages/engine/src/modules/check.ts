@@ -208,7 +208,7 @@ export function F_CHECK_GPZU_LIMITS(ctx: FormulaContext): CheckResult {
     const underuse = ctx.num("BENCH.GPZU_UNDERUSE_SHARE");
     const gpzuGfa = ctx.num("GPZU.MAX_GFA_ABOVE");
     if (gfa !== null && gpzuGfa !== null && underuse !== null && gfa.lt(gpzuGfa.mul(underuse))) {
-      ctx.message("info", `Резерв площади по ГПЗУ: наземная ГНС ${fmt(gfa)} м² из разрешённых ${fmt(gpzuGfa)} м²`, "GPZU.MAX_GFA_ABOVE", checkKey("GPZU_UNDERUSE"));
+      ctx.message("info", `Площадь по ГПЗУ использована не полностью: наземная площадь ${fmt(gfa)} м² из разрешённых ${fmt(gpzuGfa)} м², резерв ${fmt(gpzuGfa.sub(gfa))} м²`, "GPZU.MAX_GFA_ABOVE", checkKey("GPZU_UNDERUSE"));
     }
     return checked ? out : null;
   });

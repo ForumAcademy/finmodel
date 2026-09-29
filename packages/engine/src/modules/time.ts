@@ -58,7 +58,7 @@ export function milestones(ctx: FormulaContext): MilestoneRow[] {
 export function milestone(row: MilestoneRow, key: MilestoneKey): IsoDate {
   const v = row[key];
   if (!isIsoDate(v)) {
-    throw new CalcError(`Очередь ${row.phase}: заполните веху «${MILESTONE_NAMES[key]}» датой (ГГГГ-ММ-ДД)`, "TIME.MILESTONES");
+    throw new CalcError(`Очередь ${row.phase}: заполните веху «${MILESTONE_NAMES[key]}» датой, например 30.09.2026`, "TIME.MILESTONES");
   }
   return v;
 }
@@ -71,7 +71,7 @@ export function vriChangeDate(rows: MilestoneRow[]): IsoDate | null {
 
 export function F_TIME_DATE(ctx: FormulaContext): IsoDate[] {
   const start = ctx.require<IsoDate>("GEN.MODEL_START_DATE");
-  if (!isIsoDate(start)) throw new CalcError("Дата начала модели должна быть датой (ГГГГ-ММ-ДД)", "GEN.MODEL_START_DATE");
+  if (!isIsoDate(start)) throw new CalcError("Дата начала модели должна быть датой, например 30.09.2026", "GEN.MODEL_START_DATE");
   const horizon = ctx.horizonMonths;
   if (horizon === null) throw new CalcError("Не задан горизонт модели (число месяцев)");
   return Array.from({ length: horizon }, (_, t) => eomonth(start, t));
@@ -108,7 +108,7 @@ export function F_TIME_FLAG_ESCROW_RELEASE(ctx: FormulaContext): number[][] {
   // Расчёт «как в исходном Excel»: одна дата раскрытия для всех очередей, как вбито в исходнике (CF1!AB6)
   if (ctx.mode === "legacy") {
     const d = ctx.require<IsoDate>("TIME.LEGACY_ESCROW_RELEASE_DATE");
-    if (!isIsoDate(d)) throw new CalcError("дата раскрытия эскроу — ГГГГ-ММ-ДД", "TIME.LEGACY_ESCROW_RELEASE_DATE");
+    if (!isIsoDate(d)) throw new CalcError("дата раскрытия эскроу должна быть датой, например 30.09.2026", "TIME.LEGACY_ESCROW_RELEASE_DATE");
     const releaseT = monthDiff(start, d);
     return rows.map(() => date.map((_, t) => (t === releaseT ? 1 : 0)));
   }

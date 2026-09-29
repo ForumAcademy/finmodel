@@ -224,7 +224,7 @@ parameters:
     legacy: [{cell: "Бюджет!F17", value: "=2440190898-F22", verdict: fix, note: "из цены вычтена плата за ВРИ — зашитое число 2 440 190 898 без пояснения"}]
 
   - id: LAND.LEGAL_COSTS
-    name: "Юридические расходы и due diligence при покупке"
+    name: "Юридические расходы и юридическая проверка участка при покупке"
     unit: руб
     kind: scalar
     scope: project
@@ -1407,7 +1407,7 @@ parameters:
       - {cell: "Бюджет!D42", value: "=(D32+D33+D34)*10%", verdict: fix, note: "10% от суммы расценок, затем F42 = E42 + D42 (площадь + ставка) → 0,2 млн вместо ~7,5 млрд по замыслу автора"}
 
   - id: CAPEX.LEGACY_AMOUNTS_WITH_VAT
-    name: "Как в исходном Excel: суммы бюджета исходника включают НДС"
+    name: "Как в исходном Excel: суммы бюджета исходного Excel включают НДС"
     unit: bool
     kind: bool
     scope: template
@@ -1589,7 +1589,7 @@ parameters:
       - {cell: "План продаж!E30,E35,E40,E45,E50", value: 0.02, verdict: keep, note: "только в расчёте «как в исходном Excel»; в расчёте сервиса заменён рынком и стадиями"}
 
   - id: SALES.LEGACY_CASH_IN_END
-    name: "Как в исходном Excel: последний месяц поступлений от продаж в CF"
+    name: "Как в исходном Excel: последний месяц поступлений от продаж в денежном потоке"
     unit: дата
     kind: date
     scope: project
@@ -1646,7 +1646,7 @@ parameters:
   # =====================================================================
 
   - id: FIN.EQUITY_SHARE
-    name: "Доля собственного участия в бюджете (до первой выборки ПФ)"
+    name: "Доля собственного участия в бюджете (до первой выборки проектного финансирования)"
     unit: доля
     kind: scalar
     scope: project
@@ -1695,7 +1695,7 @@ parameters:
     legacy: [{cell: "CF1!D115", value: 0.1425, verdict: replace, note: "устарело, одна константа на весь срок"}]
 
   - id: FIN.RATE_DISCOUNT_COEF
-    name: "Поправка к ключевой ставке для скидки при избыточном покрытии эскроу (СкР)"
+    name: "Поправка к ключевой ставке для скидки при избыточном покрытии эскроу"
     unit: "%годовых"
     kind: scalar
     scope: project
@@ -1717,7 +1717,7 @@ parameters:
     legacy: [{cell: "CF1!D119", value: 0.001, verdict: keep}]
 
   - id: FIN.ESCROW_RESERVE_RATE
-    name: "Коэффициент уменьшения остатков эскроу для расчёта ставки (ФОР)"
+    name: "Коэффициент уменьшения остатков эскроу для расчёта ставки (норматив обязательных резервов)"
     unit: доля
     kind: scalar
     scope: project
@@ -1931,7 +1931,7 @@ parameters:
     legacy: [{cell: "Бюджет!D51", value: 0.035, verdict: keep}, {cell: "Бюджет!F51", value: "=8389618415.5/2", verdict: fix, note: "сумма вбита числом и не равна 3,5% выручки"}]
 
   - id: OPEX.BROKERAGE_RATE
-    name: "Брокеридж / агентские продажи, доля выручки"
+    name: "Агентское вознаграждение за продажи, доля выручки"
     unit: доля
     kind: scalar
     scope: project
@@ -1956,7 +1956,7 @@ parameters:
     legacy: [{cell: null, verdict: new}]
 
   - id: OPEX.DEV_FEE_RATE
-    name: "Вознаграждение за управление проектом (девелоперский фи), доля"
+    name: "Вознаграждение за управление проектом, доля выручки"
     unit: доля
     kind: scalar
     scope: project

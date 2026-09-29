@@ -7,7 +7,7 @@
  * не останавливает остальные: по ней выдаётся сообщение, в итог она не входит, и это видно в сообщении итога.
  */
 import Decimal from "decimal.js";
-import { getCapexItem, getParameter, isFormulaId, isParameterId, spec, type CapexItemId, type ParameterId, type SpecCapexItem } from "@fm/spec";
+import { getCapexItem, getFormula, getParameter, isFormulaId, isParameterId, spec, type CapexItemId, type ParameterId, type SpecCapexItem } from "@fm/spec";
 import type { FormulaContext } from "../context";
 import { CalcError, DependencyError, MissingInputError } from "../context";
 import { dayBefore, daysBetween, eomonth, isIsoDate, monthDiff, overlapDays, yearEnd, yearOf, type IsoDate } from "../lib/dates";
@@ -93,10 +93,10 @@ function items(ctx: FormulaContext): Item[] {
   const raw = ctx.param<ItemRow[] | string>("CAPEX.ITEMS");
   // Значение по умолчанию в parameters.yaml — текстовая ссылка на справочник: строк проекта нет
   const rows = typeof raw === "string" ? null : raw;
-  if (rows !== null && !Array.isArray(rows)) throw new CalcError("CAPEX.ITEMS: нужен список строк статей", "CAPEX.ITEMS");
+  if (rows !== null && !Array.isArray(rows)) throw new CalcError("Бюджет: нужен список статей", "CAPEX.ITEMS");
   const byId = new Map<string, ItemRow>();
   for (const row of rows ?? []) {
-    if (!spec.capexItems.some((c) => c.item_id === row.item_id)) throw new CalcError(`CAPEX.ITEMS: статьи «${row.item_id}» нет в справочнике`, "CAPEX.ITEMS");
+    if (!spec.capexItems.some((c) => c.item_id === row.item_id)) throw new CalcError("Бюджет: в строке указана статья, которой нет в справочнике статей бюджета. Выберите статью из списка", "CAPEX.ITEMS");
     byId.set(row.item_id, row);
   }
   return spec.capexItems.map((c) => merge(c, byId.get(c.item_id)));
@@ -110,9 +110,9 @@ function guard<T>(ctx: FormulaContext, item: Item, fn: () => T): T | null {
   try {
     return fn();
   } catch (e) {
-    if (e instanceof MissingInputError) ctx.message("error", `«${item.name}»: заполните «${getParameter(e.parameterId).name}» (${e.parameterId})`, e.parameterId);
+    if (e instanceof MissingInputError) ctx.message("error", `«${item.name}»: заполните «${getParameter(e.parameterId).name}»`, e.parameterId);
     else if (e instanceof CalcError) ctx.message("error", `«${item.name}»: ${e.message}`, e.parameterId ?? "CAPEX.ITEMS");
-    else if (e instanceof DependencyError) ctx.message("warning", `«${item.name}» не посчитана: не посчитана формула ${e.formulaId}`);
+    else if (e instanceof DependencyError) ctx.message("warning", `«${item.name}» не посчитана: не посчитан показатель «${getFormula(e.formulaId).name}»`);
     else throw e;
     return null;
   }
@@ -139,7 +139,7 @@ function baseQty(ctx: FormulaContext, item: Item): Decimal {
 function rate(ctx: FormulaContext, item: Item): Decimal {
   if (item.rate !== null) return new Decimal(item.rate);
   if (item.ratePrm) return ctx.requireNum(item.ratePrm);
-  throw new CalcError("заполните ставку статьи (CAPEX.ITEMS → rate)", "CAPEX.ITEMS");
+  throw new CalcError("заполните ставку статьи в бюджете", "CAPEX.ITEMS");
 }
 
 /** Интервал статьи по вехам: самая ранняя веха «с» и самая поздняя веха «по» среди очередей. */
@@ -202,7 +202,7 @@ function monthIndex(date: IsoDate[], d: IsoDate): number {
 /** Ручной ряд → веса по месяцам модели: доля периода делится поровну между его месяцами. */
 function manualWeights(m: ManualSchedule, date: IsoDate[]): Decimal[] {
   if (!isIsoDate(m.from) || !Number.isInteger(m.step_months) || m.step_months < 1 || !Array.isArray(m.weights)) {
-    throw new CalcError("ручной график: нужны from (дата), step_months (целое ≥ 1) и weights (доли)", "CAPEX.ITEMS");
+    throw new CalcError("ручной график: укажите дату начала, шаг в месяцах (целое, не меньше 1) и доли по периодам", "CAPEX.ITEMS");
   }
   const w = date.map(() => ZERO);
   const firstEnd = monthIndex(date, m.from);
@@ -223,18 +223,18 @@ function ruleWeights(ctx: FormulaContext, item: Item, date: IsoDate[], rows: () 
   };
   switch (item.rule) {
     case "manual": {
-      if (!item.manual) throw new CalcError("правило manual: заполните ручной график (CAPEX.ITEMS → schedule_manual)", "CAPEX.ITEMS");
+      if (!item.manual) throw new CalcError("заполните ручной график статьи", "CAPEX.ITEMS");
       return manualWeights(item.manual, date);
     }
     case "formula": {
       const f = item.catalogue.formula;
-      if (!f) throw new CalcError("правило formula без формулы в справочнике", "CAPEX.ITEMS");
+      if (!f) throw new CalcError("график «по формуле»: для статьи нет формулы в справочнике", "CAPEX.ITEMS");
       const pay = ctx.formula<Decimal[]>(f);
       const total = pay.reduce((s, x) => s.add(x), ZERO);
       return total.isZero() ? w : pay.map((x) => x.div(total));
     }
     case "at_milestone": {
-      if (!item.from) throw new CalcError("правило at_milestone: не задана веха", "CAPEX.ITEMS");
+      if (!item.from) throw new CalcError("график «в дату вехи»: не задана веха", "CAPEX.ITEMS");
       put(rows().map((r) => milestone(r, item.from as MilestoneKey)).reduce((a, b) => (b < a ? b : a)), ONE);
       return w;
     }
@@ -283,10 +283,10 @@ export function F_CAPEX_SCHEDULE_WEIGHT(ctx: FormulaContext): Series {
     if (sum.sub(ONE).abs().gte(tol)) {
       // Расчёт «как в исходном Excel» повторяет исходник: ряд берётся как есть, расхождение — предупреждение
       if (ctx.mode === "legacy") {
-        ctx.message("warning", `«${item.name}»: в денежный поток попадает ${fmtShare(sum)} суммы бюджета — так в исходнике; в расчёте сервиса график равен 100%`, "CAPEX.ITEMS", `CAPEX.SCHEDULE_SUM:${item.id}`);
+        ctx.message("warning", `«${item.name}»: в денежный поток попадает ${fmtShare(sum)} суммы бюджета — так в исходном Excel; в расчёте сервиса график в сумме 100 %`, "CAPEX.ITEMS", `CAPEX.SCHEDULE_SUM:${item.id}`);
         return;
       }
-      ctx.message("error", `«${item.name}»: в денежный поток за срок расчёта попадает ${fmtShare(sum)} суммы статьи вместо 100%. Проверьте, что график не выходит за срок расчёта и ручной ряд в сумме даёт 100%.`, "CAPEX.ITEMS");
+      ctx.message("error", `«${item.name}»: в денежный поток за срок расчёта попадает ${fmtShare(sum)} суммы статьи вместо 100 %. Проверьте, что график не выходит за срок расчёта и ручной ряд в сумме даёт 100 %.`, "CAPEX.ITEMS");
     }
   };
   for (const item of all) {
@@ -331,13 +331,13 @@ interface YearSeries {
 export function growth(ctx: FormulaContext, id: ParameterId): (year: number) => Decimal {
   const s = ctx.require<YearSeries>(id);
   const years = Object.keys(s?.by_year ?? {}).map(Number).sort((a, b) => a - b);
-  if (years.length === 0) throw new CalcError(`${id}: нет значений по годам`, id);
+  if (years.length === 0) throw new CalcError(`«${getParameter(id).name}»: нет значений по годам. Добавьте их в справочнике`, id);
   const first = Math.min(...years);
   const last = Math.max(...years);
   return (y) => {
-    if (y < first) throw new CalcError(`${id}: нет значения индекса за ${y} год`, id);
+    if (y < first) throw new CalcError(`«${getParameter(id).name}»: нет значения за ${y} год. Добавьте его в справочнике`, id);
     const key = y > last ? (s.after_last === "last" ? last : null) : y;
-    if (key === null || s.by_year[key] === undefined) throw new CalcError(`${id}: нет значения индекса за ${y} год`, id);
+    if (key === null || s.by_year[key] === undefined) throw new CalcError(`«${getParameter(id).name}»: нет значения за ${y} год. Добавьте его в справочнике`, id);
     return new Decimal(s.by_year[key] as number);
   };
 }
@@ -373,7 +373,7 @@ export function F_CAPEX_INDEX(ctx: FormulaContext): Series {
     if (!item.hasRow && !item.ratePrm) continue;
     const v = guard(ctx, item, () => {
       const p = item.priceDate;
-      if (!isIsoDate(p)) throw new CalcError("заполните дату уровня цен ставки (CAPEX.ITEMS → price_date)", "CAPEX.ITEMS");
+      if (!isIsoDate(p)) throw new CalcError("заполните дату, на которую взята ставка статьи", "CAPEX.ITEMS");
       const key = `${type}:${p}`;
       if (!series.has(key)) series.set(key, indexSeries(growth(ctx, type === "investment" ? "CAPEX.COST_INDEX" : "CAPEX.OPEX_INDEX"), date, p));
       return series.get(key) as Decimal[];

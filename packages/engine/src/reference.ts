@@ -3,6 +3,8 @@
  * Всё берётся из data/*.yaml; экран только показывает строки, собранные здесь.
  */
 import {
+  getFormula,
+  isFormulaId,
   ASSUMPTION_GROUPS,
   type SpecAssumptionVersion as AssumptionVersion,
   getParameter,
@@ -247,7 +249,12 @@ function regionRows(r: SpecRegion): RefRow[] {
   rows.push({
     name: "Плата за изменение вида разрешённого использования",
     value: r.vri_fee.exists === null ? null : { text: r.vri_fee.exists ? `есть${r.vri_fee.formula ? `, по формуле «${formulaNames.get(r.vri_fee.formula) ?? ""}»` : ""}` : "нет" },
-    status: r.vri_fee.exists === null ? { text: "нужно проверить", tone: "yel" } : { text: "по акту региона", tone: "grn" },
+    status:
+      r.vri_fee.exists === null
+        ? { text: "нужно проверить", tone: "yel" }
+        : r.vri_fee.formula && isFormulaId(r.vri_fee.formula) && getFormula(r.vri_fee.formula).status === "needs_verification"
+          ? { text: "перепроверить", tone: "red" }
+          : { text: "по акту региона", tone: "grn" },
     sources: r.vri_fee.source_ids.map(link),
     ...(r.vri_fee.note ? { note: humanize(r.vri_fee.note) } : {}),
   });
@@ -268,8 +275,10 @@ function regionRows(r: SpecRegion): RefRow[] {
   });
   rows.push({
     name: "Машино-места для апартаментов",
-    value: r.parking_norm_apart.values ? { text: JSON.stringify(r.parking_norm_apart.values) } : null,
-    status: r.parking_norm_apart.values ? { text: "сверено с источником", tone: "grn" } : NEED,
+    value: Array.isArray(r.parking_norm_apart.values)
+      ? { text: (r.parking_norm_apart.values as { max_area?: number | null; per_apt?: number }[]).map((x) => `${x.max_area === null || x.max_area === undefined ? "остальные" : `до ${num(x.max_area)} м²`} — ${num(x.per_apt ?? 0)}`).join("; ") }
+      : null,
+    status: r.parking_norm_apart.values ? (r.parking_norm_apart.status === "verified" ? { text: "сверено с источником", tone: "grn" } : { text: "перепроверить", tone: "red" }) : NEED,
     sources: r.parking_norm_apart.source_ids.map(link),
   });
   rows.push({

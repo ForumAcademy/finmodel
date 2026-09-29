@@ -296,7 +296,7 @@ export class Engine {
     const toNum = (id: ParameterId, v: unknown): Decimal | null => {
       if (v === null) return null;
       if (typeof v === "number" || typeof v === "string") return new Decimal(v);
-      throw new CalcError(`Параметр ${id} должен быть числом`, id);
+      throw new CalcError(`«${getParameter(id).name}» должен быть числом`, id);
     };
     const ctx: FormulaContext = {
       mode: this.mode,

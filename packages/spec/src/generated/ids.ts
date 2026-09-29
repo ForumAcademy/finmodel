@@ -1,7 +1,7 @@
 // Файл сгенерирован packages/spec/scripts/build-spec.ts из data/*.yaml. Не редактировать вручную.
 
 /** Версия справочника: хеш содержимого data/*.yaml. Сохраняется в каждой версии расчёта. */
-export const SPEC_VERSION = "fcf24124044e";
+export const SPEC_VERSION = "155d52a50c41";
 /** Дата актуализации справочника: самая поздняя дата проверки источника. */
 export const SPEC_ACTUALIZED_AT = "2026-09-29";
 

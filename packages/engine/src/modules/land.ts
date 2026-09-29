@@ -31,7 +31,7 @@ function landPeriod(ctx: FormulaContext, rows: MilestoneRow[], warn = false): { 
 function vriDate(ctx: FormulaContext, rows: MilestoneRow[]): IsoDate | null {
   const date = vriChangeDate(rows);
   if (date === null && ctx.num("LAND.CADASTRAL_VALUE_AFTER_VRI") !== null) {
-    throw new CalcError("Задана кадастровая стоимость после смены ВРИ — заполните веху «смена ВРИ» (TIME.MILESTONES)", "TIME.MILESTONES");
+    throw new CalcError("Задана кадастровая стоимость после смены ВРИ — заполните веху «смена ВРИ» в сроках проекта", "TIME.MILESTONES");
   }
   return date;
 }

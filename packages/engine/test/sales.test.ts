@@ -63,7 +63,7 @@ describe("SALES: Дербеневская в расчёте «как в исхо
     // первые платежи — 4 кв 2027, через 7 кварталов после первых продаж (1 кв 2026)
     const date = r.formulas["F.TIME.DATE"]?.value as string[];
     expect(date[(cash.BROKERAGE as Decimal[]).findIndex((x) => !x.isZero())]).toBe("2027-10-31");
-    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", key: "CAPEX.SCHEDULE_SUM:BROKERAGE", text: expect.stringContaining("66,11%") }));
+    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", key: "CAPEX.SCHEDULE_SUM:BROKERAGE", text: expect.stringContaining("66,11 %") }));
   });
 
   it("ипотечные сделки 0,9 (0,7 кредит + 0,2 ПВ), 100% оплата 0,1", () => {

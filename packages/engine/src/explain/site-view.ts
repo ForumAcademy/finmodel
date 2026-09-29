@@ -83,9 +83,10 @@ export function normRows(p: LandProject, versions: readonly AssumptionVersion[])
   const region: ViewRow[] = [];
   const r = code && isRegionCode(code) ? getRegion(code) : null;
   if (r?.parking_norm.values) {
-    const parts = (r.parking_norm.values as { max_area: number | null; per_apt: number }[]).map((x) =>
-      x.max_area === null ? `больше — ${num(x.per_apt)}` : `до ${num(x.max_area)} м² — ${num(x.per_apt)}`,
-    );
+    const parts = (r.parking_norm.values as { max_area: number | null; per_apt: number }[]).map((x, i, all) => {
+      const prev = all[i - 1]?.max_area;
+      return x.max_area === null ? `больше${prev ? ` ${num(prev)} м²` : ""} — ${num(x.per_apt)}` : `до ${num(x.max_area)} м² — ${num(x.per_apt)}`;
+    });
     region.push({
       label: "Норматив машино-мест на квартиру",
       value: parts.join("; "),
@@ -362,22 +363,33 @@ export interface CompareTable {
 }
 
 /** Таблица «Сравнение»: показатели по вариантам и почему выбран лучший. */
-export function compareTable(summaries: readonly VariantSummary[], choice: BestChoice | null): CompareTable {
+export function compareTable(summaries: readonly VariantSummary[], choice: BestChoice | null, criterionApproved = false): CompareTable {
   const facts = summaries.map(variantFacts);
   const labels = facts[0]?.map((f) => f.label) ?? [];
-  const title = (id: string) => {
-    const s = summaries.find((x) => x.variant.id === id);
-    return s ? variantTitle(s.variant) : id;
-  };
-  const criterion = choice?.criterion === "NPV" ? "NPV акционера" : "чистая прибыль";
+  const byNpv = choice?.criterion === "NPV";
+  const criterion = byNpv ? "NPV акционера" : "чистая прибыль";
+  const metric = (s: VariantSummary): Decimal | null => (byNpv ? s.npv : s.netProfit);
+  const best = summaries.find((s) => s.variant.id === choice?.best) ?? null;
+  const bestValue = best ? metric(best) : null;
+  // Прошли отбор, но уступили лучшему по критерию: разница в млн руб
+  const losers = summaries.filter((s) => s !== best && (choice?.reasons[s.variant.id] ?? []).length === 0 && metric(s) !== null && bestValue !== null);
   let why: string;
   if (!choice) why = "Лучший вариант не выбран: не посчитаны итоги вариантов.";
-  else if (choice.best) why = `Лучший — «${title(choice.best)}»: наибольшая ${criterion} среди вариантов, которые проходят условия отбора и сопоставимы по составу затрат и продаж.`;
-  else {
+  else if (best && bestValue !== null) {
+    const next = [...losers].sort((a, b) => (metric(b) as Decimal).cmp(metric(a) as Decimal))[0];
+    const second = next ? ` У следующего, «${variantTitle(next.variant)}», — ${mln(metric(next))} млн руб.` : "";
+    const confirm = criterionApproved ? "" : ` Критерий выбора (${criterion}) руководитель ещё не утвердил: справочник, раздел «Оценка участка».`;
+    why = `Лучший — «${variantTitle(best.variant)}»: ${criterion} ${mln(bestValue)} млн руб, ${byNpv ? "наибольший" : "наибольшая"} среди вариантов, которые проходят условия отбора и сопоставимы по составу затрат и продаж.${second}${confirm}`;
+  } else {
     const missing = criterionMissing(summaries);
     const rf = riskFreeMissing(summaries) ? " Загрузите кривую доходности ОФЗ на дату оценки (блок «Ставка дисконтирования» ниже) или введите безрисковую ставку вручную." : "";
     why = `${choice.blocked ?? "Лучший вариант не выбран"}.${rf}${missing.length ? ` Заполните в справочнике, раздел «Оценка участка»: ${missing.map((m) => `«${m}»`).join(", ")}.` : ""}`;
   }
+  const failed = summaries.filter((s) => (choice?.reasons[s.variant.id] ?? []).length > 0).map((s) => ({ title: variantTitle(s.variant), text: (choice?.reasons[s.variant.id] ?? []).join("; ") }));
+  const lost = losers.map((s) => ({
+    title: variantTitle(s.variant),
+    text: `${criterion} ${mln(metric(s))} млн руб — на ${mln((bestValue as Decimal).sub(metric(s) as Decimal))} млн руб меньше, чем у лучшего`,
+  }));
   return {
     headers: summaries.map((s) => variantTitle(s.variant)),
     rows: labels.map((label, i) => ({ label, cells: facts.map((f) => f[i]?.value ?? "—") })),
@@ -385,19 +397,34 @@ export function compareTable(summaries: readonly VariantSummary[], choice: BestC
     why,
     needsReference: !choice?.best && criterionMissing(summaries).length > 0,
     needsRiskFree: !choice?.best && riskFreeMissing(summaries),
-    reasons: summaries.filter((s) => (choice?.reasons[s.variant.id] ?? []).length > 0).map((s) => ({ title: variantTitle(s.variant), text: (choice?.reasons[s.variant.id] ?? []).join("; ") })),
+    reasons: [...failed, ...lost],
   };
+}
+
+/** Критерий выбора лучшего утверждён в справочнике проекта (статус «утверждено»). */
+export function criterionApproved(p: LandProject, versions: readonly AssumptionVersion[]): boolean {
+  const version = p.assumptionsSnapshot ?? versionOf([...versions], p.assumptionsVersion);
+  return version?.items.find((i) => i.param === "VAL.SELECT_CRITERION")?.status === "approved";
 }
 
 /** Итоги для карточки проекта в списке. */
 export function snapshotOf(summaries: readonly VariantSummary[], choice: BestChoice | null, at: string): AnalysisSnapshot {
   const best = summaries.find((s) => s.variant.id === choice?.best) ?? null;
-  return { at, best: best?.variant.id ?? null, bestTitle: best ? variantTitle(best.variant) : null, netProfit: best?.netProfit?.toString() ?? null, variants: summaries.length };
+  const byNpv = choice?.criterion === "NPV";
+  return {
+    at,
+    best: best?.variant.id ?? null,
+    bestTitle: best ? variantTitle(best.variant) : null,
+    netProfit: best?.netProfit?.toString() ?? null,
+    ...(byNpv && best?.npv ? { npv: best.npv.toString() } : {}),
+    variants: summaries.length,
+  };
 }
 
-/** Строка карточки проекта: «Лучший вариант: Комфорт, 17 этажей · прибыль 1 234,5 млн руб». */
+/** Строка карточки проекта: «Лучший вариант: Бизнес, 24 этажа · NPV акционера 1 234,5 млн руб · прибыль 2 345,6 млн руб». */
 export function snapshotText(s: AnalysisSnapshot | null): string | null {
   if (!s) return null;
   if (!s.bestTitle) return `Посчитано вариантов: ${s.variants}, лучший не выбран · ${date(s.at.slice(0, 10))}`;
-  return `Лучший вариант: ${s.bestTitle}${s.netProfit ? ` · прибыль ${mln(new Decimal(s.netProfit))} млн руб` : ""}`;
+  const npv = s.npv ? ` · NPV акционера ${mln(new Decimal(s.npv))} млн руб` : "";
+  return `Лучший вариант: ${s.bestTitle}${npv}${s.netProfit ? ` · прибыль ${mln(new Decimal(s.netProfit))} млн руб` : ""}`;
 }

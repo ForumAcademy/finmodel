@@ -7,7 +7,7 @@ import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
 import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
-import { Chip, Modal, OriginTag, Toast } from "./ui";
+import { Chip, ExpertFields, Modal, OriginTag, Toast } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
 import { AnalysisArea, type AnalysisSec } from "./AnalysisScreens";
 
@@ -71,7 +71,7 @@ function FieldRow({ p, field, onEdit }: { p: LandProject; field: plot.PlotField;
         </button>
         {field.unit && <span className="u">{field.unit}</span>}
       </div>
-      {v.basis?.note && <div className="note">{v.basis.note}</div>}
+      {plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`) && <div className="note">{plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`)}</div>}
     </div>
   );
 }
@@ -82,29 +82,30 @@ function EditField({ p, field, onApply, onClose }: { p: LandProject; field: plot
   const cur = p.plot[field.key];
   const [value, setValue] = useState(plot.plotText(field.key, cur.value));
   const [docId, setDocId] = useState(cur.basis?.documentId ?? "");
-  const [basis, setBasis] = useState(cur.basis?.documentId ? "" : (cur.basis?.title ?? ""));
-  const [url, setUrl] = useState(cur.basis?.url ?? "");
+  const [form, setForm] = useState(plot.expertForm(cur.basis, (x) => plot.plotText(field.key, x)));
   const [error, setError] = useState<string | null>(null);
   const isKn = field.key === "cadastralNumber";
   const numeric = field.kind === "area" || field.kind === "money";
 
   function apply(clear = false) {
     const doc = p.documents.find((d) => d.id === docId);
-    const b: plot.ValueBasis = doc ? { title: plot.documentTitle(doc.kind), documentId: doc.id, date: today() } : { title: basis.trim(), url: url.trim() || null, date: today() };
-    if (!doc && !basis.trim() && !clear) return setError("Укажите основание: документ проекта или на чём основано значение.");
+    const docBasis: plot.ValueBasis | null = doc ? { title: plot.documentTitle(doc.kind), documentId: doc.id, date: today() } : null;
     if (isKn) {
-      const set = plot.cadastralNumberChanges(p, value, { title: b.title || "Введено вручную", ...(b.documentId ? { documentId: b.documentId } : {}), date: today() });
+      const set = plot.cadastralNumberChanges(p, value, docBasis ?? { title: form.title.trim() || "Введено вручную", date: today(), ...(form.author.trim() ? { author: form.author.trim() } : {}) });
       if (set.problems.length && !set.changes.length) return setError(set.problems.join(" "));
       return onApply(set);
     }
-    if (clear) return onApply({ changes: plot.manualChange(p, field.key, null, b), problems: [] });
+    if (clear) return onApply({ changes: plot.manualChange(p, field.key, null, docBasis ?? { title: form.title.trim(), date: today() }), problems: [] });
     let v: string | null = value.trim();
     if (numeric) {
       v = plot.parseNumberRu(value);
       if (v === null) return setError(`«${value}» — не число. Введите число, например 32 000.`);
     }
     if (!v) return setError("Введите значение или удалите его кнопкой «Нет значения».");
-    onApply({ changes: plot.manualChange(p, field.key, v, b), problems: [] });
+    if (docBasis) return onApply({ changes: plot.manualChange(p, field.key, v, docBasis), problems: [] });
+    const b = plot.expertBasis(form, today(), numeric ? plot.plotExpertNumeric(field.key, v) : undefined);
+    if ("error" in b) return setError(b.error);
+    onApply({ changes: plot.manualChange(p, field.key, v, b.basis), problems: [] });
   }
 
   return (
@@ -162,18 +163,7 @@ function EditField({ p, field, onApply, onClose }: { p: LandProject; field: plot
             ))}
           </select>
         </label>
-        {!docId && (
-          <div className="row2">
-            <label>
-              На чём основано *
-              <input value={basis} onChange={(e) => setBasis(e.target.value)} placeholder="Например, письмо продавца от 22.09.2026" />
-            </label>
-            <label>
-              Ссылка
-              <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
-            </label>
-          </div>
-        )}
+        {!docId && <ExpertFields form={form} onChange={setForm} placeholder="Например, письмо продавца от 22.09.2026" unit={field.unit} numeric={numeric} />}
         {error && <div className="err">{error}</div>}
       </div>
     </Modal>
@@ -343,7 +333,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
             )}
             <Link className={`it ${collapsed ? "top1" : ""} ${sec === "plot" ? "on" : ""}`} href={href(p.id, "plot")}>
               <span>{collapsed ? "Участок" : "Проект и участок"}</span>
-              {!collapsed && (status.missing ? <span className="chip yel st">нет {status.missing}</span> : <span className="stok st">✓</span>)}
+              {!collapsed && (status.missing ? <span className="chip yel st">не хватает {status.missing}</span> : <span className="stok st">✓</span>)}
             </Link>
           </div>
           <div className="grp">

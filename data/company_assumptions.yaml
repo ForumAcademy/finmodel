@@ -679,7 +679,7 @@ versions:
         value: 0
         status: unverified
         from: {text: "Исходный Excel, лист «ТЭПы»: покупка участка и РНС в 4 кв 2025 (C6, C7)", url: null}
-        note: "Для нового участка обычно нужен срок на ГПЗУ, проект и экспертизу — уточните"
+        note: "Срок взят из Дербеневской; для нового участка добавьте время на ГПЗУ, проект и экспертизу по графику проекта"
       - param: TIME.CONSTRUCTION_M
         group: analysis
         value: 45
@@ -795,7 +795,7 @@ versions:
           - {product: ПСН, mortgage_share: 0.9, mortgage_down_payment: 0.2, full_payment_share: 0.1, installment_share: 0, installment_months: 18, installment_down_payment: 0}
           - {product: машино-места, mortgage_share: 0.9, mortgage_down_payment: 0.2, full_payment_share: 0.1, installment_share: 0, installment_months: 18, installment_down_payment: 0}
         status: unverified
-        from: {text: "Исходный Excel, лист «Эскроу»: ипотека 0,7 (кредит) и первоначальный взнос 0,2, оплата 100% — 0,1, рассрочки нет; одна структура для всех продуктов", url: null}
+        from: {text: "Исходный Excel, лист «Эскроу»: ипотека 70 % (кредит) и первоначальный взнос 20 %, оплата 100 % — 10 %, рассрочки нет; одна структура для всех продуктов", url: null}
         note: "Для апартаментов и кладовых стандарта нет: в исходном Excel их не было"
       - param: SALES.MORTGAGE_BANK_FEE_RATE
         group: sales
@@ -815,7 +815,7 @@ versions:
         value: 0.02
         status: unverified
         from: {text: "Методика Минстроя 421/пр: 2% для объектов непроизводственного назначения", url: "https://www.consultant.ru/document/cons_doc_LAW_362957/"}
-        note: "Нижняя граница для оценки участка. В исходном Excel задумано 10% от расценок СМР (48 958 руб/м² × 153 882 м² = 7,53 млрд), но Бюджет!F42 складывает площадь со ставкой — 202 840 руб. Решение владельца продукта 27.09.2026: в расчёте сервиса 2%, на 10% не переходим"
+        note: "Нижняя граница для оценки участка. В исходном Excel задумано 10% от расценок СМР (48 958 руб/м² × 153 882 м² = 7,53 млрд руб), но в ячейке Бюджет!F42 складываются площадь со ставкой — 202 840 руб. Решение владельца продукта 27.09.2026: в расчёте сервиса 2%, на 10% не переходим"
       - param: OPEX.DEV_FEE_RATE
         group: budget
         value: 0.02

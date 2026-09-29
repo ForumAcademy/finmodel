@@ -85,13 +85,13 @@ export function F_TEP_GFA_SPLIT(ctx: FormulaContext): GfaSplit {
   const nonres = ctx.num("TEP.NONRES_GFA");
   if (res !== null && nonres !== null) return { res, apart: ctx.num("TEP.APART_GFA") ?? ZERO, nonres };
   if (res !== null || nonres !== null) {
-    ctx.message("warning", "Из ГПЗУ/ППТ задана только одна часть ГНС (жилая или нежилая) — разделение считается по долям", res !== null ? "TEP.NONRES_GFA" : "TEP.RES_GFA");
+    ctx.message("warning", "Из ГПЗУ или ППТ задана только жилая или только нежилая площадь — вторая часть считается по долям из справочника", res !== null ? "TEP.NONRES_GFA" : "TEP.RES_GFA");
   }
   const gfa = ctx.formula<Decimal>("F.TEP.GFA_ABOVE");
   const resShare = ctx.requireNum("TEP.RES_GFA_SHARE");
   const apartShare = ctx.num("TEP.APART_GFA_SHARE") ?? ZERO;
   if (resShare.add(apartShare).gt(ONE)) {
-    throw new CalcError(`Доли жилой (${fmtShare(resShare)}) и апартаментной (${fmtShare(apartShare)}) части в сумме больше 100%`, "TEP.APART_GFA_SHARE");
+    throw new CalcError(`Доли жилой (${fmtShare(resShare)}) и апартаментной (${fmtShare(apartShare)}) части в сумме больше 100 %`, "TEP.APART_GFA_SHARE");
   }
   return { res: gfa.mul(resShare), apart: gfa.mul(apartShare), nonres: gfa.mul(ONE.sub(resShare).sub(apartShare)) };
 }
@@ -119,7 +119,7 @@ export function F_TEP_APART_AREA(ctx: FormulaContext): Decimal {
     ctx.message("warning", `Апартаменты (${fmt(area)} м²) исключены: по ГПЗУ проекта размещение объектов гостиничного назначения / апартаментов не подтверждено`, "GPZU.APART_ALLOWED");
     const codes = ctx.param<string[]>("LAND.VRI_CODES") ?? [];
     if (codes.includes("4.7")) {
-      ctx.message("info", "ВРИ участка включает код 4.7 «Гостиничное обслуживание» — это означает, что ГПЗУ допускает апартаменты. Проверьте ГПЗУ", "GPZU.APART_ALLOWED");
+      ctx.message("info", "ВРИ участка включает код 4.7 «Гостиничное обслуживание» — апартаменты могут быть допустимы. Проверьте ГПЗУ и отметьте, что апартаменты допускаются", "GPZU.APART_ALLOWED");
     }
     return ZERO;
   }
@@ -139,7 +139,7 @@ export function F_TEP_APT_COUNT(ctx: FormulaContext): Decimal[] {
     return new Decimal(r.area_share);
   });
   const total = sum(shares);
-  if (!total.eq(ONE)) throw new CalcError(`Квартирография: сумма долей площади типов = ${fmtShare(total)}, должна быть 100%`, "TEP.APT_MIX");
+  if (!total.eq(ONE)) throw new CalcError(`Квартирография: сумма долей площади типов = ${fmtShare(total)}, должна быть 100 %`, "TEP.APT_MIX");
   const aptArea = ctx.formula<Decimal>("F.TEP.APT_AREA");
   return rows.map((r, k) => (shares[k] as Decimal).mul(aptArea).div(r.avg_area).floor());
 }
@@ -205,7 +205,7 @@ export function F_TEP_PARKING_REQUIRED(ctx: FormulaContext): Decimal {
   const apartArea = ctx.formula<Decimal>("F.TEP.APART_AREA");
   if (apartArea.gt(ZERO)) {
     ctx.require("TEP.PARKING_NORM_APART");
-    throw new CalcError("Норматив машино-мест для апартаментов: единица и порядок расчёта по акту региона ещё не заданы в спецификации (вопрос владельцу продукта)", "TEP.PARKING_NORM_APART");
+    throw new CalcError("Норматив машино-мест для апартаментов по региону ещё не внесён в справочник. Введите число машино-мест по ГПЗУ с документом", "TEP.PARKING_NORM_APART");
   }
   return forApartments.ceil();
 }
