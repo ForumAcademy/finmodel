@@ -10,10 +10,11 @@ import { date as fmtDate, num, plural } from "./lib/text";
 import { basisText, parseNumberRu, PLOT_FIELDS, vriCodes, type HistoryEntry, type LandProject, type Origin, type PlotValue, type ValueBasis } from "./plot";
 import type { Variant } from "./modules/variant";
 import { variantId } from "./modules/variant";
+import type { ZcycCurve } from "./zcyc";
 
 // ---------- поля ограничений ----------
 
-export type SiteFieldKey = "zone" | "maxGfa" | "density" | "maxFloors" | "maxHeight" | "builtShare" | "apartAllowed" | "landPrice" | "startDate" | "parkingPerApt" | "landTaxRate";
+export type SiteFieldKey = "zone" | "maxGfa" | "density" | "maxFloors" | "maxHeight" | "builtShare" | "apartAllowed" | "landPrice" | "startDate" | "parkingPerApt" | "landTaxRate" | "riskFree";
 
 export type SiteFieldKind = "text" | "area" | "number" | "percent" | "density" | "bool" | "money" | "date";
 
@@ -43,6 +44,7 @@ export const SITE_FIELDS: readonly SiteField[] = [
   { key: "startDate", label: "Дата сделки по участку", param: "GEN.MODEL_START_DATE", kind: "date", hint: "С неё начинается расчёт вариантов; пусто — конец текущего месяца" },
   { key: "parkingPerApt", label: "Норматив машино-мест на квартиру", unit: "м/м", param: "TEP.PARKING_NORM", kind: "number", hint: "По нормативам градостроительного проектирования региона или ГПЗУ" },
   { key: "landTaxRate", label: "Ставка земельного налога", unit: "%", param: "TAX.LAND_RATE", kind: "percent", hint: "По решению муниципалитета (сервис ФНС «Справочная информация о ставках»)" },
+  { key: "riskFree", label: "Безрисковая ставка", unit: "% годовых", param: "VAL.RISK_FREE", kind: "percent", hint: "Доходность ОФЗ со сроком, равным сроку проекта, на дату оценки — если кривую Мосбиржи не удалось загрузить" },
 ];
 
 const siteFieldByKey = new Map(SITE_FIELDS.map((f) => [f.key, f]));
@@ -53,6 +55,8 @@ export const REGULATION_FIELDS: readonly SiteFieldKey[] = ["zone", "maxGfa", "de
 export const DEAL_FIELDS: readonly SiteFieldKey[] = ["landPrice", "startDate"];
 /** Нормативы, которых нет в справочнике регионов: вводятся по проекту с документом. */
 export const NORM_FIELDS: readonly SiteFieldKey[] = ["parkingPerApt", "landTaxRate"];
+/** Ручной ввод безрисковой ставки: только когда кривая доходности не загружена. */
+export const RATE_FIELDS: readonly SiteFieldKey[] = ["riskFree"];
 
 export const BOOL_YES = "да";
 export const BOOL_NO = "нет";
@@ -242,10 +246,12 @@ export interface SiteData {
   /** Вариант, выбранный финансистом для дальнейшей работы. */
   selectedVariant: string | null;
   snapshot: AnalysisSnapshot | null;
+  /** Кривая бескупонной доходности ОФЗ Мосбиржи на дату оценки; null — не загружена. */
+  curve: ZcycCurve | null;
 }
 
 export function emptySite(): SiteData {
-  return { values: {}, zouit: [], analogs: [], customVariants: [], selectedVariant: null, snapshot: null };
+  return { values: {}, zouit: [], analogs: [], customVariants: [], selectedVariant: null, snapshot: null, curve: null };
 }
 
 export const siteOf = (p: LandProject): SiteData => ({ ...emptySite(), ...(p.site ?? {}) });
@@ -331,6 +337,10 @@ export function siteCalcProject(p: LandProject, today: IsoDate): CalcProject {
   const start = (site.values.startDate?.value as IsoDate | undefined) ?? eomonth(today, 0);
   values["GEN.MODEL_START_DATE"] = start;
   values["GEN.VALUATION_DATE"] = start;
+  if (site.curve) {
+    values["VAL.ZCYC"] = site.curve.points.map((x) => ({ term: x.term, yield: x.yield }));
+    values["VAL.ZCYC_DATE"] = site.curve.date;
+  }
   if (site.zouit.length) {
     values["SITE.ZOUIT"] = site.zouit.map((z) => ({ name: z.name, area_m2: toNumber(z.area), no_build: z.noBuild, restriction: z.restriction }));
   }

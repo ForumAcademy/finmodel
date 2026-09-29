@@ -34,8 +34,56 @@ function revenueNet(ctx: FormulaContext): Decimal {
   return r.net;
 }
 
+/** Точка кривой бескупонной доходности: срок, лет, и доходность, доля годовых. */
+export interface CurvePoint {
+  term: Decimal;
+  yield: Decimal;
+}
+
+/** Доходность кривой в точке term: по прямой между соседними сроками, за краями — доходность крайнего срока. */
+export function curveAt(curve: readonly CurvePoint[], term: Decimal): Decimal | null {
+  const pts = [...curve].sort((a, b) => a.term.cmp(b.term));
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  if (!first || !last) return null;
+  if (term.lte(first.term)) return first.yield;
+  if (term.gte(last.term)) return last.yield;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1] as CurvePoint;
+    const b = pts[i] as CurvePoint;
+    if (term.lte(b.term)) return a.yield.add(b.yield.sub(a.yield).mul(term.sub(a.term)).div(b.term.sub(a.term)));
+  }
+  return last.yield;
+}
+
+export interface RiskFree {
+  rf: Decimal;
+  /** Срок проекта, лет: от даты оценки до последнего потока акционера. */
+  term: Decimal;
+  /** Дата кривой; null — ставка введена вручную. */
+  curve_date: IsoDate | null;
+  from_curve: boolean;
+}
+
+export function F_KPI_RISK_FREE(ctx: FormulaContext): RiskFree {
+  const rows = ctx.param<{ term: number | null; yield: number | null }[]>("VAL.ZCYC") ?? [];
+  const curve: CurvePoint[] = rows.flatMap((r) => (r.term === null || r.yield === null ? [] : [{ term: new Decimal(r.term), yield: new Decimal(r.yield) }]));
+  // Без кривой нужна ручная ставка: её нехватка — главное, что сообщить
+  const manual = curve.length ? null : ctx.requireNum("VAL.RISK_FREE");
+  const fcfe = ctx.formula<Decimal[]>("F.CF.FCFE");
+  const date = ctx.formula<IsoDate[]>("F.TIME.DATE");
+  const v0 = ctx.require<IsoDate>("GEN.VALUATION_DATE");
+  if (!isIsoDate(v0)) throw new CalcError("Дата оценки должна быть датой (ГГГГ-ММ-ДД)", "GEN.VALUATION_DATE");
+  const tLast = fcfe.reduce((last, x, t) => (x.isZero() ? last : t), fcfe.length);
+  if (tLast === fcfe.length) throw new CalcError("Срок проекта для безрисковой ставки не определён: в потоке акционера нет денег");
+  const term = new Decimal(daysBetween(v0, date[tLast] as IsoDate)).div(DAYS_IN_YEAR);
+  const fromCurve = curveAt(curve, term);
+  if (fromCurve !== null) return { rf: fromCurve, term, curve_date: ctx.param<IsoDate>("VAL.ZCYC_DATE"), from_curve: true };
+  return { rf: manual ?? ctx.requireNum("VAL.RISK_FREE"), term, curve_date: null, from_curve: false };
+}
+
 export function F_KPI_DISCOUNT_RATE(ctx: FormulaContext): Decimal {
-  return ctx.requireNum("VAL.RISK_FREE").add(ctx.requireNum("VAL.EQUITY_PREMIUM"));
+  return ctx.formula<RiskFree>("F.KPI.RISK_FREE").rf.add(ctx.requireNum("VAL.EQUITY_PREMIUM"));
 }
 
 export function F_KPI_NPV(ctx: FormulaContext): { npv_project: Decimal; npv_equity: Decimal } {
@@ -190,6 +238,7 @@ export function F_KPI_UNFORECASTED_REVENUE(ctx: FormulaContext): { dkp_revenue: 
 }
 
 export const KPI_FORMULAS = {
+  "F.KPI.RISK_FREE": F_KPI_RISK_FREE,
   "F.KPI.DISCOUNT_RATE": F_KPI_DISCOUNT_RATE,
   "F.KPI.NPV": F_KPI_NPV,
   "F.KPI.IRR": F_KPI_IRR,

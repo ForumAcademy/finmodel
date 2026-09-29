@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { analysis, book, plot, site, siteView, text } from "@fm/engine";
+import { analysis, book, plot, site, siteView, text, zcyc } from "@fm/engine";
 import { newId, nowIso } from "@/lib/store";
+import { loadZcyc } from "@/lib/zcyc";
 import { Chip, Modal, OriginTag } from "./ui";
 
 type LandProject = plot.LandProject;
@@ -918,6 +919,51 @@ export function CompareSection({ p, state, onSave }: { p: LandProject; state: An
             </>
           )}
         </>
+      )}
+      <RateBlock p={p} state={state} onSave={onSave} />
+    </>
+  );
+}
+
+/** Ставка дисконтирования для NPV: кривая доходности ОФЗ на дату оценки и премия за риск из справочника. */
+function RateBlock({ p, state, onSave }: { p: LandProject; state: AnalysisState; onSave: Save }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<SiteFieldKey | null>(null);
+  const curve = site.siteOf(p).curve;
+  const valuation = String(state.calc.input.values["GEN.VALUATION_DATE"] ?? today());
+  const load = async () => {
+    setBusy(true);
+    setError(null);
+    const r = await loadZcyc(valuation, today(), nowIso());
+    setBusy(false);
+    if ("error" in r) return setError(r.error);
+    await onSave(site.updateSite(p, { curve: r.curve }, nowIso()), `${zcyc.zcycLabel(r.curve)} загружена`);
+  };
+  return (
+    <>
+      <h3 className="h3">Ставка дисконтирования</h3>
+      <p className="small muted">NPV считается по ставке «безрисковая ставка + премия за риск». Безрисковая ставка — доходность ОФЗ на дату оценки ({text.date(valuation)}) со сроком, равным сроку варианта.</p>
+      <NormTable rows={siteView.rateRows(p, state.versions, state.summaries)} p={p} onEdit={setEditing} />
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn" disabled={busy} onClick={() => void load()}>
+          {busy ? "Загружаем…" : curve ? "Обновить кривую с Мосбиржи" : "Загрузить кривую с Мосбиржи"}
+        </button>
+        <Link className="btn" href="/reference/values?tab=analysis">
+          Премия за риск в справочнике
+        </Link>
+      </div>
+      {error && <div className="check warn">{error}</div>}
+      {editing && (
+        <EditSiteField
+          p={p}
+          fieldKey={editing}
+          onClose={() => setEditing(null)}
+          onApply={(c) => {
+            setEditing(null);
+            if (c) void onSave(site.applySiteChange(p, c, nowIso()), "Значение сохранено");
+          }}
+        />
       )}
     </>
   );

@@ -10,7 +10,7 @@ import { computeProject, projectInput, SPEC_ASSUMPTIONS, type CalcProject, type 
 import { ANALYSIS_FORMULAS } from "./registry";
 import type { MarketPrice } from "./modules/market";
 import type { MaxGfa } from "./modules/site";
-import type { Margin } from "./modules/kpi";
+import type { Margin, RiskFree } from "./modules/kpi";
 import type { Debt } from "./modules/fin";
 import type { Revenue, RowSeries } from "./modules/sales";
 import type { BestChoice, Variant, VariantResult, VariantSales } from "./modules/variant";
@@ -145,6 +145,9 @@ export interface VariantSummary {
   netMargin: Decimal | null;
   irr: Decimal | null;
   npv: Decimal | null;
+  /** Ставка дисконтирования и её безрисковая часть в точке срока варианта. */
+  discountRate: Decimal | null;
+  riskFree: RiskFree | null;
   peakDebt: Decimal | null;
   peakEquity: Decimal | null;
   salesMonths: number | null;
@@ -204,6 +207,8 @@ export function computeVariant(project: CalcProject, v: Variant, versions: Assum
     netMargin: null,
     irr: null,
     npv: null,
+    discountRate: null,
+    riskFree: null,
     peakDebt: null,
     peakEquity: null,
     salesMonths: null,
@@ -228,6 +233,8 @@ export function computeVariant(project: CalcProject, v: Variant, versions: Assum
     netMargin: margin?.net_margin ?? null,
     irr: num<{ irr_equity: Decimal | null }>(m, "F.KPI.IRR")?.irr_equity ?? null,
     npv: num<{ npv_equity: Decimal }>(m, "F.KPI.NPV")?.npv_equity ?? null,
+    discountRate: num<Decimal>(m, "F.KPI.DISCOUNT_RATE"),
+    riskFree: num<RiskFree>(m, "F.KPI.RISK_FREE"),
     peakDebt: peak(num<Debt>(m, "F.FIN.DEBT")?.debt),
     peakEquity: num<{ peak_equity: Decimal }>(m, "F.KPI.PEAK_EQUITY")?.peak_equity ?? null,
     salesMonths: salesMonths(num<RowSeries>(m, "F.SALES.SOLD_AREA")),

@@ -270,7 +270,7 @@ table.t.compact th,table.t.compact td{padding:8px 10px}
 .fld.miss .val .shown{background:var(--yel-bg);border-color:var(--yel-line);color:var(--yel)}
 .fld .val .shown.ro{cursor:default;background:var(--bg)}
 .fld .val .shown.text{text-align:left}
-.org.basis{border:0;padding:0;color:var(--ink2);font-weight:500;background:none;cursor:pointer}
+.org.basis{border:0;white-space:normal;padding:0;color:var(--ink2);font-weight:500;background:none;cursor:pointer}
 .org.basis:hover{text-decoration:underline}
 .side .it .st{margin-left:auto}
 a.it,a.gh{text-decoration:none}

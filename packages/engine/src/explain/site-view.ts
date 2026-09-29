@@ -12,6 +12,7 @@ import { siteDisplay, siteOf, siteValue, variantTitle, HOUSING_CLASSES, ANALOG_P
 import type { LandProject } from "../plot";
 import type { SiteAnalysis, VariantSummary, BestChoice } from "../analysis";
 import type { GfaLimit } from "../modules/site";
+import { ZCYC_PAGE } from "../zcyc";
 import { marketKey } from "../modules/market";
 
 export type Tone = "yel" | "red" | "grn" | "gry";
@@ -109,20 +110,65 @@ export function normRows(p: LandProject, versions: readonly AssumptionVersion[])
   } else {
     region.push(ownRow(p, "landTaxRate", "Ставка земельного налога", "Ставка устанавливается муниципалитетом: введите по решению с документом.", sourceLink("S_FNS_RATES")));
   }
-  const version = p.assumptionsSnapshot ?? versionOf([...versions], p.assumptionsVersion);
-  const standard = VARIANT_STANDARDS.map((param): ViewRow => {
-    const item = version?.items.find((i) => i.param === param);
-    const text = item ? refText(param, item.value) : null;
-    return {
-      label: getParameter(param).name,
-      value: text ?? "нет значения",
-      origin: text ? "reference" : null,
-      basis: item ? { title: item.from.text, url: item.from.url ?? null } : null,
-      tone: text ? (item?.status === "approved" ? "grn" : item?.status === "check" ? "red" : "gry") : "yel",
-      note: text ? undefined : "Заполните в справочнике, раздел «Оценка участка»",
-    };
-  });
+  const standard = VARIANT_STANDARDS.map((param) => standardRow(p, versions, param));
   return { region, standard };
+}
+
+/** Стандартное значение справочника, на котором строятся варианты. */
+function standardRow(p: LandProject, versions: readonly AssumptionVersion[], param: ParameterId): ViewRow {
+  const version = p.assumptionsSnapshot ?? versionOf([...versions], p.assumptionsVersion);
+  const item = version?.items.find((i) => i.param === param);
+  const text = item ? refText(param, item.value) : null;
+  return {
+    label: getParameter(param).name,
+    value: text ?? "нет значения",
+    origin: text ? "reference" : null,
+    basis: item ? { title: item.from.text, url: item.from.url ?? null } : null,
+    tone: text ? (item?.status === "approved" ? "grn" : item?.status === "check" ? "red" : "gry") : "yel",
+    note: text ? undefined : "Заполните в справочнике, раздел «Оценка участка»",
+  };
+}
+
+// ---------- ставка дисконтирования ----------
+
+/** Значение или диапазон по вариантам: «15,3 %» или «15,1 % – 15,3 %». */
+function span(xs: readonly Decimal[], f: (d: Decimal) => string): string {
+  const lo = f(Decimal.min(...xs));
+  const hi = f(Decimal.max(...xs));
+  return lo === hi ? lo : `${lo} – ${hi}`;
+}
+
+/**
+ * Ставка дисконтирования для NPV: кривая доходности ОФЗ на дату оценки (или ручная безрисковая ставка, если кривая
+ * не загружена) и премия за риск из справочника.
+ */
+export function rateRows(p: LandProject, versions: readonly AssumptionVersion[], summaries: readonly VariantSummary[]): ViewRow[] {
+  const curve = siteOf(p).curve;
+  const rows: ViewRow[] = [
+    {
+      label: "Кривая доходности ОФЗ",
+      value: curve ? `на ${date(curve.date)}, сроки от ${num(curve.points[0]?.term ?? 0)} до ${num(curve.points.at(-1)?.term ?? 0)} лет` : "не загружена",
+      origin: curve ? "source" : null,
+      basis: { title: getSource("S_MOEX_ZCYC").title, url: ZCYC_PAGE },
+      tone: curve ? "grn" : "yel",
+      note: curve ? undefined : "Загрузите кривую на дату оценки. Если биржа недоступна, введите безрисковую ставку вручную",
+    },
+  ];
+  if (curve) {
+    const rfs = summaries.flatMap((s) => (s.riskFree?.from_curve ? [s.riskFree] : []));
+    rows.push({
+      label: "Безрисковая ставка",
+      value: rfs.length ? `${span(rfs.map((x) => x.rf), pct)} на срок ${span(rfs.map((x) => x.term), (d) => num(d.toNumber(), 1))} года` : "посчитается с вариантами",
+      origin: "source",
+      basis: { title: getSource("S_MOEX_ZCYC").title, url: ZCYC_PAGE },
+      note: "Точка кривой, равная сроку варианта: от даты оценки до последнего потока акционера",
+    });
+  } else rows.push(ownRow(p, "riskFree", "Безрисковая ставка", "Доходность ОФЗ со сроком, равным сроку проекта, на дату оценки, с документом", { title: getSource("S_MOEX_ZCYC").title, url: ZCYC_PAGE }));
+  // Премия — надбавка к ставке: в п.п., а не в % годовых
+  const premium = standardRow(p, versions, "VAL.EQUITY_PREMIUM");
+  const v = (p.assumptionsSnapshot ?? versionOf([...versions], p.assumptionsVersion))?.items.find((i) => i.param === "VAL.EQUITY_PREMIUM")?.value;
+  rows.push(typeof v === "number" ? { ...premium, value: `${num(v * PERCENT, 2)} п.п.` } : premium);
+  return rows;
 }
 
 // ---------- градпотенциал ----------
@@ -219,6 +265,7 @@ export function variantFacts(s: VariantSummary): Fact[] {
     { label: "Рентабельность продаж", value: pct(s.netMargin) },
     { label: "IRR акционера", value: pct(s.irr) },
     { label: "NPV акционера, млн руб", value: mln(s.npv) },
+    { label: "Ставка дисконтирования", value: rateText(s) },
     { label: "Пиковый долг, млн руб", value: mln(s.peakDebt) },
     { label: "Срок продаж", value: s.salesMonths === null ? "—" : `${s.salesMonths} мес` },
   ];
@@ -238,22 +285,37 @@ export function variantProblems(s: VariantSummary, limit = 3): string[] {
   return out.slice(0, limit);
 }
 
-/** Ставка дисконтирования = безрисковая ставка + премия за риск (F.KPI.DISCOUNT_RATE): обе нужны для NPV. */
-const DISCOUNT_PARAMS: readonly ParameterId[] = ["VAL.RISK_FREE", "VAL.EQUITY_PREMIUM"];
+/** Премия за риск берётся из справочника; безрисковая ставка — из кривой доходности ОФЗ проекта (F.KPI.RISK_FREE). */
+const RISK_FREE: ParameterId = "VAL.RISK_FREE";
+const PREMIUM: ParameterId = "VAL.EQUITY_PREMIUM";
 
-/** Чего не хватает для критерия выбора (NPV): параметры, из-за которых он не посчитан. */
+const inputValue = (s: VariantSummary, id: ParameterId): unknown => {
+  const input = s.model?.input;
+  return input?.values[id] ?? input?.standard?.[id] ?? null;
+};
+
+/** Чего не хватает в справочнике для критерия выбора (NPV): параметры, из-за которых он не посчитан. */
 export function criterionMissing(summaries: readonly VariantSummary[]): string[] {
   const names = new Set<string>();
   for (const s of summaries) {
     for (const e of s.errors) {
       if (!e.formulaId.startsWith("F.KPI.") || !e.parameterId) continue;
-      if (e.formulaId === "F.KPI.DISCOUNT_RATE") {
-        const input = s.model?.input;
-        for (const id of DISCOUNT_PARAMS) if ((input?.values[id] ?? input?.standard?.[id] ?? null) === null) names.add(getParameter(id).name);
-      } else names.add(getParameter(e.parameterId).name);
+      if (e.formulaId === "F.KPI.DISCOUNT_RATE" || e.formulaId === "F.KPI.RISK_FREE") {
+        if (inputValue(s, PREMIUM) === null) names.add(getParameter(PREMIUM).name);
+      } else if (e.parameterId !== RISK_FREE) names.add(getParameter(e.parameterId).name);
     }
   }
   return [...names];
+}
+
+/** NPV не посчитан, потому что нет безрисковой ставки: кривая доходности не загружена и ставка не введена. */
+export function riskFreeMissing(summaries: readonly VariantSummary[]): boolean {
+  return summaries.some((s) => s.errors.some((e) => e.formulaId.startsWith("F.KPI.") && e.parameterId === RISK_FREE));
+}
+
+/** Ставка дисконтирования варианта для таблицы сравнения: «24,3 %». */
+export function rateText(s: VariantSummary): string {
+  return pct(s.discountRate);
 }
 
 /** Что не учтено во всех вариантах сразу — показывается один раз над карточками. */
@@ -276,6 +338,8 @@ export interface CompareTable {
   why: string;
   /** Для выбора не хватает значений справочника. */
   needsReference: boolean;
+  /** Для NPV не хватает безрисковой ставки: загрузите кривую доходности ОФЗ или введите ставку. */
+  needsRiskFree: boolean;
   /** Причины по вариантам, которые не прошли условия. */
   reasons: { title: string; text: string }[];
 }
@@ -294,7 +358,8 @@ export function compareTable(summaries: readonly VariantSummary[], choice: BestC
   else if (choice.best) why = `Лучший — «${title(choice.best)}»: наибольшая ${criterion} среди вариантов, которые проходят условия отбора и сопоставимы по составу затрат и продаж.`;
   else {
     const missing = criterionMissing(summaries);
-    why = `${choice.blocked ?? "Лучший вариант не выбран"}.${missing.length ? ` Заполните в справочнике, раздел «Оценка участка»: ${missing.map((m) => `«${m}»`).join(", ")}.` : ""}`;
+    const rf = riskFreeMissing(summaries) ? " Загрузите кривую доходности ОФЗ на дату оценки (блок «Ставка дисконтирования» ниже) или введите безрисковую ставку вручную." : "";
+    why = `${choice.blocked ?? "Лучший вариант не выбран"}.${rf}${missing.length ? ` Заполните в справочнике, раздел «Оценка участка»: ${missing.map((m) => `«${m}»`).join(", ")}.` : ""}`;
   }
   return {
     headers: summaries.map((s) => variantTitle(s.variant)),
@@ -302,6 +367,7 @@ export function compareTable(summaries: readonly VariantSummary[], choice: BestC
     best: choice?.best ?? null,
     why,
     needsReference: !choice?.best && criterionMissing(summaries).length > 0,
+    needsRiskFree: !choice?.best && riskFreeMissing(summaries),
     reasons: summaries.filter((s) => (choice?.reasons[s.variant.id] ?? []).length > 0).map((s) => ({ title: variantTitle(s.variant), text: (choice?.reasons[s.variant.id] ?? []).join("; ") })),
   };
 }

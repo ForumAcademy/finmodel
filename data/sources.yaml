@@ -581,6 +581,17 @@ sources:
     accessed: 2026-09-25
     verified: false
 
+  - id: S_MOEX_ZCYC
+    level: 2
+    scope: global
+    title: "Московская биржа — кривая бескупонной доходности ОФЗ (КБД, G-curve): доходности по срокам на дату"
+    issuer: "ПАО Московская Биржа"
+    url: "https://www.moex.com/ru/marketdata/indices/state/g-curve/"
+    used_for: "безрисковая ставка на дату оценки в точке срока проекта; сервис загружает кривую из информационной системы биржи (https://iss.moex.com/iss/engines/stock/zcyc)"
+    accessed: 2026-09-29
+    verified: false
+    note: "Страница и адрес загрузки не открывались из среды разработки (доступ закрыт); проверить при первой загрузке в браузере. Ориентир пользователя на 18.09.2026: 1 год — 13,05 %, 5 лет — 15,49 %, 10 лет — 16,09 %"
+
   - id: S_CBR_PF_STATS
     level: 2
     scope: global

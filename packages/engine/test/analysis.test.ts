@@ -1,14 +1,16 @@
 import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
 import { getFormula, type FormulaId, type ParameterId } from "@fm/spec";
-import { ANALYSIS_FORMULAS, Engine, type CalcProject } from "../src";
+import { ANALYSIS_FORMULAS, Engine, SPEC_ASSUMPTIONS, type CalcProject } from "../src";
 import { analyzeSite, chooseBest, computeVariant, salesMonths, variantProject } from "../src/analysis";
-import { compareTable, commonNotCounted, criterionMissing, marketRows, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
+import { compareTable, commonNotCounted, criterionMissing, marketRows, rateRows, rateText, riskFreeMissing, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
 import { analogFromForm, analogToForm, customVariant, emptySite, parseSite, siteCalcProject, siteText, variantTitle, applySiteChange, siteChange } from "../src/site";
 import { createProject, type LandProject } from "../src/plot";
 import type { BestChoice, Variant, VariantResult } from "../src/modules/variant";
 import type { MaxGfa } from "../src/modules/site";
 import type { MarketPrice } from "../src/modules/market";
+import { curveAt } from "../src/modules/kpi";
+import { parseZcyc, zcycTryDates } from "../src/zcyc";
 
 type Values = Partial<Record<ParameterId, unknown>>;
 
@@ -21,6 +23,41 @@ function run<T>(id: FormulaId, values: Values): T {
 
 const example = (id: FormulaId) => getFormula(id).example as { input: Record<string, unknown>; output: unknown };
 const analog = (name: string, cls: string, price: number, pace: number, product = "квартиры") => ({ name, product, housing_class: cls, price, pace, url: "https://наш.дом.рф/" });
+
+describe("безрисковая ставка по кривой доходности ОФЗ", () => {
+  it("пример формулы: 7 лет между точками 5 и 10 лет — по прямой", () => {
+    const { input, output } = example("F.KPI.RISK_FREE");
+    const curve = (input.curve as [number, number][]).map(([t, y]) => ({ term: new Decimal(t), yield: new Decimal(y) }));
+    expect(curveAt(curve, new Decimal(input.term as number))?.toDecimalPlaces(4).toNumber()).toBe(output);
+    expect(curveAt(curve, new Decimal(0.5))?.toNumber()).toBe(0.1305);
+    expect(curveAt(curve, new Decimal(30))?.toNumber()).toBe(0.1609);
+    expect(curveAt([], new Decimal(7))).toBeNull();
+  });
+
+  it("ответ биржи: сроки и доходности в % → доли; дата — торговый день из ответа", () => {
+    const json = {
+      yearyields: {
+        columns: ["tradedate", "tradetime", "period", "value"],
+        data: [
+          ["2026-09-18", "18:59:59", 5, 15.49],
+          ["2026-09-18", "18:59:59", 1, 13.05],
+          ["2026-09-18", "18:59:59", 10, 16.09],
+        ],
+      },
+    };
+    const c = parseZcyc(json, "2026-09-20", "2026-09-29T08:00:00Z");
+    expect(c?.date).toBe("2026-09-18");
+    expect(c?.points).toEqual([
+      { term: 1, yield: 0.1305 },
+      { term: 5, yield: 0.1549 },
+      { term: 10, yield: 0.1609 },
+    ]);
+    expect(parseZcyc({ yearyields: { columns: ["period", "value"], data: [] } }, "2026-09-20", "")).toBeNull();
+    expect(parseZcyc("<html>", "2026-09-20", "")).toBeNull();
+    // Дата оценки в будущем — кривая на сегодня и раньше
+    expect(zcycTryDates("2026-12-31", "2026-09-29").slice(0, 2)).toEqual(["2026-09-29", "2026-09-28"]);
+  });
+});
 
 describe("анализ участка: примеры формул (formulas.yaml → example)", () => {
   it("F.SITE.BUILDABLE_AREA: площадь минус зоны, где строить нельзя", () => {
@@ -191,10 +228,13 @@ describe("анализ участка: варианты освоения", () =>
     expect(common).not.toContain("СМР надземной части (в т.ч. стилобат)");
     const { choice } = chooseBest(MSK, summaries);
     expect(choice?.best).toBeNull();
-    expect(criterionMissing(summaries)).toEqual(["Безрисковая ставка", "Премия за риск девелоперского проекта"]);
+    expect(criterionMissing(summaries)).toEqual(["Премия за риск девелоперского проекта"]);
+    expect(riskFreeMissing(summaries)).toBe(true);
     const table = compareTable(summaries, choice);
-    expect(table.why).toContain("Безрисковая ставка");
+    expect(table.why).toContain("Загрузите кривую доходности ОФЗ");
+    expect(table.why).toContain("«Премия за риск девелоперского проекта»");
     expect(table.needsReference).toBe(true);
+    expect(table.needsRiskFree).toBe(true);
     // Комфорт без ставки СМР не сопоставим с бизнесом
     expect(table.reasons.map((r) => r.title)).toEqual(["Комфорт, 24 этажа"]);
 
@@ -204,6 +244,40 @@ describe("анализ участка: варианты освоения", () =>
     expect(best?.best).toBe("бизнес-24");
     expect(compareTable(rated, best).why).toContain("«Бизнес, 24 этажа»");
     expect(snapshotText(snapshotOf(rated, best, "2026-09-29T10:00:00Z"))).toMatch(/^Лучший вариант: Бизнес, 24 этажа · прибыль -?[\d\s ]+,\d млн руб$/);
+  });
+
+  it("справочник версии 3 и кривая ОФЗ: безрисковая ставка в точке срока варианта, премия 9 п.п., лучший выбран", () => {
+    const curve = (example("F.KPI.RISK_FREE").input.curve as [number, number][]).map(([term, y]) => ({ term, yield: y }));
+    const v3: CalcProject = { assumptionsVersion: 3, input: { ...MSK.input, values: { ...MSK.input.values, "VAL.ZCYC": curve, "VAL.ZCYC_DATE": "2026-09-18" } } };
+    const list = sa.variants.filter((v) => v.floors === 24);
+    const rated = list.map((v) => computeVariant(v3, v));
+    for (const s of rated) {
+      expect(s.riskFree?.from_curve).toBe(true);
+      const rf = s.riskFree?.rf.toNumber() ?? 0;
+      expect(rf).toBeGreaterThan(0.1305);
+      expect(rf).toBeLessThan(0.1609);
+      expect(s.discountRate?.sub(s.riskFree?.rf ?? 0).toNumber()).toBeCloseTo(0.09, 10);
+      expect(s.npv).not.toBeNull();
+      expect(rateText(s)).toMatch(/^[\d,]+ %$/);
+    }
+    expect(chooseBest(v3, rated).choice?.best).toBe("бизнес-24");
+    const p = { ...landProject(), assumptionsVersion: 3, site: { ...emptySite(), curve: { date: "2026-09-18", points: curve, loadedAt: "" } } };
+    expect(rateRows(p, SPEC_ASSUMPTIONS, rated)[1]?.value).toMatch(/^[\d,]+ %( – [\d,]+ %)? на срок [\d,]+( – [\d,]+)? года$/);
+  });
+
+  it("блок ставки: без кривой — ручной ввод безрисковой ставки, премия из справочника", () => {
+    const p = { ...landProject(), assumptionsVersion: 3 };
+    const rows = rateRows(p, SPEC_ASSUMPTIONS, []);
+    expect(rows.map((r) => r.label)).toEqual(["Кривая доходности ОФЗ", "Безрисковая ставка", "Премия за риск девелоперского проекта"]);
+    expect(rows[0]?.value).toBe("не загружена");
+    expect(rows[1]?.edit).toBe("riskFree");
+    expect(rows[2]?.origin).toBe("reference");
+    expect(rows[2]?.value).toBe("9 п.п.");
+    const withCurve = { ...p, site: { ...emptySite(), curve: { date: "2026-09-18", points: [{ term: 1, yield: 0.1305 }, { term: 10, yield: 0.1609 }], loadedAt: "2026-09-29T08:00:00Z" } } };
+    const r2 = rateRows(withCurve, SPEC_ASSUMPTIONS, []);
+    expect(r2[0]?.value).toBe("на 18.09.2026, сроки от 1 до 10 лет");
+    expect(r2[1]?.origin).toBe("source");
+    expect(siteCalcProject(withCurve, "2026-09-29").input.values["VAL.ZCYC_DATE"]).toBe("2026-09-18");
   });
 
   it("срок продаж — от первого до последнего месяца с продажами", () => {

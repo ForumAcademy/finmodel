@@ -1,5 +1,5 @@
 {
-  "specVersion": "8835b3e19180",
+  "specVersion": "6d2f46c363ba",
   "actualizedAt": "2026-09-29",
   "sources": [
     {
@@ -611,6 +611,18 @@
       "used_for": "безрисковая ставка для ставки дисконтирования",
       "accessed": "2026-09-25",
       "verified": false
+    },
+    {
+      "id": "S_MOEX_ZCYC",
+      "level": 2,
+      "scope": "global",
+      "title": "Московская биржа — кривая бескупонной доходности ОФЗ (КБД, G-curve): доходности по срокам на дату",
+      "issuer": "ПАО Московская Биржа",
+      "url": "https://www.moex.com/ru/marketdata/indices/state/g-curve/",
+      "used_for": "безрисковая ставка на дату оценки в точке срока проекта; сервис загружает кривую из информационной системы биржи (https://iss.moex.com/iss/engines/stock/zcyc)",
+      "accessed": "2026-09-29",
+      "verified": false,
+      "note": "Страница и адрес загрузки не открывались из среды разработки (доступ закрыт); проверить при первой загрузке в браузере. Ориентир пользователя на 18.09.2026: 1 год — 13,05 %, 5 лет — 15,49 %, 10 лет — 16,09 %"
     },
     {
       "id": "S_CBR_PF_STATS",
@@ -4925,16 +4937,68 @@
     },
     {
       "id": "VAL.RISK_FREE",
-      "name": "Безрисковая ставка",
+      "name": "Безрисковая ставка (ручной ввод)",
       "unit": "%годовых",
       "kind": "scalar",
       "scope": "template",
       "default": null,
       "source_ids": [
+        "S_MOEX_ZCYC",
         "S_CBR_ZCYC"
       ],
-      "basis": "Доходность ОФЗ со сроком, равным сроку проекта, на дату оценки (G-curve ЦБ)",
+      "basis": "Доходность ОФЗ со сроком, равным сроку проекта, на дату оценки. Основной путь — кривая бескупонной доходности Мосбиржи (VAL.ZCYC), её сервис загружает сам; ручной ввод — только если кривая не загружена (F.KPI.RISK_FREE)",
       "status": "needs_verification",
+      "legacy": [
+        {
+          "cell": null,
+          "verdict": "new"
+        }
+      ]
+    },
+    {
+      "id": "VAL.ZCYC",
+      "name": "Кривая бескупонной доходности ОФЗ на дату оценки",
+      "unit": "table",
+      "kind": "table",
+      "scope": "project",
+      "default": null,
+      "columns": [
+        {
+          "key": "term",
+          "title": "Срок",
+          "unit": "лет"
+        },
+        {
+          "key": "yield",
+          "title": "Доходность",
+          "unit": "доля годовых"
+        }
+      ],
+      "source_ids": [
+        "S_MOEX_ZCYC"
+      ],
+      "basis": "Официальные данные Мосбиржи, не экспертное значение (решение пользователя 29.09.2026). Сервис загружает доходности по срокам на дату оценки или ближайший предыдущий торговый день; из кривой берётся точка, равная сроку проекта (F.KPI.RISK_FREE)",
+      "how_to_fill": "Экран «Сравнение»: кнопка загрузки кривой; дата кривой — VAL.ZCYC_DATE",
+      "status": "project_input",
+      "legacy": [
+        {
+          "cell": null,
+          "verdict": "new"
+        }
+      ]
+    },
+    {
+      "id": "VAL.ZCYC_DATE",
+      "name": "Дата кривой бескупонной доходности",
+      "unit": "дата",
+      "kind": "date",
+      "scope": "project",
+      "default": null,
+      "source_ids": [
+        "S_MOEX_ZCYC"
+      ],
+      "basis": "Торговый день, на который взята кривая VAL.ZCYC: дата оценки или ближайший предыдущий торговый день",
+      "status": "project_input",
       "legacy": [
         {
           "cell": null,
@@ -4952,7 +5016,7 @@
       "source_ids": [
         "S_EXPERT"
       ],
-      "basis": "Экспертная (уровень 5): обязательны автор и диапазон. Ставка дисконтирования = безрисковая + премия",
+      "basis": "Экспертная (уровень 5): закона или методики, задающих премию, нет; утверждает руководитель, обязательны автор и диапазон. Опорная точка — исходная финмодель Дербеневской: ставка дисконтирования 25 % (CF1!D139) минус КБД на дату оценки ≈ 9 п.п. (решение пользователя 29.09.2026). Ставка дисконтирования = безрисковая + премия",
       "status": "expert_allowed",
       "legacy": [
         {
@@ -13063,12 +13127,74 @@
       "status": "verified"
     },
     {
+      "id": "F.KPI.RISK_FREE",
+      "module": "KPI",
+      "name": "Безрисковая ставка в точке срока проекта",
+      "unit": "%годовых",
+      "dims": [],
+      "expr": "t_last = последний месяц, в котором поток акционера F.CF.FCFE ≠ 0\nT      = (date[t_last] − GEN.VALUATION_DATE) / 365\nЕСЛИ VAL.ZCYC задана:\n  (T1, y1), (T2, y2) = соседние сроки кривой: T1 <= T <= T2\n  rf = y1 + (y2 − y1) × (T − T1) / (T2 − T1)\n  T меньше первого срока кривой → rf = доходность первого срока; больше последнего → доходность последнего\nИНАЧЕ:\n  rf = VAL.RISK_FREE\n",
+      "terms": {
+        "rf": "результат: безрисковая ставка, доля годовых",
+        "T": "срок проекта, лет",
+        "term": "срок кривой, лет",
+        "curve_date": "дата кривой (VAL.ZCYC_DATE)"
+      },
+      "plain": {
+        "title": "Безрисковая ставка, % годовых",
+        "how": "Доходность ОФЗ по кривой бескупонной доходности Мосбиржи на дату оценки, в точке, равной сроку проекта: от даты оценки до последнего потока акционера. Между сроками кривой ставка берётся по прямой."
+      },
+      "depends_on": [
+        "VAL.ZCYC",
+        "VAL.ZCYC_DATE",
+        "VAL.RISK_FREE",
+        "F.CF.FCFE",
+        "F.TIME.DATE",
+        "GEN.VALUATION_DATE"
+      ],
+      "rationale": "Безрисковая ставка — официальные данные, не экспертное значение: доходность ОФЗ того же срока, что и проект, на дату оценки (решение пользователя 29.09.2026). Срок — до последнего потока акционера, потому что NPV выбора варианта — NPV акционера. Кривая Мосбиржи публикуется по фиксированным срокам (0,25–30 лет), промежуточная точка — линейно",
+      "rejected": [
+        "Ставка дисконтирования 25 % одной цифрой (исходник CF1!D139) — без разбивки на безрисковую ставку и премию",
+        "Ключевая ставка ЦБ — ставка на один день, не соответствует сроку проекта",
+        "Срок до конца горизонта модели — горизонт включает запас после последнего события (TIME.HORIZON_TAIL_M)",
+        "Формула Нельсона — Сигеля — Свенссона по параметрам кривой — даёт те же доходности на опубликованных сроках, но требует констант метода в коде; разница между сроками кривой несущественна для выбора варианта"
+      ],
+      "source_ids": [
+        "S_MOEX_ZCYC",
+        "S_CBR_ZCYC"
+      ],
+      "legacy": {
+        "cells": "CF1!D139",
+        "verdict": "replace"
+      },
+      "status": "verified",
+      "example": {
+        "input": {
+          "curve": [
+            [
+              1,
+              0.1305
+            ],
+            [
+              5,
+              0.1549
+            ],
+            [
+              10,
+              0.1609
+            ]
+          ],
+          "term": 7
+        },
+        "output": 0.1573
+      }
+    },
+    {
       "id": "F.KPI.DISCOUNT_RATE",
       "module": "KPI",
       "name": "Ставка дисконтирования",
       "unit": "%годовых",
       "dims": [],
-      "expr": "r = VAL.RISK_FREE + VAL.EQUITY_PREMIUM",
+      "expr": "r = F.KPI.RISK_FREE + VAL.EQUITY_PREMIUM",
       "terms": {
         "r": "результат: ставка дисконтирования, % год."
       },
@@ -13077,7 +13203,7 @@
         "how": "Безрисковая ставка плюс премия за риск собственного капитала."
       },
       "depends_on": [
-        "VAL.RISK_FREE",
+        "F.KPI.RISK_FREE",
         "VAL.EQUITY_PREMIUM"
       ],
       "rationale": "Кумулятивный подход: доходность ОФЗ + премия за риск; каждая часть имеет свой источник",
@@ -13085,7 +13211,7 @@
         "Cost of equity 25% одной цифрой (исходник CF1!D139)"
       ],
       "source_ids": [
-        "S_CBR_ZCYC",
+        "S_MOEX_ZCYC",
         "S_EXPERT"
       ],
       "legacy": {
@@ -15054,6 +15180,543 @@
             "url": null
           },
           "note": "Нужно для NPV: ставка дисконтирования = безрисковая ставка + премия"
+        },
+        {
+          "param": "VAR.LOWER_LEVELS",
+          "group": "analysis",
+          "value": 2,
+          "status": "unverified",
+          "from": {
+            "text": "Задание, раздел 4.E: максимум этажности по регламенту и 1–2 уровня ниже",
+            "url": null
+          }
+        },
+        {
+          "param": "VAR.MAX_VARIANTS",
+          "group": "analysis",
+          "value": 6,
+          "status": "unverified",
+          "from": {
+            "text": "Задание, раздел 4.E: система строит 4–6 вариантов",
+            "url": null
+          }
+        },
+        {
+          "param": "TIME.PRE_RNS_M",
+          "group": "analysis",
+          "value": 0,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: покупка участка и РНС в 4 кв 2025 (C6, C7)",
+            "url": null
+          },
+          "note": "Для нового участка обычно нужен срок на ГПЗУ, проект и экспертизу — уточните"
+        },
+        {
+          "param": "TIME.CONSTRUCTION_M",
+          "group": "analysis",
+          "value": 45,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: РНС 31.12.2025 → ввод очереди 1 30.09.2029 (C7, C10) = 45 мес",
+            "url": null
+          },
+          "note": "Одинаков для всех очередей и этажности"
+        },
+        {
+          "param": "TIME.SALES_AFTER_RNS_M",
+          "group": "analysis",
+          "value": 3,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: РНС 4 кв 2025 → старт продаж 1 кв 2026 (C7, C8) = 3 мес",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.RES_GFA_SHARE",
+          "group": "areas",
+          "value": 0.9481,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: ГНС жилая 210 458 м² / ГНС наземная 221 967 м² (C20, C18)",
+            "url": null
+          },
+          "note": "Остальное — нежилая часть (ПСН). В исходнике жилая и нежилая вместе больше наземной на 7 500 м² — расхождение исходника"
+        },
+        {
+          "param": "TEP.APT_EFFICIENCY",
+          "group": "areas",
+          "value": 0.6821,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: площадь квартир 143 560 м² / ГНС жилая 210 458 м²",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.COMM_EFFICIENCY",
+          "group": "areas",
+          "value": 0.543,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: площадь ПСН 10 322 м² / ГНС нежилая 19 009 м²",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.APART_EFFICIENCY",
+          "group": "areas",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel апартаментов нет",
+            "url": null
+          },
+          "note": "Пока не задан, варианты с апартаментами не строятся"
+        },
+        {
+          "param": "TEP.APT_MIX",
+          "group": "areas",
+          "value": [
+            {
+              "type_name": "Тип 1",
+              "area_share": 0.235,
+              "avg_area": 35.108
+            },
+            {
+              "type_name": "Тип 2",
+              "area_share": 0.3036,
+              "avg_area": 60.53
+            },
+            {
+              "type_name": "Тип 3",
+              "area_share": 0.4614,
+              "avg_area": 92
+            }
+          ],
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: 961 × 35,108 м², 720 × 60,53 м², 720 × 92 м² — доли в площади квартир (D41:F43)",
+            "url": null
+          },
+          "note": "Квартирография проекта бизнес-класса; для других классов уточните"
+        },
+        {
+          "param": "TEP.STORAGE_PER_APT",
+          "group": "areas",
+          "value": 0,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы», строка 50: прочие помещения (кладовые) = 0",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.PARKING_AREA_PER_SPACE",
+          "group": "areas",
+          "value": 40.945,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: площадь паркинга на машино-место с проездами 40,945 м²",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.LANDSCAPE_SHARE",
+          "group": "areas",
+          "value": 0.3,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: благоустройство 30% площади участка",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.ROAD_SHARE",
+          "group": "areas",
+          "value": 0.1,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: проезды 10% благоустройства",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.GREEN_SHARE",
+          "group": "areas",
+          "value": 0.1,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: озеленение 10% благоустройства",
+            "url": null
+          }
+        },
+        {
+          "param": "SALES.PRICE_MARKET_GROWTH",
+          "group": "sales",
+          "value": {
+            "by_year": {
+              "2026": 0.056,
+              "2027": 0.04,
+              "2028": 0.04,
+              "2029": 0.04
+            },
+            "after_last": "last"
+          },
+          "status": "unverified",
+          "from": {
+            "text": "Прогноз инфляции Минэкономразвития (сценарные условия от 21.05.2026, базовый вариант): цены растут вместе с инфляцией, пока нет данных о росте цен в локации",
+            "url": "https://www.garant.ru/products/ipo/prime/doc/414115625/"
+          },
+          "note": "Для анализа нового участка (решение владельца продукта 29.09.2026); у проекта из Excel остаётся своё значение"
+        },
+        {
+          "param": "CAPEX.ESTIMATE_RATES",
+          "group": "budget",
+          "value": [
+            {
+              "item": "Предпроектные проработки (концепция)",
+              "housing_class": "все",
+              "per": "сумма на проект",
+              "rate": 2000000,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Проектирование, стадия П",
+              "housing_class": "все",
+              "per": "м² общей ГНС",
+              "rate": 2919.75,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Подготовка площадки (включая снос)",
+              "housing_class": "все",
+              "per": "м² участка",
+              "rate": 1465.79,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "СМР надземной части (в т.ч. стилобат)",
+              "housing_class": "бизнес",
+              "per": "м² наземной ГНС",
+              "rate": 237794.88,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "ТУ и плата за технологическое присоединение",
+              "housing_class": "все",
+              "per": "м² общей ГНС",
+              "rate": 4461.08,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Наружные сети и сооружения",
+              "housing_class": "все",
+              "per": "м² общей ГНС",
+              "rate": 4461.08,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Благоустройство",
+              "housing_class": "все",
+              "per": "м² благоустройства",
+              "rate": 46.8,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            }
+          ],
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: суммы статей Дербеневской, делённые на базу статьи (ГНС общая 257 261,59 м², наземная 221 967 м², участок 96 572 м², благоустройство 28 971,6 м²); цены на 31.12.2025 с НДС",
+            "url": null
+          },
+          "note": "СМР — только для бизнес-класса: для комфорта и премиума ставки нет. Подземная часть, соцобъекты, УДС и мониторинг в исходнике не посчитаны или привязаны к участку — в вариантах не учтены"
+        },
+        {
+          "param": "OPEX.MARKETING_RATE",
+          "group": "sales",
+          "value": 0.035,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: маркетинг 3,5% выручки",
+            "url": null
+          }
+        },
+        {
+          "param": "OPEX.BROKERAGE_RATE",
+          "group": "sales",
+          "value": 0.035,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: брокеридж 3,5% выручки",
+            "url": null
+          }
+        },
+        {
+          "param": "SALES.PAYMENT_MIX",
+          "group": "sales",
+          "value": [
+            {
+              "product": "квартиры",
+              "mortgage_share": 0.9,
+              "mortgage_down_payment": 0.2,
+              "full_payment_share": 0.1,
+              "installment_share": 0,
+              "installment_months": 18,
+              "installment_down_payment": 0
+            },
+            {
+              "product": "ПСН",
+              "mortgage_share": 0.9,
+              "mortgage_down_payment": 0.2,
+              "full_payment_share": 0.1,
+              "installment_share": 0,
+              "installment_months": 18,
+              "installment_down_payment": 0
+            },
+            {
+              "product": "машино-места",
+              "mortgage_share": 0.9,
+              "mortgage_down_payment": 0.2,
+              "full_payment_share": 0.1,
+              "installment_share": 0,
+              "installment_months": 18,
+              "installment_down_payment": 0
+            }
+          ],
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Эскроу»: ипотека 0,7 (кредит) и первоначальный взнос 0,2, оплата 100% — 0,1, рассрочки нет; одна структура для всех продуктов",
+            "url": null
+          },
+          "note": "Для апартаментов и кладовых стандарта нет: в исходном Excel их не было"
+        },
+        {
+          "param": "SALES.MORTGAGE_BANK_FEE_RATE",
+          "group": "sales",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel комиссии банку по ипотеке нет",
+            "url": null
+          },
+          "note": "Нужно значение из договора с банком-партнёром"
+        },
+        {
+          "param": "SALES.PRICE_STAGE_UPLIFT",
+          "group": "sales",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel цена растёт на 2% в квартал без деления на рост рынка и надбавки за готовность",
+            "url": null
+          },
+          "note": "Надбавки по стадиям готовности не заданы"
+        },
+        {
+          "param": "CAPEX.CONTINGENCY_RATE",
+          "group": "budget",
+          "value": 0.02,
+          "status": "unverified",
+          "from": {
+            "text": "Методика Минстроя 421/пр: 2% для объектов непроизводственного назначения",
+            "url": "https://www.consultant.ru/document/cons_doc_LAW_362957/"
+          },
+          "note": "Нижняя граница для оценки участка. В исходном Excel задумано 10% от расценок СМР (48 958 руб/м² × 153 882 м² = 7,53 млрд), но Бюджет!F42 складывает площадь со ставкой — 202 840 руб. Решение владельца продукта 27.09.2026: в расчёте сервиса 2%, на 10% не переходим"
+        },
+        {
+          "param": "OPEX.DEV_FEE_RATE",
+          "group": "budget",
+          "value": 0.02,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: вознаграждение за управление проектом 2% выручки",
+            "url": null
+          }
+        },
+        {
+          "param": "TIME.ESCROW_RELEASE_LAG_M",
+          "group": "escrow",
+          "value": 3,
+          "status": "approved",
+          "from": {
+            "text": "Решение владельца продукта 27.09.2026: 3 месяца после ввода в эксплуатацию; закон — не позднее 10 рабочих дней после представления разрешения (ч.6 ст.15.5 214-ФЗ)",
+            "url": "https://www.consultant.ru/document/cons_doc_LAW_51038/7e20edcc51ba599c70fb328204e3ac1226e7d912/"
+          }
+        },
+        {
+          "param": "FIN.EQUITY_SHARE",
+          "group": "fin",
+          "value": 0.1,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: собственные средства 10% бюджета",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.RATE_PREFERENTIAL",
+          "group": "fin",
+          "value": 0.05,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: льготная ставка 5% на часть долга, покрытую эскроу",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.RATE_BASE_SPREAD",
+          "group": "fin",
+          "value": 0.0575,
+          "status": "check",
+          "check": "условия банка",
+          "from": {
+            "text": "Расчёт из исходного Excel, лист «CF1»: базовая ставка 20% − ключевая 14,25% = 5,75 п.п.",
+            "url": null
+          },
+          "note": "В исходном Excel базовая ставка задана целиком, без привязки к ключевой"
+        },
+        {
+          "param": "FIN.RATE_DISCOUNT_COEF",
+          "group": "fin",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: скидка к ставке −2 п.п. при избыточном покрытии эскроу",
+            "url": null
+          },
+          "note": "Стандарта нет: скидка считается, только если она есть в договоре банка (решение владельца продукта 28.09.2026)"
+        },
+        {
+          "param": "FIN.RATE_MIN",
+          "group": "fin",
+          "value": 0.001,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: минимальная ставка 0,1%",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.ESCROW_RESERVE_RATE",
+          "group": "fin",
+          "value": 0,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: остатки эскроу для ставки не уменьшаются",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.FEE_ARRANGEMENT",
+          "group": "fin",
+          "value": 0.01,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: комиссия за выдачу 1% лимита",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.FEE_COMMITMENT",
+          "group": "fin",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel комиссии за неиспользованный лимит нет",
+            "url": null
+          },
+          "note": "Нужно значение из кредитного решения банка"
+        },
+        {
+          "param": "FIN.COLLATERAL_DISCOUNT",
+          "group": "fin",
+          "value": 0.15,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: дисконт залоговой стоимости 15%",
+            "url": null
+          }
+        }
+      ]
+    },
+    {
+      "version": 3,
+      "date": "2026-09-29",
+      "author": "Первичное наполнение",
+      "note": "Ставка дисконтирования для NPV: безрисковая ставка — по кривой бескупонной доходности ОФЗ Мосбиржи на дату оценки (сервис загружает её в проекте), премия за риск — 9 п.п., не подтверждено, утверждает руководитель (решение пользователя 29.09.2026).",
+      "items": [
+        {
+          "param": "VAL.SELECT_CRITERION",
+          "group": "analysis",
+          "value": "NPV",
+          "status": "unverified",
+          "from": {
+            "text": "Задание, раздел 4.G: максимальный NPV, пока руководитель не утвердил критерий; решение пользователя 29.09.2026 оставить NPV",
+            "url": null
+          }
+        },
+        {
+          "param": "VAL.HURDLE_IRR",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Инвестиционная политика компании — порог не утверждён",
+            "url": null
+          },
+          "note": "Пока не задан, условие «IRR не ниже порога» не проверяется"
+        },
+        {
+          "param": "VAL.MAX_PEAK_DEBT",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Лимит компании на долг проекта — не утверждён",
+            "url": null
+          },
+          "note": "Пока не задан, условие «пиковый долг не выше лимита» не проверяется"
+        },
+        {
+          "param": "VAL.MAX_SALES_M",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Предел срока продаж — не утверждён",
+            "url": null
+          },
+          "note": "Пока не задан, условие «срок продаж не больше предела» не проверяется"
+        },
+        {
+          "param": "VAL.RISK_FREE",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Кривая бескупонной доходности ОФЗ Мосбиржи на дату оценки в точке срока проекта — сервис загружает её в проекте сам",
+            "url": "https://www.moex.com/ru/marketdata/indices/state/g-curve/"
+          },
+          "note": "Вводится вручную, только если кривую не удалось загрузить: доходность и дата, на которую она взята"
+        },
+        {
+          "param": "VAL.EQUITY_PREMIUM",
+          "group": "analysis",
+          "value": 0.09,
+          "status": "unverified",
+          "from": {
+            "text": "Исходная финмодель Дербеневской: ставка дисконтирования 25 % (лист «CF1», D139) минус кривая бескупонной доходности ОФЗ на дату оценки (около 16 %) ≈ 9 п.п. Экспертное значение, утверждает руководитель (решение пользователя 29.09.2026)",
+            "url": null
+          },
+          "note": "Закона или методики, задающих премию, нет"
         },
         {
           "param": "VAR.LOWER_LEVELS",

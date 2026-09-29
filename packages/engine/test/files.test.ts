@@ -79,7 +79,7 @@ describe("новая версия справочника", () => {
   it("справочник браузера: сохранённые версии, а новые версии спецификации добавляются в конец", () => {
     expect(book.withSpecVersions(null)).toEqual(SPEC_ASSUMPTIONS);
     const mine = [V1, v2()];
-    expect(book.withSpecVersions(mine)).toEqual(mine);
+    expect(book.withSpecVersions(mine)).toEqual([...mine, ...SPEC_ASSUMPTIONS.filter((v) => v.version > 2)]);
   });
 });
 
