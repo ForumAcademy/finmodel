@@ -41,6 +41,8 @@ export { amount, compatDiff, exampleFocus, howExample, inputFields, shortSource,
 export { dataQuestions, LEGACY_QUESTION_MAX_NO, type DataQuestion, type Impact, type ImpactKind, type QuestionBlock } from "./legacy-questions";
 export * as plot from "./plot";
 export * as reference from "./reference";
+export * as book from "./book";
+export * as projectFile from "./projectfile";
 export type * from "./types";
 
 /** Модули ядра в порядке расчёта (docs/01_architecture.md). */

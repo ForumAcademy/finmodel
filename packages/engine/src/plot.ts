@@ -3,7 +3,7 @@
  * изменения «было → стало» и история. Экраны только показывают результат этих функций (CLAUDE.md, «Устройство»).
  */
 import Decimal from "decimal.js";
-import { getParameter, spec, type ParameterId, type RegionCode } from "@fm/spec";
+import { getParameter, spec, type ParameterId, type RegionCode, type SpecAssumptionVersion } from "@fm/spec";
 import { SPEC_ASSUMPTIONS } from "./project";
 import { date as fmtDate, num } from "./lib/text";
 
@@ -71,6 +71,8 @@ export const PLOT_FIELDS: readonly PlotField[] = [
 const fieldByKey = new Map(PLOT_FIELDS.map((f) => [f.key, f]));
 export const plotField = (key: PlotFieldKey): PlotField => fieldByKey.get(key) as PlotField;
 
+export const historyLabel = (field: HistoryField): string => (field === "assumptionsVersion" ? "Версия справочника" : plotField(field).label);
+
 export type Plot = Record<PlotFieldKey, PlotValue>;
 
 const EMPTY: PlotValue = { value: null, origin: null, basis: null };
@@ -112,10 +114,13 @@ export function documentTitle(kind: DocumentKind): string {
 
 // ---------- проект ----------
 
+/** Строка истории: поле участка или переход проекта на другую версию справочника. */
+export type HistoryField = PlotFieldKey | "assumptionsVersion";
+
 export interface HistoryEntry {
   /** Дата и время, ISO. */
   at: string;
-  field: PlotFieldKey;
+  field: HistoryField;
   from: string;
   to: string;
   basis: string;
@@ -132,8 +137,13 @@ export interface LandProject {
   createdAt: string;
   updatedAt: string;
   archived: boolean;
-  /** Версия справочника допущений компании, на которой создан проект. */
+  /** Версия справочника допущений компании, на которой посчитан проект. */
   assumptionsVersion: number;
+  /**
+   * Версия справочника, пришедшая с проектом из файла, если в этом браузере такой версии нет или она другая.
+   * Проект считается на ней, пока финансист не перейдёт на версию этого браузера кнопкой «Обновить».
+   */
+  assumptionsSnapshot?: SpecAssumptionVersion;
   plot: Plot;
   /** Точка на карте, если участок указан точкой. */
   point: GeoPoint | null;
@@ -487,7 +497,8 @@ export function suggestedRegion(form: Pick<NewProjectForm, "cadastralNumber" | "
 }
 
 /** Проверить форму «Новый проект» и создать проект. */
-export function createProject(form: NewProjectForm, id: string, at: string): NewProjectResult {
+/** assumptionsVersion — текущая версия справочника этого браузера (по умолчанию — последняя из спецификации). */
+export function createProject(form: NewProjectForm, id: string, at: string, assumptionsVersion = SPEC_ASSUMPTIONS.at(-1)?.version ?? 1): NewProjectResult {
   const errors: NewProjectResult["errors"] = [];
   const knText = form.cadastralNumber.trim();
   const kn = knText ? normalizeCadastralNumber(knText) : null;
@@ -538,7 +549,7 @@ export function createProject(form: NewProjectForm, id: string, at: string): New
     createdAt: at,
     updatedAt: at,
     archived: false,
-    assumptionsVersion: SPEC_ASSUMPTIONS.at(-1)?.version ?? 1,
+    assumptionsVersion,
     plot,
     point: form.point,
     documents,

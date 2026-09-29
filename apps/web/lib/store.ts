@@ -1,15 +1,19 @@
 /**
- * Хранилище проектов и документов. Сейчас — в браузере (IndexedDB): проекты видны только там, где созданы.
- * Общая база подключается заменой этого файла; экраны работают только через эти функции.
+ * Хранилище проектов, документов и справочника — в браузере (IndexedDB), решение пользователя 29.09.2026:
+ * отдельную базу не подключаем, проекты и справочник передаются коллегам файлами (lib/files.ts).
+ * Сервер, если понадобится, подключается заменой этого файла; экраны работают только через эти функции.
  */
-import type { plot } from "@fm/engine";
+import { book, type plot } from "@fm/engine";
 
 type LandProject = plot.LandProject;
 
 const DB = "finmodel";
-const VERSION = 1;
+const VERSION = 2;
 const PROJECTS = "projects";
 const FILES = "files";
+/** Справочник допущений компании: одна запись — все версии по порядку. */
+const REFERENCE = "reference";
+const REFERENCE_KEY = "versions";
 
 export interface StoredFile {
   id: string;
@@ -27,6 +31,7 @@ function db(): Promise<IDBDatabase> {
       const d = req.result;
       if (!d.objectStoreNames.contains(PROJECTS)) d.createObjectStore(PROJECTS, { keyPath: "id" });
       if (!d.objectStoreNames.contains(FILES)) d.createObjectStore(FILES, { keyPath: "id" });
+      if (!d.objectStoreNames.contains(REFERENCE)) d.createObjectStore(REFERENCE);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error("Хранилище браузера недоступно"));
@@ -62,9 +67,27 @@ export async function saveFile(id: string, file: File): Promise<void> {
   await run(FILES, "readwrite", (s) => s.put(f));
 }
 
+export async function saveStoredFile(f: StoredFile): Promise<void> {
+  await run(FILES, "readwrite", (s) => s.put(f));
+}
+
+export async function deleteFile(id: string): Promise<void> {
+  await run(FILES, "readwrite", (s) => s.delete(id));
+}
+
 export async function getFile(id: string): Promise<StoredFile | null> {
   return (await run<StoredFile | undefined>(FILES, "readonly", (s) => s.get(id))) ?? null;
 }
 
 export const newId = () => crypto.randomUUID();
 export const nowIso = () => new Date().toISOString();
+
+/** Справочник этого браузера: сохранённые версии и новые версии, пришедшие с обновлением сервиса. */
+export async function getReference(): Promise<book.AssumptionVersion[]> {
+  const stored = await run<book.AssumptionVersion[] | undefined>(REFERENCE, "readonly", (s) => s.get(REFERENCE_KEY));
+  return book.withSpecVersions(stored ?? null);
+}
+
+export async function saveReference(versions: book.AssumptionVersion[]): Promise<void> {
+  await run(REFERENCE, "readwrite", (s) => s.put(versions, REFERENCE_KEY));
+}
