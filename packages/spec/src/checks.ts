@@ -162,6 +162,12 @@ export function assumptionValueProblem(p: SpecData["parameters"][number], value:
     }
     return null;
   }
+  if (p.kind === "enum") return p.options?.includes(String(value)) ? null : `${String(value)} нет среди вариантов`;
+  if (p.kind === "series") {
+    const by = value && typeof value === "object" && !Array.isArray(value) ? (value as { by_year?: unknown }).by_year : undefined;
+    const ok = !!by && typeof by === "object" && Object.keys(by).length > 0 && Object.values(by).every((x) => typeof x === "number" && Number.isFinite(x));
+    return ok ? null : "нужен ряд по годам";
+  }
   return `вид параметра ${p.kind} в справочнике допущений не поддерживается`;
 }
 

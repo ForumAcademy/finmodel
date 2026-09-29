@@ -111,6 +111,7 @@ function cellText(unit: string, v: unknown): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return unit === "bool" ? (v ? "облагается" : "не облагается") : v ? "да" : "нет";
   if (typeof v === "number" && unit.startsWith("доля")) return pct(v);
+  if (unit === "дата" && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return date(v);
   return scalarText(unit, v);
 }
 
@@ -150,7 +151,14 @@ const link = (id: SourceId): RefLink => {
 
 // ---------- стандартные значения ----------
 
-const GROUP_TITLE: Record<(typeof ASSUMPTION_GROUPS)[number], string> = { sales: "Продажи", budget: "Бюджет", escrow: "Эскроу", fin: "Финансирование" };
+const GROUP_TITLE: Record<(typeof ASSUMPTION_GROUPS)[number], string> = {
+  analysis: "Оценка участка",
+  areas: "Коэффициенты выхода площадей",
+  sales: "Продажи",
+  budget: "Бюджет",
+  escrow: "Эскроу",
+  fin: "Финансирование",
+};
 
 /** Значения по закону и официальным прогнозам, одинаковые для всех проектов. */
 const LAW_PARAMS: readonly ParameterId[] = [
@@ -302,6 +310,9 @@ export const MODULE_TITLE: Record<SpecFormula["module"], string> = {
   KPI: "Показатели",
   CHECK: "Проверки",
   BENCH: "Аналоги",
+  SITE: "Участок и ограничения",
+  MARKET: "Рынок",
+  VAR: "Варианты освоения",
 };
 
 export interface FormulaRow {

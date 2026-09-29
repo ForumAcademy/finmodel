@@ -430,7 +430,7 @@ parameters:
     legacy: [{cell: "ТЭПы!C19", value: 221967, verdict: keep, note: "подпись «СПП (ГНС)» смешивала понятия; уточнено как наземная ГНС (вопрос автора ТЭПы!E19)"}]
 
   - id: GPZU.MAX_GFA_ABOVE
-    name: "ГПЗУ: максимальная суммарная поэтажная площадь наземной части"
+    name: "Максимальная наземная ГНС по ГПЗУ или ПЗЗ"
     unit: м2
     kind: scalar
     scope: project
@@ -442,7 +442,7 @@ parameters:
     legacy: [{cell: null, verdict: new}]
 
   - id: GPZU.MAX_BUILT_SHARE
-    name: "ГПЗУ: максимальный процент застройки участка"
+    name: "Максимальный процент застройки участка (ГПЗУ или ПЗЗ)"
     unit: доля
     kind: scalar
     scope: project
@@ -455,31 +455,31 @@ parameters:
     legacy: [{cell: null, verdict: new}]
 
   - id: GPZU.MAX_FLOORS
-    name: "ГПЗУ: предельное количество этажей"
+    name: "Предельное количество этажей (ГПЗУ или ПЗЗ)"
     unit: шт
     kind: scalar
     scope: project
     default: null
     source_ids: [S_GRK_38, S_PROJECT_DOCS]
     basis: "Предельный параметр (ч.1 ст.38 ГрК РФ). Проверка F.CHECK.GPZU_LIMITS: TEP.MAX_FLOORS ≤ это значение"
-    how_to_fill: "ГПЗУ участка; уровень 4, вложение обязательно"
+    how_to_fill: "ГПЗУ участка или регламент территориальной зоны ПЗЗ; уровень 4, вложение обязательно"
     status: project_input
     legacy: [{cell: null, verdict: new}]
 
   - id: GPZU.MAX_HEIGHT_M
-    name: "ГПЗУ: предельная высота зданий, м"
+    name: "Предельная высота зданий (ГПЗУ или ПЗЗ), м"
     unit: м
     kind: scalar
     scope: project
     default: null
     source_ids: [S_GRK_38, S_PROJECT_DOCS]
     basis: "Предельный параметр (ч.1 ст.38 ГрК РФ). Проверка F.CHECK.GPZU_LIMITS: TEP.BUILDING_HEIGHT_M ≤ это значение"
-    how_to_fill: "ГПЗУ участка; уровень 4, вложение обязательно"
+    how_to_fill: "ГПЗУ участка или регламент территориальной зоны ПЗЗ; уровень 4, вложение обязательно"
     status: project_input
     legacy: [{cell: null, verdict: new}]
 
   - id: GPZU.APART_ALLOWED
-    name: "ГПЗУ допускает объекты гостиничного назначения / апартаменты"
+    name: "Допускаются апартаменты (объекты гостиничного назначения)"
     unit: bool
     kind: bool
     scope: project
@@ -506,6 +506,203 @@ parameters:
     how_to_fill: "Приложить решение о разрешении на отклонение (обязательно)"
     status: project_input
     legacy: [{cell: null, verdict: new}]
+
+  - id: SITE.ZONE
+    name: "Территориальная зона ПЗЗ"
+    unit: текст
+    kind: text
+    scope: project
+    default: null
+    source_ids: [S_MSK_PZZ_120PP, S_MO_RGIS, S_PROJECT_DOCS]
+    basis: "Зона по правилам землепользования и застройки: Москва — ПП Москвы № 120-ПП, Московская область — ПЗЗ муниципального образования на Геопортале Подмосковья. Определяет предельные параметры, если ГПЗУ ещё нет"
+    how_to_fill: "Название и индекс зоны из ПЗЗ или ГПЗУ со ссылкой на документ"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
+  - id: SITE.MAX_DENSITY
+    name: "Предельная плотность застройки"
+    unit: м2/м2
+    kind: scalar
+    scope: project
+    default: null
+    range: [0, 100]
+    source_ids: [S_MSK_PZZ_120PP, S_MO_RGIS, S_GRK_38, S_PROJECT_DOCS]
+    basis: "Предельная плотность застройки (коэффициент использования территории): метров наземной ГНС на 1 м² участка. В ПЗЗ Москвы задаётся в тыс. м²/га: 25 тыс. м²/га = 2,5 м²/м². Предел наземной ГНС = площадь участка × плотность (F.SITE.MAX_GFA)"
+    how_to_fill: "ПЗЗ (регламент зоны) или ГПЗУ; вводится в тыс. м²/га, хранится в м²/м²"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
+  - id: SITE.ZOUIT
+    name: "Зоны с особыми условиями использования на участке"
+    unit: table
+    kind: table
+    columns:
+      - {key: name, title: "Зона", unit: текст}
+      - {key: area_m2, title: "Площадь на участке", unit: м2, note: "0 — зоны на участке нет"}
+      - {key: no_build, title: "Строить нельзя", unit: bool}
+      - {key: restriction, title: "Ограничение", unit: текст}
+    scope: project
+    default: null
+    source_ids: [S_ZK_105, S_NSPD, S_PROJECT_DOCS]
+    basis: "Охранные и санитарно-защитные зоны, приаэродромные территории, зоны объектов культурного наследия (ст.105 ЗК РФ). Площадь зон, где строить нельзя, вычитается из площади под застройку (F.SITE.BUILDABLE_AREA)"
+    how_to_fill: "По ГПЗУ (раздел об ограничениях) или слою ЗОУИТ НСПД; у каждой строки — документ"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
+  - id: MARKET.ANALOGS
+    name: "Аналоги рынка (ручная таблица)"
+    unit: table
+    kind: table
+    columns:
+      - {key: name, title: "Аналог", unit: текст}
+      - {key: product, title: "Продукт", unit: enum, options: [квартиры, апартаменты, ПСН, машино-места]}
+      - {key: housing_class, title: "Класс", unit: enum, options: [эконом, комфорт, бизнес, премиум]}
+      - {key: distance_km, title: "Расстояние", unit: км}
+      - {key: stage, title: "Стадия", unit: текст}
+      - {key: price, title: "Цена", unit: "руб/м2 (руб/шт для машино-мест)", note: "с НДС, как платит покупатель"}
+      - {key: pace, title: "Темп продаж", unit: "м2/мес (шт/мес для машино-мест)"}
+      - {key: sold_share, title: "Продано", unit: доля}
+      - {key: url, title: "Ссылка", unit: текст}
+      - {key: date, title: "Дата данных", unit: дата}
+    scope: project
+    default: null
+    source_ids: [S_MARKET_ANALOGS, S_EISZHS_SALES]
+    basis: "До подключения ЕИСЖС и платного источника (задание, раздел 4.C) финансист вносит аналоги в радиусе 1–3 км вручную, у каждого — ссылка. Из таблицы считаются цена по продуктам и классам (F.MARKET.PRICE), темп проекта (F.MARKET.PACE) и ёмкость локации (F.MARKET.CAPACITY). С подключением ЕИСЖС таблицу заменит выборка сделок BENCH.MARKET_SAMPLE"
+    how_to_fill: "Экран «Рынок»: строка на аналог и продукт, ссылка на карточку ЖК обязательна"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAR.LOWER_LEVELS
+    name: "Сколько уровней этажности ниже предельного рассматривать"
+    unit: шт
+    kind: scalar
+    scope: template
+    default: 2
+    range: [0, 4]
+    source_ids: [S_EXPERT]
+    basis: "Задание, раздел 4.E: этажность — максимум по регламенту и 1–2 уровня ниже, чтобы было видно, что максимум не всегда лучший. Уровни — верхние границы групп высотности BENCH.HEIGHT_BAND ниже группы предельной этажности (F.VAR.FLOORS)"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAR.MAX_VARIANTS
+    name: "Наибольшее число вариантов освоения"
+    unit: шт
+    kind: scalar
+    scope: template
+    default: 6
+    range: [1, 12]
+    source_ids: [S_EXPERT]
+    basis: "Задание, раздел 4.E: система строит 4–6 вариантов в пределах ограничений. Свои варианты пользователя в это число не входят"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAR.RESULTS
+    name: "Итоги расчёта вариантов для выбора лучшего"
+    unit: table
+    kind: table
+    columns:
+      - {key: variant, unit: текст}
+      - {key: computed, unit: bool, note: "вариант посчитан по полной цепочке"}
+      - {key: npv, unit: руб, note: "NPV акционера (F.KPI.NPV → npv_equity)"}
+      - {key: net_profit, unit: руб, note: "F.KPI.MARGIN → net_profit"}
+      - {key: irr, unit: "%годовых", note: "IRR акционера (F.KPI.IRR → irr_equity)"}
+      - {key: peak_debt, unit: руб, note: "максимум остатка долга F.FIN.DEBT"}
+      - {key: sales_months, unit: мес, note: "месяцев с первой до последней продажи (F.SALES.SOLD_AREA)"}
+      - {key: not_counted, unit: список, note: "статьи бюджета и продукты, не учтённые в расчёте варианта (нет ставки, цены или темпа)"}
+    scope: project
+    default: null
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Промежуточные итоги: каждый вариант считается полной цепочкой расчёта, итоги передаются в выбор лучшего (F.VAR.BEST). Не вводится вручную"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.SELECT_CRITERION
+    name: "Критерий выбора лучшего варианта"
+    unit: enum
+    kind: enum
+    options: [NPV, прибыль]
+    scope: template
+    default: NPV
+    source_ids: [S_EXPERT]
+    basis: "Задание, раздел 4.G: пока руководитель не утвердил критерий — максимальный NPV при ограничениях по IRR, пиковому долгу и сроку продаж; прибыль показывается рядом. Решение пользователя 29.09.2026: оставить NPV, ставки дисконтирования ввести в справочнике"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.MAX_PEAK_DEBT
+    name: "Предельный пиковый долг проекта"
+    unit: руб
+    kind: scalar
+    scope: template
+    default: null
+    source_ids: [S_EXPERT]
+    basis: "Ограничение выбора лучшего варианта (задание, раздел 4.G). Экспертное значение: пока не задано, условие не проверяется"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.MAX_SALES_M
+    name: "Предельный срок продаж"
+    unit: мес
+    kind: scalar
+    scope: template
+    default: null
+    source_ids: [S_EXPERT]
+    basis: "Ограничение выбора лучшего варианта (задание, раздел 4.G). Экспертное значение: пока не задано, условие не проверяется"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: TIME.PRE_RNS_M
+    name: "Срок от сделки по участку до разрешения на строительство"
+    unit: мес
+    kind: scalar
+    scope: template
+    default: null
+    range: [0, 60]
+    source_ids: [S_COMPANY_ACTUALS, S_EXPERT]
+    basis: "ГПЗУ, проектирование и экспертиза до РНС первой очереди (ст.51 ГрК РФ). Вехи вариантов освоения строятся от даты начала модели"
+    status: expert_allowed
+    legacy: [{cell: "ТЭПы!C6:C7", verdict: new, note: "в исходнике РНС в квартале покупки участка"}]
+
+  - id: TIME.CONSTRUCTION_M
+    name: "Срок строительства очереди (от РНС до РНВ)"
+    unit: мес
+    kind: scalar
+    scope: template
+    default: null
+    range: [1, 120]
+    source_ids: [S_COMPANY_ACTUALS, S_EXPERT]
+    basis: "От разрешения на строительство до ввода в эксплуатацию (ст.51, 55 ГрК РФ). В вариантах освоения одинаков для всех очередей и этажности — упрощение до нормы продолжительности строительства"
+    status: expert_allowed
+    legacy: [{cell: "ТЭПы!C7, C10", verdict: new, note: "РНС 4 кв 2025 → РНВ очереди 1 30.09.2029"}]
+
+  - id: TIME.SALES_AFTER_RNS_M
+    name: "Старт продаж после разрешения на строительство"
+    unit: мес
+    kind: scalar
+    scope: template
+    default: null
+    range: [0, 24]
+    source_ids: [S_COMPANY_ACTUALS, S_214_ART3]
+    basis: "Продажи по ДДУ с эскроу — не раньше РНС (214-ФЗ, ст.3). Сколько месяцев после РНС до первой продажи"
+    status: expert_allowed
+    legacy: [{cell: "ТЭПы!C7:C8", verdict: new, note: "РНС 4 кв 2025 → старт продаж 1 кв 2026"}]
+
+  - id: CAPEX.ESTIMATE_RATES
+    name: "Ставки статей бюджета для оценки участка"
+    unit: table
+    kind: table
+    columns:
+      - {key: item, title: "Статья", unit: enum, options: ["Покупка участка / прав", "Юридические расходы, due diligence", "Агентское вознаграждение за участок", "Земельный налог или арендная плата", "Плата за изменение ВРИ", "Обязательства перед городом: денежная компенсация", "Обязательства перед городом: строительство и передача объектов", "Получение ИРД (ППТ, ГПЗУ, ТУ)", "Предпроектные проработки (концепция)", "Инженерные изыскания", "Проектирование, стадия П", "Проектирование, стадия РД", "Экспертиза проектной документации", "Подготовка площадки (включая снос)", "СМР надземной части (в т.ч. стилобат)", "СМР подземной части (паркинг)", "Отделка МОП", "Прочие СМР", "Расходы по вводу в эксплуатацию", "ТУ и плата за технологическое присоединение", "Наружные сети и сооружения", "Благоустройство", "Улично-дорожная сеть", "Социальные объекты (отдельно стоящие)", "Непредвиденные расходы", "Услуги технического заказчика", "Авторский надзор", "Строительный контроль (технадзор)", "Мониторинг окружающей застройки", "Охрана и содержание площадки", "Вознаграждение за управление проектом", "Содержание застройщика (СЗ)", "Маркетинг", "Брокеридж"]}
+      - {key: housing_class, title: "Класс", unit: enum, options: [все, эконом, комфорт, бизнес, премиум]}
+      - {key: per, title: "Ставка за", unit: enum, options: ["сумма на проект", "м² участка", "м² наземной ГНС", "м² общей ГНС", "м² продаваемой площади", "м² благоустройства"]}
+      - {key: rate, title: "Ставка", unit: руб}
+      - {key: price_date, title: "Цены на дату", unit: дата}
+      - {key: vat, title: "НДС", unit: enum, options: ["с НДС", "без НДС"]}
+    scope: template
+    default: null
+    source_ids: [S_COMPANY_ACTUALS, S_EXPERT]
+    basis: "Пока по участку нет сметы и расчёта по НЦС, статьи бюджета вариантов считаются по ставкам компании: ставка × база статьи. Строка с классом действует только для этого класса и главнее строки «все». Статьи без ставки в расчёт вариантов не входят и показываются как «не учтено»"
+    status: expert_allowed
+    legacy: [{cell: "Бюджет!D17:D52", verdict: new, note: "первичные ставки — из сумм исходного Excel, пересчитанных на базу статьи"}]
 
   - id: TEP.FOOTPRINT_AREA
     name: "Площадь пятна застройки"

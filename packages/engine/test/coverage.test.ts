@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FORMULA_IDS, formulaFnName, getFormula, type FormulaId } from "@fm/spec";
-import { FORMULAS, IMPLEMENTED_MODULES } from "../src";
+import { ANALYSIS_FORMULAS as FORMULAS, IMPLEMENTED_MODULES } from "../src";
 
 describe("одна формула = одна функция (CLAUDE.md, правило 2)", () => {
   const implemented = new Set<string>(IMPLEMENTED_MODULES);

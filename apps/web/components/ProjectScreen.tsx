@@ -2,22 +2,31 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { book, plot, projectFile, text } from "@fm/engine";
+import { book, plot, projectFile, site, text } from "@fm/engine";
 import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
 import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
 import { Chip, Modal, OriginTag, Toast } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
+import { AnalysisArea, type AnalysisSec } from "./AnalysisScreens";
 
 type LandProject = plot.LandProject;
 type PlotFieldKey = plot.PlotFieldKey;
 
-export type ProjectSection = "plot" | "docs";
+export type ProjectSection = "plot" | "docs" | AnalysisSec;
 const PLOT_TABS = ["Участок", "Проект", "История"] as const;
 type PlotTab = (typeof PLOT_TABS)[number];
 
-const href = (id: string, sec: ProjectSection, tab?: PlotTab) => `/projects/${id}?sec=${sec}${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`;
+const href = (id: string, sec: ProjectSection, tab?: string) => `/projects/${id}?sec=${sec}${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`;
+
+/** Пункты меню «Анализ участка». */
+const ANALYSIS_MENU: readonly { sec: AnalysisSec; title: string; short: string }[] = [
+  { sec: "site", title: "Участок и ограничения", short: "Ограничения" },
+  { sec: "market", title: "Рынок", short: "Рынок" },
+  { sec: "variants", title: "Варианты", short: "Варианты" },
+  { sec: "compare", title: "Сравнение", short: "Сравнение" },
+];
 const today = () => nowIso().slice(0, 10);
 
 // ---------- поле участка ----------
@@ -173,7 +182,8 @@ function EditField({ p, field, onApply, onClose }: { p: LandProject; field: plot
 
 // ---------- экран проекта ----------
 
-export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSection; tab: PlotTab }) {
+export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: ProjectSection; tab: string | undefined }) {
+  const tab: PlotTab = PLOT_TABS.find((t) => t === rawTab) ?? "Участок";
   const [project, setProject] = useState<LandProject | null | undefined>(undefined);
   const [pending, setPending] = useState<plot.PlotChange[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
@@ -337,6 +347,19 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
             </Link>
           </div>
           <div className="grp">
+            {!collapsed && (
+              <div className="gh open">
+                <span>Анализ участка</span>
+              </div>
+            )}
+            {ANALYSIS_MENU.map((m) => (
+              <Link key={m.sec} className={`it ${collapsed ? "top1" : ""} ${sec === m.sec ? "on" : ""}`} href={href(p.id, m.sec)}>
+                <span>{collapsed ? m.short : m.title}</span>
+                {!collapsed && m.sec === "market" && <span className="chip gry st">{site.siteOf(p).analogs.length}</span>}
+              </Link>
+            ))}
+          </div>
+          <div className="grp">
             <Link className={`it top1 ${sec === "docs" ? "on" : ""}`} href={href(p.id, "docs")}>
               <span>{collapsed ? "Документы" : "Документы проекта"}</span>
               {!collapsed && (
@@ -348,7 +371,19 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
           </div>
         </aside>
         <main className="main">
-          {sec === "plot" ? (
+          {sec === "site" || sec === "market" || sec === "variants" || sec === "compare" ? (
+            <AnalysisArea
+              p={p}
+              sec={sec}
+              tab={rawTab}
+              versions={versions}
+              href={(s, t) => href(p.id, s, t)}
+              onSave={async (next, msg) => {
+                await persist(next);
+                if (msg) flash(msg);
+              }}
+            />
+          ) : sec === "plot" ? (
             <>
               <div className="mhead">
                 <h2>Проект и участок</h2>

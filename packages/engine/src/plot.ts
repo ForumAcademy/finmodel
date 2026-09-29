@@ -6,6 +6,7 @@ import Decimal from "decimal.js";
 import { getParameter, spec, type ParameterId, type RegionCode, type SpecAssumptionVersion } from "@fm/spec";
 import { SPEC_ASSUMPTIONS } from "./project";
 import { date as fmtDate, num } from "./lib/text";
+import { siteField, type SiteData, type SiteFieldKey } from "./site";
 
 // ---------- происхождение значения (задание, раздел 5) ----------
 
@@ -71,7 +72,8 @@ export const PLOT_FIELDS: readonly PlotField[] = [
 const fieldByKey = new Map(PLOT_FIELDS.map((f) => [f.key, f]));
 export const plotField = (key: PlotFieldKey): PlotField => fieldByKey.get(key) as PlotField;
 
-export const historyLabel = (field: HistoryField): string => (field === "assumptionsVersion" ? "Версия справочника" : plotField(field).label);
+export const historyLabel = (field: HistoryField): string =>
+  field === "assumptionsVersion" ? "Версия справочника" : fieldByKey.has(field as PlotFieldKey) ? plotField(field as PlotFieldKey).label : siteField(field as SiteFieldKey).label;
 
 export type Plot = Record<PlotFieldKey, PlotValue>;
 
@@ -114,8 +116,8 @@ export function documentTitle(kind: DocumentKind): string {
 
 // ---------- проект ----------
 
-/** Строка истории: поле участка или переход проекта на другую версию справочника. */
-export type HistoryField = PlotFieldKey | "assumptionsVersion";
+/** Строка истории: поле участка, ограничение участка или переход проекта на другую версию справочника. */
+export type HistoryField = PlotFieldKey | SiteFieldKey | "assumptionsVersion";
 
 export interface HistoryEntry {
   /** Дата и время, ISO. */
@@ -149,6 +151,8 @@ export interface LandProject {
   point: GeoPoint | null;
   documents: ProjectDocument[];
   history: HistoryEntry[];
+  /** Анализ участка: ограничения, аналоги, свои варианты; нет — ещё не заполнялся. */
+  site?: SiteData;
 }
 
 // ---------- кадастровый номер и регион ----------

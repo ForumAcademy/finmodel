@@ -128,8 +128,10 @@ function EditItem({ item, onApply, onClose }: { item: Item; onApply: (next: Item
   const p = getParameter(item.param);
   const cols = book.tableColumns(p);
   const isTable = p.kind === "table";
+  const isSeries = p.kind === "series";
   const [scalar, setScalar] = useState(book.toInput(p.unit, item.value));
-  const [cells, setCells] = useState<Cells>(() => (Array.isArray(item.value) ? (item.value as Record<string, unknown>[]).map((r) => Object.fromEntries(cols.map((c) => [c.key, book.cellInput(c.unit, r[c.key])]))) : []));
+  const [cells, setCells] = useState<Cells>(() => (Array.isArray(item.value) ? (item.value as Record<string, unknown>[]).map((r) => Object.fromEntries(cols.map((c) => [c.key, book.cellText(c.unit, r[c.key])]))) : []));
+  const [years, setYears] = useState<book.SeriesRow[]>(() => (isSeries ? book.seriesRows(p.unit, item.value) : []));
   const [status, setStatus] = useState(item.status);
   const [check, setCheck] = useState(item.check ?? "");
   const [from, setFrom] = useState(item.from.text);
@@ -149,13 +151,19 @@ function EditItem({ item, onApply, onClose }: { item: Item; onApply: (next: Item
             row[c.key] = r[c.key] ?? "";
             continue;
           }
-          const v = book.fromInput(c.unit, r[c.key] ?? "");
+          const v = book.cellFromInput(c.unit, r[c.key] ?? "");
           if (v.error !== undefined) return setError(`Строка ${i + 1}, «${c.title}»: ${v.error}`);
           row[c.key] = v.value;
         }
         rows.push(row);
       }
       value = rows.length ? rows : null;
+    } else if (isSeries) {
+      const v = book.seriesFromRows(p.unit, years, item.value);
+      if (v.error !== undefined) return setError(v.error);
+      value = v.value as Item["value"];
+    } else if (p.options) {
+      value = scalar || null;
     } else {
       const v = book.fromInput(p.unit, scalar, p.range ?? null);
       if (v.error !== undefined) return setError(v.error);
@@ -218,7 +226,12 @@ function EditItem({ item, onApply, onClose }: { item: Item; onApply: (next: Item
                                 ))}
                               </select>
                             ) : (
-                              <input value={r[c.key] ?? ""} inputMode="decimal" onChange={(e) => setCell(i, c.key, e.target.value)} />
+                              <input
+                                value={r[c.key] ?? ""}
+                                inputMode={c.unit === "текст" ? "text" : "decimal"}
+                                placeholder={c.unit === "дата" ? "ДД.ММ.ГГГГ" : undefined}
+                                onChange={(e) => setCell(i, c.key, e.target.value)}
+                              />
                             )}
                           </td>
                         ))}
@@ -239,6 +252,56 @@ function EditItem({ item, onApply, onClose }: { item: Item; onApply: (next: Item
               + Строка
             </button>
           </div>
+        ) : isSeries ? (
+          <div>
+            <div className="lbl">Значение по годам{unit ? `, ${unit}` : ""}</div>
+            {years.length ? (
+              <div className="innerwrap">
+                <table className="inner edit">
+                  <thead>
+                    <tr>
+                      <th>Год</th>
+                      <th>Значение</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {years.map((r, i) => (
+                      <tr key={i}>
+                        <td>
+                          <input value={r.year} inputMode="numeric" onChange={(e) => setYears((prev) => prev.map((x, j) => (j === i ? { ...x, year: e.target.value } : x)))} />
+                        </td>
+                        <td>
+                          <input value={r.value} inputMode="decimal" onChange={(e) => setYears((prev) => prev.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} />
+                        </td>
+                        <td>
+                          <button className="x" title="Удалить год" onClick={() => setYears((prev) => prev.filter((_, j) => j !== i))}>
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="small muted">Стандарта нет: значение вводится в проекте.</div>
+            )}
+            <button className="btn sm" style={{ marginTop: 6 }} onClick={() => setYears((prev) => [...prev, { year: String(Number(prev.at(-1)?.year ?? new Date().getFullYear() - 1) + 1), value: "" }])}>
+              + Год
+            </button>
+            <div className="hint">После последнего года до конца проекта действует значение последнего года.</div>
+          </div>
+        ) : p.options ? (
+          <label>
+            Значение
+            <select value={scalar} onChange={(e) => setScalar(e.target.value)}>
+              <option value="">— стандарта нет</option>
+              {p.options.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </select>
+          </label>
         ) : (
           <label>
             Значение{unit ? `, ${unit}` : ""}
