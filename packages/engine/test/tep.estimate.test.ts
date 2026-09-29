@@ -102,7 +102,7 @@ describe("ТЭП: ошибки и ограничения", () => {
 
   it("апартаменты есть, а норматив машино-мест для них в спецификации не задан — ошибка, а не выдуманный расчёт", () => {
     const r = calc({ "TEP.PARKING_NORM_APART": { rule: "per_m2", values: [] } }, ["F.TEP.PARKING_REQUIRED"]);
-    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "error", parameterId: "TEP.PARKING_NORM_APART", text: expect.stringContaining("вопрос владельцу продукта") }));
+    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "error", parameterId: "TEP.PARKING_NORM_APART", text: expect.stringContaining("ещё не внесён в справочник") }));
   });
 
   it("площадь на машино-место меньше 5,3 × 2,5 = 13,25 м² — ошибка", () => {

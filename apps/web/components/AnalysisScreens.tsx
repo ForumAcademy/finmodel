@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { analysis, book, plot, site, siteView, text, zcyc } from "@fm/engine";
 import { newId, nowIso } from "@/lib/store";
 import { loadZcyc } from "@/lib/zcyc";
-import { Chip, Modal, OriginTag } from "./ui";
+import { Chip, ExpertFields, Modal, OriginTag } from "./ui";
 
 type LandProject = plot.LandProject;
 type SiteFieldKey = site.SiteFieldKey;
@@ -84,7 +84,7 @@ function uniqueTexts(messages: readonly { text: string; severity: string }[], se
 
 function BasisText({ basis }: { basis: plot.ValueBasis | { title: string; url: string | null } | null }) {
   if (!basis) return null;
-  const label = "documentId" in basis ? plot.basisText(basis as plot.ValueBasis) : basis.title;
+  const label = plot.basisText(basis);
   if (basis.url) {
     return (
       <a className="org basis" href={basis.url} target="_blank" rel="noopener">
@@ -114,7 +114,7 @@ function SiteFieldRow({ p, fieldKey, onEdit, required }: { p: LandProject; field
         </button>
         {f.unit && <span className="u">{f.unit}</span>}
       </div>
-      {v.basis?.note ? <div className="note">{v.basis.note}</div> : v.value === null && <div className="note">{f.hint}</div>}
+      {plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x)) ? <div className="note">{plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x))}</div> : v.value === null && <div className="note">{f.hint}</div>}
     </div>
   );
 }
@@ -124,18 +124,19 @@ function EditSiteField({ p, fieldKey, onApply, onClose }: { p: LandProject; fiel
   const cur = site.siteValue(p, fieldKey);
   const [value, setValue] = useState(site.siteText(fieldKey, cur.value));
   const [docId, setDocId] = useState(cur.basis?.documentId ?? "");
-  const [basis, setBasis] = useState(cur.basis?.documentId ? "" : (cur.basis?.title ?? ""));
-  const [url, setUrl] = useState(cur.basis?.url ?? "");
+  const [form, setForm] = useState(plot.expertForm(cur.basis, (x) => site.siteText(fieldKey, x)));
   const [error, setError] = useState<string | null>(null);
 
   function apply(clear = false) {
     const doc = p.documents.find((d) => d.id === docId);
-    const b: plot.ValueBasis = doc ? { title: plot.documentTitle(doc.kind), documentId: doc.id, date: today() } : { title: basis.trim(), url: url.trim() || null, date: today() };
-    if (clear) return onApply(site.siteChange(p, fieldKey, null, b));
-    if (!doc && !basis.trim()) return setError("Укажите основание: документ проекта или на чём основано значение.");
+    const docBasis: plot.ValueBasis | null = doc ? { title: plot.documentTitle(doc.kind), documentId: doc.id, date: today() } : null;
+    if (clear) return onApply(site.siteChange(p, fieldKey, null, docBasis ?? { title: form.title.trim(), date: today() }));
     const parsed = site.parseSite(fieldKey, value);
     if (parsed.error !== undefined) return setError(parsed.error);
-    onApply(site.siteChange(p, fieldKey, parsed.value, b));
+    if (docBasis) return onApply(site.siteChange(p, fieldKey, parsed.value, docBasis));
+    const b = plot.expertBasis(form, today(), site.siteExpertNumeric(fieldKey, parsed.value));
+    if ("error" in b) return setError(b.error);
+    onApply(site.siteChange(p, fieldKey, parsed.value, b.basis));
   }
 
   return (
@@ -183,18 +184,7 @@ function EditSiteField({ p, fieldKey, onApply, onClose }: { p: LandProject; fiel
             ))}
           </select>
         </label>
-        {!docId && (
-          <div className="row2">
-            <label>
-              На чём основано *
-              <input value={basis} onChange={(e) => setBasis(e.target.value)} placeholder="Например, ПЗЗ Москвы, зона Ж1" />
-            </label>
-            <label>
-              Ссылка
-              <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
-            </label>
-          </div>
-        )}
+        {!docId && <ExpertFields form={form} onChange={setForm} placeholder="Например, ПЗЗ Москвы, зона Ж1" unit={f.unit} numeric={!!site.siteExpertNumeric(fieldKey, null)} />}
         {error && <div className="err">{error}</div>}
       </div>
     </Modal>
@@ -388,8 +378,7 @@ function EditZone({ p, zone, onApply, onClose }: { p: LandProject; zone: site.Zo
   const [noBuild, setNoBuild] = useState(zone?.noBuild ?? false);
   const [restriction, setRestriction] = useState(zone?.restriction ?? "");
   const [docId, setDocId] = useState(zone?.basis.documentId ?? "");
-  const [basis, setBasis] = useState(zone?.basis.documentId ? "" : (zone?.basis.title ?? ""));
-  const [url, setUrl] = useState(zone?.basis.url ?? "");
+  const [form, setForm] = useState(plot.expertForm(zone?.basis, (x) => text.num(Number(x), 2)));
   const [error, setError] = useState<string | null>(null);
   const list = site.siteOf(p).zouit;
 
@@ -399,8 +388,9 @@ function EditZone({ p, zone, onApply, onClose }: { p: LandProject; zone: site.Zo
     if (area.trim() && a === null) return setError(`Площадь «${area}» — не число. Введите площадь в м².`);
     if (noBuild && a === null) return setError("Для зоны, где строить нельзя, укажите её площадь на участке: она вычитается из площади под застройку.");
     const doc = p.documents.find((d) => d.id === docId);
-    if (!doc && !basis.trim()) return setError("Укажите основание: документ проекта или на чём основано значение.");
-    const b: plot.ValueBasis = doc ? { title: plot.documentTitle(doc.kind), documentId: doc.id, date: today() } : { title: basis.trim(), url: url.trim() || null, date: today() };
+    const expert = doc ? null : plot.expertBasis(form, today(), a === null ? undefined : site.zoneAreaNumeric(a));
+    if (expert && "error" in expert) return setError(expert.error);
+    const b: plot.ValueBasis = doc ? { title: plot.documentTitle(doc.kind), documentId: doc.id, date: today() } : (expert as { basis: plot.ValueBasis }).basis;
     const entry: site.ZouitEntry = { id: zone?.id ?? newId(), name: name.trim(), area: a, noBuild, restriction: restriction.trim(), origin: doc ? "source" : "expert", basis: b };
     onApply(zone ? list.map((z) => (z.id === zone.id ? entry : z)) : [...list, entry], zone ? "Зона изменена" : "Зона добавлена");
   }
@@ -458,18 +448,7 @@ function EditZone({ p, zone, onApply, onClose }: { p: LandProject; zone: site.Zo
             ))}
           </select>
         </label>
-        {!docId && (
-          <div className="row2">
-            <label>
-              На чём основано *
-              <input value={basis} onChange={(e) => setBasis(e.target.value)} placeholder="Например, выписка ЕГРН, раздел об ограничениях" />
-            </label>
-            <label>
-              Ссылка
-              <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" />
-            </label>
-          </div>
-        )}
+        {!docId && <ExpertFields form={form} onChange={setForm} placeholder="Например, выписка ЕГРН, раздел об ограничениях" unit="м²" numeric={!!area.trim()} />}
         {error && <div className="err">{error}</div>}
       </div>
     </Modal>
@@ -515,7 +494,7 @@ export function MarketSection({ p, state, onSave }: { p: LandProject; state: Ana
                   <td>
                     {r.product}, {r.housingClass}
                   </td>
-                  <td>{r.enough ? r.analogs : <Chip tone="yel">{r.analogs} — мало</Chip>}</td>
+                  <td>{r.enough ? r.analogs : <Chip tone="yel">{r.analogs} из {minComps} — мало</Chip>}</td>
                   <td>{r.price}</td>
                   <td>{r.range}</td>
                   <td>{r.pace}</td>
@@ -555,7 +534,7 @@ export function MarketSection({ p, state, onSave }: { p: LandProject; state: Ana
                   <td>{a.distanceKm === null ? "—" : `${text.num(Number(a.distanceKm), 1)} км`}</td>
                   <td>{a.price === null ? "—" : `${text.num(Number(a.price), 0)} ${site.analogPriceUnit(a.product)}`}</td>
                   <td>{a.pace === null ? "—" : `${text.num(Number(a.pace), 0)} ${site.analogPaceUnit(a.product)}`}</td>
-                  <td>{a.soldShare === null ? "—" : `${text.num(Number(a.soldShare) * 100, 0)} %`}</td>
+                  <td>{site.analogSoldText(a)}</td>
                   <td className="l">{text.date(a.date)}</td>
                   <td className="l">
                     <OriginTag origin="source" />{" "}
@@ -851,7 +830,7 @@ function AddVariant({ p, generated, onAdd, onClose }: { p: LandProject; generate
 
 export function CompareSection({ p, state, onSave }: { p: LandProject; state: AnalysisState; onSave: Save }) {
   const selected = site.siteOf(p).selectedVariant;
-  const table = siteView.compareTable(state.summaries, state.choice);
+  const table = siteView.compareTable(state.summaries, state.choice, siteView.criterionApproved(p, state.versions));
   return (
     <>
       <div className="mhead">

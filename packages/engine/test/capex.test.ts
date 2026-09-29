@@ -73,7 +73,7 @@ describe("CAPEX: график статьи (F.CAPEX.SCHEDULE_WEIGHT)", () => {
 
   it("график за горизонтом модели — ошибка SCHEDULE_SUM", () => {
     const short = calculate(project([{ item_id: "EXTERNAL_NETWORKS", rate: 400, price_date: "2025-12-31" }]), { horizonMonths: 3 }, ["F.CAPEX.SCHEDULE_WEIGHT"]);
-    expect(short.messages).toContainEqual(expect.objectContaining({ severity: "error", text: expect.stringContaining("вместо 100%. Проверьте, что график не выходит за срок расчёта") }));
+    expect(short.messages).toContainEqual(expect.objectContaining({ severity: "error", text: expect.stringContaining("вместо 100 %. Проверьте, что график не выходит за срок расчёта") }));
   });
 });
 
@@ -137,7 +137,7 @@ describe("CAPEX: индекс, НДС, платёж", () => {
 
   it("статьи от выручки без плана продаж не считаются и не входят в итог", () => {
     const r = calculate(project([]), { horizonMonths: 12 }, ["F.CAPEX.TOTAL"]);
-    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", text: expect.stringContaining("«Маркетинг» не посчитана: не посчитана формула F.SALES.REVENUE_TOTAL") }));
+    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", text: expect.stringContaining("«Маркетинг» не посчитана: не посчитан показатель «") }));
     expect(r.messages).toContainEqual(expect.objectContaining({ formulaId: "F.CAPEX.TOTAL", text: expect.stringContaining("Маркетинг") }));
   });
 });
@@ -164,7 +164,7 @@ describe("CAPEX: Дербеневская в расчёте «как в исхо
     expect(sum(cash.ROADS_UDS as Decimal[]).isZero()).toBe(true);
     expect(sum(cash.OTHER_SMR as Decimal[]).isZero()).toBe(true);
     expect(totals(r).ROADS_UDS?.toNumber()).toBe(535620851);
-    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", key: "CAPEX.SCHEDULE_SUM:ROADS_UDS", text: expect.stringContaining("0% суммы бюджета") }));
+    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", key: "CAPEX.SCHEDULE_SUM:ROADS_UDS", text: expect.stringContaining("0 % суммы бюджета") }));
   });
 
   it("без индексации: суммы исходника в ценах исходника, эффект индексации = 0", () => {

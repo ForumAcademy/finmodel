@@ -96,7 +96,7 @@ export function legacyChecks(c: LegacyCase): CalcMessage[] {
       formulaId: "F.CAPEX.ITEM_TOTAL",
       parameterId: "CAPEX.ITEMS",
       key: "LEGACY.CONTINGENCY_F42",
-      text: `Резерв Бюджет!F42 ${budget.contingency_F42_formula} = ${fmt(budget.contingency_F42)}: сложены площадь E42 = ${fmt(budget.contingency_E42)} м² и ставка D42 = ${fmt(budget.contingency_D42)} руб./м² (10% от ставок СМР D32:D34). Единицы разные, но результат учтён в бюджете как рубли; произведение — ${fmt(new Decimal(budget.contingency_E42).mul(budget.contingency_D42))} руб.`,
+      text: `Резерв Бюджет!F42 ${budget.contingency_F42_formula} = ${fmt(budget.contingency_F42)}: сложены площадь E42 = ${fmt(budget.contingency_E42)} м² и ставка D42 = ${fmt(budget.contingency_D42)} руб./м² (10 % от ставок СМР D32:D34). Единицы разные, но результат учтён в бюджете как рубли; произведение — ${fmt(new Decimal(budget.contingency_E42).mul(budget.contingency_D42))} руб.`,
     });
   }
   return out;

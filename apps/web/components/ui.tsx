@@ -46,3 +46,38 @@ export function Modal({ title, onClose, children, footer, wide }: { title: strin
 export function Toast({ text }: { text: string | null }) {
   return text ? <div className="toast">{text}</div> : null;
 }
+
+/** Поля основания Экспертного значения: на чём основано, ссылка, кто задал; у числа — диапазон от–до. */
+export function ExpertFields({ form, onChange, placeholder, unit, numeric }: { form: plot.ExpertForm; onChange: (f: plot.ExpertForm) => void; placeholder: string; unit?: string | undefined; numeric: boolean }) {
+  const set = (k: keyof plot.ExpertForm) => (e: { target: { value: string } }) => onChange({ ...form, [k]: e.target.value });
+  return (
+    <>
+      <div className="row2">
+        <label>
+          На чём основано *
+          <input value={form.title} onChange={set("title")} placeholder={placeholder} />
+        </label>
+        <label>
+          Ссылка
+          <input value={form.url} onChange={set("url")} placeholder="https://" />
+        </label>
+      </div>
+      <label>
+        Кто задал *
+        <input value={form.author} onChange={set("author")} placeholder="Фамилия и должность, например Иванова, финансовый директор" />
+      </label>
+      {numeric && (
+        <div className="row2">
+          <label>
+            Диапазон: от *{unit ? `, ${unit}` : ""}
+            <input value={form.min} onChange={set("min")} inputMode="decimal" />
+          </label>
+          <label>
+            до *{unit ? `, ${unit}` : ""}
+            <input value={form.max} onChange={set("max")} inputMode="decimal" />
+          </label>
+        </div>
+      )}
+    </>
+  );
+}

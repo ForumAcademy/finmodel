@@ -73,7 +73,7 @@ export function F_KPI_RISK_FREE(ctx: FormulaContext): RiskFree {
   const fcfe = ctx.formula<Decimal[]>("F.CF.FCFE");
   const date = ctx.formula<IsoDate[]>("F.TIME.DATE");
   const v0 = ctx.require<IsoDate>("GEN.VALUATION_DATE");
-  if (!isIsoDate(v0)) throw new CalcError("Дата оценки должна быть датой (ГГГГ-ММ-ДД)", "GEN.VALUATION_DATE");
+  if (!isIsoDate(v0)) throw new CalcError("Дата оценки должна быть датой, например 30.09.2026", "GEN.VALUATION_DATE");
   const tLast = fcfe.reduce((last, x, t) => (x.isZero() ? last : t), fcfe.length);
   if (tLast === fcfe.length) throw new CalcError("Срок проекта для безрисковой ставки не определён: в потоке акционера нет денег");
   const term = new Decimal(daysBetween(v0, date[tLast] as IsoDate)).div(DAYS_IN_YEAR);
@@ -92,7 +92,7 @@ export function F_KPI_NPV(ctx: FormulaContext): { npv_project: Decimal; npv_equi
   const r = ctx.formula<Decimal>("F.KPI.DISCOUNT_RATE");
   const date = ctx.formula<IsoDate[]>("F.TIME.DATE");
   const v0 = ctx.require<IsoDate>("GEN.VALUATION_DATE");
-  if (!isIsoDate(v0)) throw new CalcError("Дата оценки должна быть датой (ГГГГ-ММ-ДД)", "GEN.VALUATION_DATE");
+  if (!isIsoDate(v0)) throw new CalcError("Дата оценки должна быть датой, например 30.09.2026", "GEN.VALUATION_DATE");
   const k = ONE.add(r);
   const pv = (xs: Decimal[]) => xs.reduce((s, x, t) => s.add(x.div(k.pow(new Decimal(daysBetween(v0, date[t] as IsoDate)).div(DAYS_IN_YEAR)))), ZERO);
   return { npv_project: pv(cfads), npv_equity: pv(fcfe) };

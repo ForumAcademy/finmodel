@@ -7,7 +7,7 @@ import { getParameter, spec } from "@fm/spec";
 import type { FormulaContext } from "../context";
 import { CalcError } from "../context";
 import { eomonth, isIsoDate } from "../lib/dates";
-import { fmt, fmtShare } from "../lib/format";
+import { fmt, fmtMln, fmtShare } from "../lib/format";
 import { marketKey, type MarketPrice } from "./market";
 import type { MilestoneKey, MilestoneRow } from "./time";
 
@@ -89,7 +89,7 @@ export function F_VAR_FLOORS(ctx: FormulaContext): Decimal[] {
   const max = ctx.requireNum("GPZU.MAX_FLOORS");
   const bands = ctx.require<HeightBand[]>("BENCH.HEIGHT_BAND").filter((b) => b.floors_min !== null);
   const band0 = bands.find((b) => max.gte(b.floors_min as number) && (b.floors_max === null || max.lte(b.floors_max)));
-  if (!band0) throw new CalcError(`Предельная этажность ${fmt(max)} не попадает ни в одну группу высотности`, "GPZU.MAX_FLOORS");
+  if (!band0) throw new CalcError(`Предельная этажность ${fmt(max)} не попадает ни в одну группу высотности. Проверьте предельную этажность в ограничениях участка`, "GPZU.MAX_FLOORS");
   const lower = bands
     .filter((b): b is HeightBand & { floors_max: number } => b.floors_max !== null && b.floors_max < (band0.floors_min as number))
     .map((b) => new Decimal(b.floors_max))
@@ -132,7 +132,7 @@ export function F_VAR_PHASES(ctx: FormulaContext): Decimal {
 
 export function F_VAR_MILESTONES(ctx: FormulaContext): MilestoneRow[] {
   const start = ctx.require<string>("GEN.MODEL_START_DATE");
-  if (!isIsoDate(start)) throw new CalcError("Дата начала модели должна быть датой (ГГГГ-ММ-ДД)", "GEN.MODEL_START_DATE");
+  if (!isIsoDate(start)) throw new CalcError("Дата начала модели должна быть датой, например 30.09.2026", "GEN.MODEL_START_DATE");
   const phases = ctx.formula<Decimal>("F.VAR.PHASES").toNumber();
   const w = window(ctx).toNumber();
   const pre = ctx.requireNum("TIME.PRE_RNS_M").toNumber();
@@ -175,9 +175,9 @@ function stockOf(ctx: FormulaContext, product: Product): Decimal {
 export function F_VAR_PRODUCTS(ctx: FormulaContext): VariantSales {
   const cls = ctx.require<string>("GEN.HOUSING_CLASS");
   const valuation = ctx.require<string>("GEN.VALUATION_DATE");
-  if (!isIsoDate(valuation)) throw new CalcError("Дата оценки должна быть датой (ГГГГ-ММ-ДД)", "GEN.VALUATION_DATE");
+  if (!isIsoDate(valuation)) throw new CalcError("Дата оценки должна быть датой, например 30.09.2026", "GEN.VALUATION_DATE");
   const aptArea = ctx.formula<Decimal>("F.TEP.APT_AREA");
-  if (aptArea.lte(ZERO)) throw new CalcError("Площадь квартир варианта равна нулю", "TEP.APT_EFFICIENCY");
+  if (aptArea.lte(ZERO)) throw new CalcError("Площадь квартир варианта — 0 м²: проверьте долю жилой части и коэффициент выхода площади квартир в справочнике", "TEP.APT_EFFICIENCY");
   const phases = ctx.formula<Decimal>("F.VAR.PHASES").toNumber();
   const perPhase = aptPace(ctx).mul(window(ctx));
   // Доля очереди в запасе: по квартирам, которые рынок продаёт за срок продаж очереди до ввода; последней — остаток
@@ -324,7 +324,7 @@ export function F_VAR_NCS_CHECK(ctx: FormulaContext): NcsCheck {
   const rows = ctx.require<NcsRow[]>("BENCH.NCS_RATES");
   const floors = ctx.requireNum("GPZU.MAX_FLOORS").toNumber();
   const kPer = ctx.region().ncs_k_per;
-  if (kPer === null || kPer === undefined) throw new CalcError("Коэффициент перехода НЦС для региона не задан", "GEN.REGION_CODE");
+  if (kPer === null || kPer === undefined) throw new CalcError(`Контроль по нормативу цены строительства не выполнен: для региона «${ctx.region().name}» нет коэффициента перехода (таблица 1 НЦС 81-02-01-2026)`, "GEN.REGION_CODE");
   const vat = ONE.add(ctx.requireNum("TAX.VAT_RATE"));
   const apt = ctx.formula<Decimal>("F.TEP.APT_AREA");
   const gfa = ctx.formula<Decimal>("F.TEP.GFA_ABOVE");
@@ -370,7 +370,7 @@ export function F_VAR_BEST(ctx: FormulaContext): BestChoice {
       if (extra.length > 0) out.push(`не учтено то, что учтено в других вариантах: ${extra.join(", ")}`);
       const checks = [
         failed(r.irr, hurdle, (v, l) => v.gte(l), (v, l) => `IRR ${fmtShare(v)} ниже порога ${fmtShare(l)}`, "IRR не посчитана"),
-        failed(r.peak_debt, maxDebt, (v, l) => v.lte(l), (v, l) => `пиковый долг ${fmt(v.round())} руб. выше лимита ${fmt(l)} руб.`, "пиковый долг не посчитан"),
+        failed(r.peak_debt, maxDebt, (v, l) => v.lte(l), (v, l) => `пиковый долг ${fmtMln(v)} выше лимита ${fmtMln(l)}`, "пиковый долг не посчитан"),
         failed(r.sales_months, maxSales, (v, l) => v.lte(l), (v, l) => `срок продаж ${fmt(v)} мес. дольше предела ${fmt(l)} мес.`, "срок продаж не посчитан"),
       ];
       out.push(...checks.filter((x): x is string => x !== null));

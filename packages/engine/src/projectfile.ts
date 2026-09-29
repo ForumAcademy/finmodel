@@ -41,7 +41,7 @@ export interface ProjectFile {
 
 // ---------- схема (проверка файла при открытии) ----------
 
-const basis = z.object({ title: z.string(), url: z.string().nullish(), documentId: z.string().nullish(), date: z.string().nullish(), note: z.string().nullish() }).nullable();
+const basis = z.object({ title: z.string(), url: z.string().nullish(), documentId: z.string().nullish(), date: z.string().nullish(), note: z.string().nullish(), author: z.string().nullish(), min: z.string().nullish(), max: z.string().nullish() }).nullable();
 const plotValue = z.object({ value: z.string().nullable(), origin: z.enum(["source", "estimate", "expert", "reference"]).nullable(), basis });
 const kinds: [string, ...string[]] = ["other", ...DOCUMENT_KINDS.map((d) => d.kind)];
 const fieldKeys = PLOT_FIELDS.map((f) => f.key) as [string, ...string[]];
@@ -56,7 +56,7 @@ const siteSchema = z.object({
   ),
   customVariants: z.array(z.object({ id: z.string(), housing_class: z.string(), floors: z.number(), apart: z.boolean() })),
   selectedVariant: nstr,
-  snapshot: z.object({ at: z.string(), best: nstr, bestTitle: nstr, netProfit: nstr, variants: z.number() }).nullable(),
+  snapshot: z.object({ at: z.string(), best: nstr, bestTitle: nstr, netProfit: nstr, npv: z.string().optional(), variants: z.number() }).nullable(),
   curve: z.object({ date: z.string(), points: z.array(z.object({ term: z.number(), yield: z.number() })), loadedAt: z.string() }).nullable().optional(),
 });
 

@@ -287,7 +287,7 @@ function EditItem({ item, onApply, onClose }: { item: Item; onApply: (next: Item
             ) : (
               <div className="small muted">Стандарта нет: значение вводится в проекте.</div>
             )}
-            <button className="btn sm" style={{ marginTop: 6 }} onClick={() => setYears((prev) => [...prev, { year: String(Number(prev.at(-1)?.year ?? new Date().getFullYear() - 1) + 1), value: "" }])}>
+            <button className="btn sm" style={{ marginTop: 6 }} onClick={() => setYears((prev) => [...prev, book.nextSeriesRow(prev)])}>
               + Год
             </button>
             <div className="hint">После последнего года до конца проекта действует значение последнего года.</div>
@@ -604,7 +604,7 @@ export function ReferenceScreen({ section, tab }: { section: SectionId; tab: str
                 setSaving(true);
               }}
             >
-              Сохранить версию {(current?.version ?? 0) + 1}
+              Сохранить версию {book.nextVersionNumber(versions)}
             </button>
           </div>
         </div>
@@ -614,7 +614,7 @@ export function ReferenceScreen({ section, tab }: { section: SectionId; tab: str
 
       {saving && (
         <Modal
-          title={`Сохранить версию ${(current?.version ?? 0) + 1} справочника`}
+          title={`Сохранить версию ${book.nextVersionNumber(versions)} справочника`}
           onClose={() => setSaving(false)}
           footer={
             <>

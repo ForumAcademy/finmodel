@@ -379,3 +379,14 @@ export function seriesFromRows(unit: string, rows: readonly SeriesRow[], prev: u
   const base = prev && typeof prev === "object" && !Array.isArray(prev) ? (prev as Record<string, unknown>) : {};
   return { value: { ...base, by_year: sorted, after_last: "last" } };
 }
+
+/** Строка «+ Год»: следующий год после последнего в ряду; ряд пуст — текущий год. */
+export function nextSeriesRow(rows: readonly SeriesRow[], today: Date = new Date()): SeriesRow {
+  const last = Number(rows.at(-1)?.year);
+  return { year: String(Number.isFinite(last) && rows.length ? last + 1 : today.getFullYear()), value: "" };
+}
+
+/** Номер следующей версии справочника. */
+export function nextVersionNumber(versions: readonly AssumptionVersion[]): number {
+  return versions.reduce((m, v) => Math.max(m, v.version), 0) + 1;
+}

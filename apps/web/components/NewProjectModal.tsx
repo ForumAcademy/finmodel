@@ -190,7 +190,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
             </>
           ) : (
             <>
-              Есть готовая финмодель в Excel? Загрузите: файл сохранится в документах проекта для сверки с расчётом сервиса
+              Есть готовая финансовая модель в Excel? Загрузите: файл сохранится в документах проекта для сверки с расчётом сервиса
               <br />
               <button className="btn sm" style={{ marginTop: 8 }} onClick={() => excelInput.current?.click()}>
                 Выбрать файл

@@ -5,6 +5,7 @@
 import Decimal from "decimal.js";
 import type { FormulaContext } from "../context";
 import { CalcError } from "../context";
+import { fmt } from "../lib/format";
 
 const ZERO = new Decimal(0);
 
@@ -33,7 +34,7 @@ export function F_SITE_BUILDABLE_AREA(ctx: FormulaContext): Decimal {
   if (!Array.isArray(rows)) throw new CalcError("Зоны с особыми условиями: нужен список строк", "SITE.ZOUIT");
   const closed = rows.reduce((s, r) => (r.no_build ? s.add(r.area_m2 ?? 0) : s), ZERO);
   const out = area.sub(closed);
-  if (out.lte(0)) throw new CalcError(`Зоны, где строить нельзя, занимают ${closed.toString()} м² — весь участок. Проверьте площади зон`, "SITE.ZOUIT");
+  if (out.lte(0)) throw new CalcError(`Зоны, где строить нельзя, занимают ${fmt(closed)} м² при площади участка ${fmt(area)} м². Проверьте площади зон`, "SITE.ZOUIT");
   return out;
 }
 

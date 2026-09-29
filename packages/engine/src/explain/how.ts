@@ -36,7 +36,7 @@ const isSeries = (v: unknown): v is Decimal[] => Array.isArray(v) && v.length > 
 export function amount(v: Decimal | number, unit: string): string {
   const d = new Decimal(v);
   if (unit === "руб") return `${d.isNeg() ? "−" : ""}${fmtRub(d)}`;
-  if (unit === "доля") return `${fmt.num(d.mul(HUNDRED), d.abs().lt(SMALL_SHARE) && !d.isZero() ? SHARE_DIGITS_SMALL : 2)}%`;
+  if (unit === "доля") return `${fmt.num(d.mul(HUNDRED), d.abs().lt(SMALL_SHARE) && !d.isZero() ? SHARE_DIGITS_SMALL : 2)} %`;
   if (unit === "коэф") return fmt.num(d, COEF_DIGITS);
   // площади и штуки — целыми вниз, как в предупреждениях расчёта: «продано 10 888 м²» при 10 888,61
   if (unit === "м2" || unit === "шт") return `${fmt.num(d.trunc(), 0)} ${fmt.unit(unit)}`;
@@ -121,7 +121,7 @@ function price(c: Ctx): string | null {
   const b = months[months.length - 1]!;
   const pa = price[k][a]!;
   const pb = price[k][b]!;
-  return `${k}: ${whole(pa)} ${u} в ${monthName(c.dates[a], "prep")} → ${whole(pb)} ${u} в ${monthName(c.dates[b], "prep")} (+${fmt.num(pb.div(pa).sub(1).mul(HUNDRED), 1)}%).`;
+  return `${k}: ${whole(pa)} ${u} в ${monthName(c.dates[a], "prep")}, ${whole(pb)} ${u} в ${monthName(c.dates[b], "prep")} (+${fmt.num(pb.div(pa).sub(1).mul(HUNDRED), 1)} %).`;
 }
 
 function contractValue(c: Ctx): string | null {
@@ -140,7 +140,7 @@ function cashIn(c: Ctx): string | null {
   const value = (c.f("F.SALES.CONTRACT_VALUE") ?? {}) as Series;
   if (!cash) return null;
   const all = (s: Series) => Object.values(s).reduce((a, x) => a.add(sum(x)), ZERO);
-  return `Договоры на ${fmtRub(all(value))} → поступило ${fmtRub(all(cash.total))}, из них на эскроу ${fmtRub(all(cash.ddu))}.`;
+  return `Договоры на ${fmtRub(all(value))}, поступило ${fmtRub(all(cash.total))}, из них на эскроу ${fmtRub(all(cash.ddu))}.`;
 }
 
 function wavgPrice(c: Ctx): string | null {
@@ -224,7 +224,7 @@ function scheduleWeight(c: Ctx): string | null {
   const s = k && w ? w[k] : undefined;
   if (!k || !s || !nonZero(s).length) return null;
   const t = argMax(s);
-  return `«${itemName(k)}»: ${nonZero(s).length} мес. ${span(c, nonZero(s))}, больше всего ${fmt.num(s[t]!.mul(HUNDRED), 2)}% в ${monthName(c.dates[t], "prep")}.`;
+  return `«${itemName(k)}»: ${nonZero(s).length} мес. ${span(c, nonZero(s))}, больше всего ${fmt.num(s[t]!.mul(HUNDRED), 2)} % в ${monthName(c.dates[t], "prep")}.`;
 }
 
 function capexIndex(c: Ctx): string | null {

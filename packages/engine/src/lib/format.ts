@@ -8,9 +8,9 @@ export function fmt(value: Decimal | number): string {
   return RU.format(new Decimal(value).toNumber());
 }
 
-/** Доля как процент для текста сообщения: 0,012 → «1,2%». */
+/** Доля как процент для текста сообщения: 0,012 → «1,2 %». */
 export function fmtShare(value: Decimal): string {
-  return `${RU.format(value.mul(PERCENT).toNumber())}%`;
+  return `${RU.format(value.mul(PERCENT).toNumber())} %`;
 }
 
 /** Процент из текста справочника: «25%» → 0,25; не процент — null. */
@@ -39,4 +39,11 @@ export function fmtRub(value: Decimal | number): string {
   if (x >= MILLION) return `${SHORT1.format(x / MILLION)} млн ₽`;
   if (x >= THOUSAND) return `${SHORT1.format(x / THOUSAND)} тыс. ₽`;
   return `${RU.format(x)} ₽`;
+}
+
+const MLN1 = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** Сумма в млн руб для сообщений сравнения (тот же масштаб, что в таблицах анализа): 1 234 500 000 → «1 234,5 млн руб». */
+export function fmtMln(value: Decimal | number): string {
+  return `${MLN1.format(new Decimal(value).div(MILLION).toNumber())} млн руб`;
 }

@@ -10,7 +10,7 @@ import Decimal from "decimal.js";
 import type { FormulaContext } from "../context";
 import { CalcError, DependencyError } from "../context";
 import { isIsoDate, monthDiff, yearOf, type IsoDate } from "../lib/dates";
-import { fmt, fmtQuarter, parsePercent } from "../lib/format";
+import { fmt, fmtQuarter, fmtShare, parsePercent } from "../lib/format";
 import { growth } from "./capex";
 import { milestone, milestones, type MilestoneRow } from "./time";
 
@@ -103,7 +103,7 @@ function monthIndex(date: IsoDate[], d: IsoDate): number {
 /** Ручной ряд темпа → продажи по месяцам: объём периода поровну между его месяцами. */
 function manualPace(p: Product, m: ManualPace | null | undefined, date: IsoDate[]): Decimal[] {
   if (!m || !isIsoDate(m.from) || !Number.isInteger(m.step_months) || m.step_months < 1 || !Array.isArray(m.values)) {
-    throw new CalcError(`«${p.key}»: ручной темп — нужны from (дата), step_months (целое ≥ 1) и values (продажи за период)`, "SALES.PACE");
+    throw new CalcError(`«${p.key}»: ручной темп — укажите дату начала, шаг в месяцах (целое, не меньше 1) и продажи по периодам`, "SALES.PACE");
   }
   const out = date.map(() => ZERO);
   const firstEnd = monthIndex(date, m.from);
@@ -157,7 +157,7 @@ export function F_SALES_SOLD_AREA(ctx: FormulaContext): RowSeries {
     const manual = rowPace.method === "ручной" ? manualPace(p, rowPace.manual, date) : null;
     const value = rowPace.value;
     if (rowPace.method !== "ручной" && (typeof value !== "number" || value < 0)) throw new CalcError(`«${p.key}»: заполните темп — неотрицательное число`, "SALES.PACE");
-    if (rowPace.method === "доля_остатка" && (value as number) > 1) throw new CalcError(`«${p.key}»: доля остатка в месяц — не больше 1`, "SALES.PACE");
+    if (rowPace.method === "доля_остатка" && (value as number) > 1) throw new CalcError(`«${p.key}»: доля остатка в месяц — не больше 100 %`, "SALES.PACE");
     const ddu = (p.row.sale_channel_before_rnv ?? CHANNEL_DDU) === CHANNEL_DDU;
     let remaining = stock;
     // сколько из ручного плана не продано: сверх построенного и в месяцы, когда продавать нельзя
@@ -239,7 +239,7 @@ export function F_SALES_PRICE(ctx: FormulaContext): RowSeries {
   };
   const priceDate = (p: Product) => {
     const d = p.row.price_date ?? start;
-    if (!isIsoDate(d)) throw new CalcError(`«${p.key}»: дата цены должна быть датой (ГГГГ-ММ-ДД)`, "SALES.PRODUCTS");
+    if (!isIsoDate(d)) throw new CalcError(`«${p.key}»: дата цены должна быть датой, например 30.09.2026`, "SALES.PRODUCTS");
     return d;
   };
 
@@ -317,7 +317,7 @@ function mixFor(rows: MixRow[], p: Product): { now: Decimal; down: Decimal; rest
   const own = m.mortgage_down_payment;
   if (own !== undefined && own !== null && (typeof own !== "number" || own < 0 || own > m.mortgage_share)) throw new CalcError(`«${p.row.product}»: первоначальный взнос по ипотеке — доля выручки от 0 до доли ипотечных сделок`, "SALES.PAYMENT_MIX");
   const sum = shares.reduce((s, x) => s.add(x), ZERO);
-  if (!sum.eq(ONE)) throw new CalcError(`«${p.row.product}»: сумма долей ипотеки, 100% оплаты и рассрочки ${fmt(sum)} — должна быть 1`, "SALES.PAYMENT_MIX");
+  if (!sum.eq(ONE)) throw new CalcError(`«${p.row.product}»: сумма долей ипотеки, 100 % оплаты и рассрочки ${fmtShare(sum)} — должна быть 100 %`, "SALES.PAYMENT_MIX");
   const inst = new Decimal(m.installment_share);
   const n = inst.isZero() ? 0 : Number(m.installment_months);
   if (!inst.isZero() && (!Number.isInteger(n) || n < 1)) throw new CalcError(`«${p.row.product}»: срок рассрочки — целое число месяцев ≥ 1`, "SALES.PAYMENT_MIX");

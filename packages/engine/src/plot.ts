@@ -29,6 +29,80 @@ export interface ValueBasis {
   date?: string | null;
   /** Пояснение: как получено значение. */
   note?: string | null;
+  /** Экспертное значение: кто задал. */
+  author?: string | null;
+  /** Экспертное значение: диапазон min–max в единицах хранения значения (строки, как value). */
+  min?: string | null;
+  max?: string | null;
+}
+
+// ---------- основание Экспертного значения ----------
+
+/** Поля формы «без документа»: на чём основано, ссылка, кто задал, диапазон (как вводит финансист). */
+export interface ExpertForm {
+  title: string;
+  url: string;
+  author: string;
+  min: string;
+  max: string;
+}
+
+/**
+ * Начальные поля формы из текущего основания. show переводит хранимое число в вид ввода (проценты — в %),
+ * чтобы диапазон открывался в тех же единицах, что и значение.
+ */
+export function expertForm(b: ValueBasis | null | undefined, show: (stored: string) => string = (x) => x): ExpertForm {
+  const own = b && !b.documentId ? b : null;
+  return {
+    title: own?.title ?? "",
+    url: b?.url ?? "",
+    author: own?.author ?? "",
+    min: own?.min ? show(own.min) : "",
+    max: own?.max ? show(own.max) : "",
+  };
+}
+
+/**
+ * Основание Экспертного значения из формы: обязательны «на чём основано» и «кто задал»; у числа — ещё диапазон
+ * от–до, в который попадает само значение (правило: автор, обоснование и диапазон min–max).
+ * parse переводит ввод в хранимое число (как у самого значения) или возвращает текст ошибки.
+ */
+export function expertBasis(
+  form: ExpertForm,
+  today: string,
+  numeric?: { value: string | null; parse: (text: string) => { value?: string | undefined; error?: string | undefined }; show: (stored: string) => string },
+): { basis: ValueBasis } | { error: string } {
+  if (!form.title.trim()) return { error: "Укажите основание: документ проекта или на чём основано значение." };
+  if (!form.author.trim()) return { error: "Укажите, кто задал значение: для Экспертного значения нужен автор." };
+  const basis: ValueBasis = { title: form.title.trim(), url: form.url.trim() || null, date: today, author: form.author.trim() };
+  if (!numeric) return { basis };
+  if (!form.min.trim() || !form.max.trim()) return { error: "Укажите диапазон «от» и «до»: в каких пределах может быть Экспертное значение. Он нужен для расчёта чувствительности." };
+  const lo = numeric.parse(form.min);
+  if (lo.value === undefined) return { error: `Диапазон «от»: ${lo.error ?? "не число"}` };
+  const hi = numeric.parse(form.max);
+  if (hi.value === undefined) return { error: `Диапазон «до»: ${hi.error ?? "не число"}` };
+  if (new Decimal(lo.value).gt(hi.value)) return { error: `Диапазон: «от» ${numeric.show(lo.value)} больше, чем «до» ${numeric.show(hi.value)}. Поменяйте границы местами.` };
+  const v = numeric.value;
+  if (v !== null && (new Decimal(v).lt(lo.value) || new Decimal(v).gt(hi.value))) {
+    return { error: `Значение ${numeric.show(v)} вне диапазона ${numeric.show(lo.value)}–${numeric.show(hi.value)}: проверьте значение или диапазон.` };
+  }
+  return { basis: { ...basis, min: lo.value, max: hi.value } };
+}
+
+/** Проверка диапазона числового поля участка без документа: разбор как у значения, показ с единицей. */
+export function plotExpertNumeric(key: PlotFieldKey, value: string | null) {
+  const unit = PLOT_FIELDS.find((f) => f.key === key)?.unit;
+  const show = (x: string) => `${plotText(key, x)}${unit ? ` ${unit}` : ""}`;
+  return { value, parse: (t: string) => { const v = parseNumberRu(t); return v === null ? { error: `«${t}» — не число` } : { value: v }; }, show };
+}
+
+/** Подпись под значением: пояснение и диапазон Экспертного значения («Диапазон 20–24 эт.»). Нечего сказать — null. */
+export function basisNote(b: ValueBasis | null | undefined, show: (stored: string) => string = (x) => x): string | null {
+  if (!b) return null;
+  const parts: string[] = [];
+  if (b.note) parts.push(b.note);
+  if (b.min && b.max) parts.push(`Диапазон ${show(b.min)}–${show(b.max)}`);
+  return parts.length ? parts.join(". ") : null;
 }
 
 export interface PlotValue {
@@ -246,8 +320,9 @@ export function plotDisplay(key: PlotFieldKey, value: string | null): string {
 /** Строка основания для показа: «Выписка ЕГРН от 28.09.2026». */
 export function basisText(b: ValueBasis | null): string {
   if (!b) return "";
-  if (!b.date || b.title.includes(fmtDate(b.date))) return b.title;
-  return b.documentId ? `${b.title} от ${fmtDate(b.date)}` : `${b.title}, ${fmtDate(b.date)}`;
+  const who = b.author ? `, задал(а) ${b.author}` : "";
+  if (!b.date || b.title.includes(fmtDate(b.date))) return `${b.title}${who}`;
+  return b.documentId ? `${b.title} от ${fmtDate(b.date)}` : `${b.title}, ${fmtDate(b.date)}${who}`;
 }
 
 // ---------- статус проекта ----------

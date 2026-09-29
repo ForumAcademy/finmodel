@@ -118,7 +118,26 @@ export function parseSite(key: SiteFieldKey, text: string): ParsedSite {
   return { value: stored.toString() };
 }
 
+/** Число с единицей для сообщений и диапазона: «24 эт.», «40 %». */
+export function siteShow(key: SiteFieldKey, stored: string): string {
+  const f = siteField(key);
+  return `${siteText(key, stored)}${f.unit ? ` ${f.unit}` : ""}`;
+}
+
+/** Проверка диапазона Экспертного значения поля ограничений: у числовых полей — разбор как у значения; у текста, даты, да/нет — нет. */
+export function siteExpertNumeric(key: SiteFieldKey, value: string | null) {
+  const f = siteField(key);
+  if (f.kind === "text" || f.kind === "bool" || f.kind === "date") return undefined;
+  return { value, parse: (t: string) => parseSite(key, t), show: (x: string) => siteShow(key, x) };
+}
+
 // ---------- зоны с особыми условиями ----------
+
+/** Диапазон площади зоны без документа (Экспертное значение), м². */
+export function zoneAreaNumeric(area: string | null) {
+  const show = (x: string) => `${num(x, 2)} м²`;
+  return { value: area, parse: (t: string) => { const v = parseNumberRu(t); return v === null ? { error: `«${t}» — не число, введите площадь в м²` } : { value: v }; }, show };
+}
 
 export interface ZouitEntry {
   id: string;
@@ -234,6 +253,8 @@ export interface AnalysisSnapshot {
   bestTitle: string | null;
   /** Итог лучшего (или выбранного) варианта для карточки: чистая прибыль, руб. */
   netProfit: string | null;
+  /** NPV акционера лучшего варианта, руб — если выбран по NPV. */
+  npv?: string;
   variants: number;
 }
 
@@ -364,4 +385,9 @@ export function siteCalcProject(p: LandProject, today: IsoDate): CalcProject {
 /** Версии справочника для расчёта проекта: снимок из файла проекта, иначе справочник этого браузера. */
 export function calcVersions(p: LandProject, local: readonly AssumptionVersion[]): AssumptionVersion[] {
   return p.assumptionsSnapshot ? [p.assumptionsSnapshot] : [...local];
+}
+
+/** Распроданность аналога для таблицы: доля → «63 %»; нет — «—». */
+export function analogSoldText(a: AnalogEntry): string {
+  return a.soldShare === null ? "—" : `${num(new Decimal(a.soldShare).mul(PERCENT), 0)} %`;
 }
