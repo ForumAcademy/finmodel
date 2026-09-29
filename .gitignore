@@ -10,3 +10,7 @@ next-env.d.ts
 docs/03_formulas.md
 docs/04_parameters.md
 docs/05_sources.md
+
+# Справочник и карта исходного Excel для TypeScript собираются из data/*.yaml и legacy/*.csv при pnpm install (postinstall) и при сборке интерфейса
+packages/spec/src/generated/
+packages/excel-import/src/generated/
