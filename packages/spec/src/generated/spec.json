@@ -1,5 +1,5 @@
 {
-  "specVersion": "6d2f46c363ba",
+  "specVersion": "1304d5e07104",
   "actualizedAt": "2026-09-29",
   "sources": [
     {
@@ -8120,7 +8120,7 @@
       "code": "31",
       "name": "Белгородская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn31/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8155,7 +8155,7 @@
       "code": "32",
       "name": "Брянская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn32/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.85,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8190,7 +8190,7 @@
       "code": "33",
       "name": "Владимирская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn33/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.86,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8260,7 +8260,7 @@
       "code": "35",
       "name": "Вологодская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn35/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.97,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8295,7 +8295,7 @@
       "code": "36",
       "name": "Воронежская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn36/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.83,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8330,7 +8330,7 @@
       "code": "37",
       "name": "Ивановская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn37/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.85,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8435,7 +8435,7 @@
       "code": "40",
       "name": "Калужская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn40/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8575,7 +8575,7 @@
       "code": "44",
       "name": "Костромская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn44/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.83,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8645,7 +8645,7 @@
       "code": "46",
       "name": "Курская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn46/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.93,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8715,7 +8715,7 @@
       "code": "48",
       "name": "Липецкая область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn48/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.86,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8785,7 +8785,7 @@
       "code": "50",
       "name": "Московская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn50/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 1,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9044,7 +9044,7 @@
       "code": "57",
       "name": "Орловская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn57/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.84,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9219,7 +9219,7 @@
       "code": "62",
       "name": "Рязанская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn62/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.84,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9394,7 +9394,7 @@
       "code": "67",
       "name": "Смоленская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn67/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.82,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9429,7 +9429,7 @@
       "code": "68",
       "name": "Тамбовская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn68/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.82,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9464,7 +9464,7 @@
       "code": "69",
       "name": "Тверская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn69/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9534,7 +9534,7 @@
       "code": "71",
       "name": "Тульская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn71/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9709,7 +9709,7 @@
       "code": "76",
       "name": "Ярославская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn76/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9744,7 +9744,7 @@
       "code": "77",
       "name": "г. Москва",
       "fns_rates_url": "https://www.nalog.gov.ru/rn77/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 1.03,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
