@@ -48,6 +48,8 @@ const legacyCellSchema = z
 const tableColumnSchema = z
   .object({
     key: z.string().min(1),
+    /** Заголовок колонки для интерфейса. */
+    title: z.string().min(1).optional(),
     unit: z.string().min(1),
     options: z.array(z.string()).optional(),
     note: z.string().optional(),
@@ -216,6 +218,19 @@ export const regionSchema = z
       .strict(),
     ngp_source_ids: idList,
     status: z.enum(REGION_STATUSES),
+    /**
+     * Регион доступен для новых проектов: как определить его по кадастровому номеру (номер кадастрового округа —
+     * первая часть номера) и по адресу (названия региона в адресе). Нет поля — регион пока недоступен.
+     */
+    lookup: z
+      .object({
+        cadastral_districts: z.array(z.string().regex(/^\d{2}$/, "номер кадастрового округа — две цифры")),
+        address_names: z.array(z.string().min(1)).min(1),
+        source_ids: idList.min(1, "нужен хотя бы один источник"),
+        note: z.string().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

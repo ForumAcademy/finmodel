@@ -39,6 +39,8 @@ export { cellQty, hasUnsold, paceLine, parkingWarning, rowName, salesRows, sales
 export { aggregate, PERIOD_LABEL, periodKey, type Period } from "./explain/periods";
 export { amount, compatDiff, exampleFocus, howExample, inputFields, shortSource, templateExample } from "./explain/how";
 export { dataQuestions, LEGACY_QUESTION_MAX_NO, type DataQuestion, type Impact, type ImpactKind, type QuestionBlock } from "./legacy-questions";
+export * as plot from "./plot";
+export * as reference from "./reference";
 export type * from "./types";
 
 /** Модули ядра в порядке расчёта (docs/01_architecture.md). */

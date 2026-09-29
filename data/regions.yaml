@@ -6,6 +6,8 @@
 # ncs_k_per — коэффициент перехода от базового района (Московская обл.) к субъекту, таблица 1 НЦС 81-02-01-2026 (S_NCS_2026_01).
 # land_tax_rate — ставка задаётся муниципалитетом по ОКТМО: брать через fns_rates_url (S_FNS_RATES), не на уровне субъекта.
 # land_tax_rate_housing — только для городов федерального значения, где ставка одна на город (закон города).
+# lookup — регион доступен для новых проектов: номера кадастровых округов (первая часть кадастрового номера) и названия
+#   региона в адресе (сравниваются целыми словами, без учёта регистра и точек). Регион добавляется этим полем, а не кодом.
 
 regions:
   - code: "01"
@@ -708,6 +710,11 @@ regions:
     parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
     ngp_source_ids: []
     status: structure_only
+    lookup:
+      cadastral_districts: ["50"]
+      address_names: ["Московская область", "Московская обл", "обл Московская"]
+      source_ids: [S_NSPD]
+      note: "Кадастровый округ 50 — Московская область; по этому же номеру округа учтены и часть участков Новой Москвы, поэтому регион сверяется с адресом в выписке ЕГРН"
   - code: "51"
     name: "Мурманская область"
     fns_rates_url: "https://www.nalog.gov.ru/rn51/service/tax/"
@@ -1095,6 +1102,11 @@ regions:
     parking_norm_apart: {source_ids: [], rule: to_fill, values: null, status: to_fill}  # НГП для объектов гостиничного назначения (апартаменты)
     ngp_source_ids: [S_MSK_NGP_TRANSPORT_945PP]
     status: reference_filled
+    lookup:
+      cadastral_districts: ["77"]
+      address_names: ["Москва"]
+      source_ids: [S_NSPD]
+      note: "Кадастровый округ 77 — Москва. Участки Новой Москвы могут иметь номер округа 50: регион сверяется с адресом в выписке ЕГРН"
   - code: "78"
     name: "г. Санкт-Петербург"
     fns_rates_url: "https://www.nalog.gov.ru/rn78/service/tax/"

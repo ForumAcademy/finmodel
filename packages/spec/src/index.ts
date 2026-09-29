@@ -75,6 +75,7 @@ export type SpecRegion = Omit<
   | "parking_norm"
   | "parking_norm_apart"
   | "ngp_source_ids"
+  | "lookup"
 > & {
   code: RegionCode;
   ncs_k_per_source_ids: SourceId[];
@@ -85,6 +86,7 @@ export type SpecRegion = Omit<
   parking_norm: Omit<Region["parking_norm"], "source_ids"> & { source_ids: SourceId[] };
   parking_norm_apart: Omit<Region["parking_norm_apart"], "source_ids"> & { source_ids: SourceId[] };
   ngp_source_ids: SourceId[];
+  lookup?: Omit<NonNullable<Region["lookup"]>, "source_ids"> & { source_ids: SourceId[] };
 };
 
 export type SpecAssumptionItem = Omit<AssumptionItem, "param"> & { param: ParameterId };
