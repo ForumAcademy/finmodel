@@ -10,7 +10,7 @@ export type ValueOrigin = "project" | "standard" | "region" | "template";
 /** Режим расчёта: расчёт сервиса (normal) или «как в исходном Excel» (legacy, tests/cases/*_legacy.yaml). */
 export type CalcMode = "normal" | "legacy";
 
-/** Входные данные проекта: значения параметров по ID (docs/01, «Расчётное ядро»). */
+/** Входные данные проекта: значения параметров по ID (docs/passports/engine.md). */
 export interface ProjectInput {
   values: Partial<Record<ParameterId, unknown>>;
   /**
