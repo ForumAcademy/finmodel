@@ -5,3 +5,8 @@ node_modules/
 .env*
 next-env.d.ts
 *.tsbuildinfo
+
+# Каталоги формул, параметров и источников собираются из data/*.yaml (python scripts/render_docs.py) и в CI
+docs/03_formulas.md
+docs/04_parameters.md
+docs/05_sources.md

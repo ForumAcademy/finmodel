@@ -493,7 +493,7 @@ export function F_CAPEX_SMR_PROGRESS(ctx: FormulaContext): Decimal[] {
 
 export function F_CAPEX_NCS_BENCH(ctx: FormulaContext): Decimal | null {
   // Показатели НЦС 81-02-01-2026 по классу и этажности в справочник не выписаны (status: needs_verification):
-  // контроль не считается, а не подменяется выдуманным значением (CLAUDE.md, правило 8).
+  // контроль не считается, а не подменяется выдуманным значением (CLAUDE.md, правило 7).
   ctx.message("warning", "Контроль СМР по НЦС пока недоступен: показатели НЦС 81-02-01-2026 по классу и этажности не выписаны в справочник");
   return null;
 }

@@ -1,0 +1,5 @@
+packages/spec/src/generated/
+packages/excel-import/src/generated/
+legacy/*.csv
+legacy/*.xlsx
+pnpm-lock.yaml
