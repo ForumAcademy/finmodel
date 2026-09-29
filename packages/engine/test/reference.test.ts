@@ -24,18 +24,18 @@ describe("справочник для экрана", () => {
   });
 
   it("разделы: стандартные значения, регионы проектов, формулы, источники", () => {
-    expect(reference.standardTabs().map((t) => t.title)).toEqual(["Продажи", "Бюджет", "Эскроу", "Финансирование", "Налоги и ставки"]);
+    expect(reference.standardTabs().map((t) => t.title)).toEqual(["Оценка участка", "Коэффициенты выхода площадей", "Продажи", "Бюджет", "Эскроу", "Финансирование", "Налоги и ставки"]);
     expect(reference.regionTabs().map((t) => t.title)).toEqual(["г. Москва", "Московская область"]);
     expect(reference.sourceTabs().map((t) => t.title)).toEqual(["Законодательство", "Статистика и аналитика", "Документы компании", "Экспертные данные"]);
     // param — ключ строки для правки, на экран не выводится
     const all = JSON.stringify([reference.standardTabs(), reference.regionTabs(), reference.formulaTabs(), reference.sourceTabs()], (k, v: unknown) => (k === "param" ? undefined : v));
     // в интерфейсе нет ID параметров, формул и источников
-    expect(all).not.toMatch(/\b(?:F\.)?(?:GEN|LAND|TEP|CAPEX|SALES|FIN|TAX|TIME|OPEX|BENCH|VAL|GPZU)\.[A-Z0-9_]+\b|\bS_[A-Z0-9_]+\b/);
+    expect(all).not.toMatch(/\b(?:F\.)?(?:GEN|LAND|TEP|CAPEX|SALES|FIN|TAX|TIME|OPEX|BENCH|VAL|GPZU|SITE|MARKET|VAR)\.[A-Z0-9_]+\b|\bS_[A-Z0-9_]+\b/);
   });
 
   it("шапка: пустые значения и источники на перепроверку", () => {
     const s = reference.referenceSummary();
-    expect(s.version).toBe(1);
+    expect(s.version).toBe(2);
     expect(s.needValue).toBeGreaterThan(0);
     expect(s.recheckSources).toBeGreaterThan(0);
   });

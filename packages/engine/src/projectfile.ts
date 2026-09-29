@@ -10,7 +10,8 @@ import { z } from "zod";
 import { assumptionVersionSchema, type SpecAssumptionVersion as AssumptionVersion } from "@fm/spec";
 import { sameVersion } from "./book";
 import { versionOf } from "./project";
-import { DOCUMENT_KINDS, PLOT_FIELDS, projectTitle, type LandProject } from "./plot";
+import { DOCUMENT_KINDS, PLOT_FIELDS, projectTitle, type LandProject, type PlotValue } from "./plot";
+import { SITE_FIELDS } from "./site";
 import { date } from "./lib/text";
 
 export const PROJECT_FORMAT = "finmodel-project";
@@ -44,6 +45,19 @@ const basis = z.object({ title: z.string(), url: z.string().nullish(), documentI
 const plotValue = z.object({ value: z.string().nullable(), origin: z.enum(["source", "estimate", "expert", "reference"]).nullable(), basis });
 const kinds: [string, ...string[]] = ["other", ...DOCUMENT_KINDS.map((d) => d.kind)];
 const fieldKeys = PLOT_FIELDS.map((f) => f.key) as [string, ...string[]];
+const siteKeys = SITE_FIELDS.map((f) => f.key) as [string, ...string[]];
+const nstr = z.string().nullable();
+
+const siteSchema = z.object({
+  values: z.object(Object.fromEntries(siteKeys.map((k) => [k, plotValue.optional()]))),
+  zouit: z.array(z.object({ id: z.string(), name: z.string(), area: nstr, noBuild: z.boolean(), restriction: z.string(), origin: z.enum(["source", "estimate", "expert", "reference"]), basis: basis.unwrap() })),
+  analogs: z.array(
+    z.object({ id: z.string(), name: z.string(), product: z.string(), housingClass: z.string(), distanceKm: nstr, stage: nstr, price: nstr, pace: nstr, soldShare: nstr, url: z.string(), date: z.string() }),
+  ),
+  customVariants: z.array(z.object({ id: z.string(), housing_class: z.string(), floors: z.number(), apart: z.boolean() })),
+  selectedVariant: nstr,
+  snapshot: z.object({ at: z.string(), best: nstr, bestTitle: nstr, netProfit: nstr, variants: z.number() }).nullable(),
+});
 
 const projectSchema = z.object({
   id: z.string().min(1),
@@ -56,7 +70,8 @@ const projectSchema = z.object({
   plot: z.object(Object.fromEntries(fieldKeys.map((k) => [k, plotValue]))),
   point: z.object({ lat: z.number(), lon: z.number() }).nullable(),
   documents: z.array(z.object({ id: z.string().min(1), kind: z.enum(kinds), fileName: z.string(), size: z.number(), uploadedAt: z.string() })),
-  history: z.array(z.object({ at: z.string(), field: z.enum([...fieldKeys, "assumptionsVersion"]), from: z.string(), to: z.string(), basis: z.string() })),
+  history: z.array(z.object({ at: z.string(), field: z.enum([...fieldKeys, ...siteKeys, "assumptionsVersion"]), from: z.string(), to: z.string(), basis: z.string() })),
+  site: siteSchema.optional(),
 });
 
 const fileSchema = z.object({
@@ -132,9 +147,15 @@ export interface OpenResult {
 export function openProject(file: ProjectFile, mode: OpenMode, local: readonly AssumptionVersion[], existing: LandProject | null, newId: () => string, at: string): OpenResult {
   const src = structuredClone(file.project);
   const ids = new Map(src.documents.map((d) => [d.id, newId()]));
-  const plot = Object.fromEntries(
-    Object.entries(src.plot).map(([k, v]) => [k, v.basis?.documentId && ids.has(v.basis.documentId) ? { ...v, basis: { ...v.basis, documentId: ids.get(v.basis.documentId) } } : v]),
-  ) as LandProject["plot"];
+  const relink = <T extends Pick<PlotValue, "basis">>(v: T): T => (v.basis?.documentId && ids.has(v.basis.documentId) ? { ...v, basis: { ...v.basis, documentId: ids.get(v.basis.documentId) } } : v);
+  const plot = Object.fromEntries(Object.entries(src.plot).map(([k, v]) => [k, relink(v)])) as LandProject["plot"];
+  if (src.site) {
+    src.site = {
+      ...src.site,
+      values: Object.fromEntries(Object.entries(src.site.values).map(([k, v]) => [k, v && relink(v)])),
+      zouit: src.site.zouit.map((z) => relink(z)),
+    };
+  }
   const documents = src.documents.map((d) => ({ ...d, id: ids.get(d.id) ?? d.id }));
   const files = file.files.filter((f) => ids.has(f.id)).map((f) => ({ ...f, id: ids.get(f.id) as string }));
 

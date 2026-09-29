@@ -328,3 +328,54 @@ export function updateReference(p: LandProject, local: readonly AssumptionVersio
 
 /** Значение ячейки таблицы для поля ввода. */
 export const cellInput = (unit: string, v: unknown): string => (typeof v === "number" ? toInput(unit, v) : v === null || v === undefined ? "" : String(v));
+
+const DMY = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Значение ячейки таблицы для поля ввода: даты — ДД.ММ.ГГГГ. */
+export const cellText = (unit: string, v: unknown): string => (unit === "дата" && typeof v === "string" && ISO_DATE.test(v) ? date(v) : cellInput(unit, v));
+
+export type CellParsed = { value: unknown; error?: undefined } | { value?: undefined; error: string };
+
+/** Текст ячейки → значение: текст как есть, дата из ДД.ММ.ГГГГ, число — как у значения (проценты в %). */
+export function cellFromInput(unit: string, text: string): CellParsed {
+  const t = text.trim();
+  if (unit === "текст") return { value: t || null };
+  if (unit === "дата") {
+    if (!t) return { value: null };
+    const m = DMY.exec(t);
+    const iso = m ? `${m[3]}-${m[2]}-${m[1]}` : t;
+    return ISO_DATE.test(iso) ? { value: iso } : { error: `«${t}» — не дата. Введите дату как 31.12.2025` };
+  }
+  return fromInput(unit, text);
+}
+
+/** Ряд по годам (kind: series): строки «год — значение» для ввода. */
+export interface SeriesRow {
+  year: string;
+  value: string;
+}
+
+export function seriesRows(unit: string, v: unknown): SeriesRow[] {
+  const byYear = (v as { by_year?: Record<string, number> } | null)?.by_year ?? {};
+  return Object.entries(byYear).map(([year, x]) => ({ year, value: toInput(unit, x) }));
+}
+
+const YEAR = /^\d{4}$/;
+
+/** Строки ряда → значение параметра; остальные поля ряда (текущее значение, дата прогноза) сохраняются. */
+export function seriesFromRows(unit: string, rows: readonly SeriesRow[], prev: unknown): CellParsed {
+  if (rows.length === 0) return { value: null };
+  const byYear: Record<string, number> = {};
+  for (const r of rows) {
+    if (!YEAR.test(r.year.trim())) return { error: `«${r.year}» — не год. Введите год, например 2027` };
+    if (byYear[r.year.trim()] !== undefined) return { error: `Год ${r.year.trim()} указан дважды` };
+    const v = fromInput(unit, r.value);
+    if (v.error !== undefined) return { error: `${r.year}: ${v.error}` };
+    if (v.value === null) return { error: `${r.year}: введите значение` };
+    byYear[r.year.trim()] = v.value;
+  }
+  const sorted = Object.fromEntries(Object.entries(byYear).sort(([a], [b]) => a.localeCompare(b)));
+  const base = prev && typeof prev === "object" && !Array.isArray(prev) ? (prev as Record<string, unknown>) : {};
+  return { value: { ...base, by_year: sorted, after_last: "last" } };
+}

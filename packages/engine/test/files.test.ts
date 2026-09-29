@@ -22,6 +22,7 @@ function project(id = "p1", name = "Каширка"): plot.LandProject {
     { cadastralNumber: "77:05:0004012:1873", name, area: "", address: "", point: null, regionCode: "", egrn: { data: EGRN, document }, documents: [] },
     id,
     AT,
+    1,
   );
   return r.project as plot.LandProject;
 }

@@ -1,9 +1,9 @@
 // Файл сгенерирован packages/spec/scripts/build-spec.ts из data/*.yaml. Не редактировать вручную.
 
 /** Версия справочника: хеш содержимого data/*.yaml. Сохраняется в каждой версии расчёта. */
-export const SPEC_VERSION = "d2948dee3fcd";
+export const SPEC_VERSION = "8835b3e19180";
 /** Дата актуализации справочника: самая поздняя дата проверки источника. */
-export const SPEC_ACTUALIZED_AT = "2026-09-28";
+export const SPEC_ACTUALIZED_AT = "2026-09-29";
 
 /** ID источников из data/sources.yaml */
 export const SOURCE_IDS = [
@@ -80,6 +80,11 @@ export const SOURCE_IDS = [
   "S_PROJECT_DOCS",
   "S_BANK_TERMSHEET",
   "S_COMPANY_ACTUALS",
+  "S_MSK_PZZ_120PP",
+  "S_MO_RGIS",
+  "S_MO_NGP_713",
+  "S_ZK_105",
+  "S_MARKET_ANALOGS",
   "S_EXPERT",
 ] as const;
 export type SourceId = (typeof SOURCE_IDS)[number];
@@ -124,6 +129,20 @@ export const PARAMETER_IDS = [
   "GPZU.MAX_HEIGHT_M",
   "GPZU.APART_ALLOWED",
   "GPZU.DEVIATION_PERMIT",
+  "SITE.ZONE",
+  "SITE.MAX_DENSITY",
+  "SITE.ZOUIT",
+  "MARKET.ANALOGS",
+  "VAR.LOWER_LEVELS",
+  "VAR.MAX_VARIANTS",
+  "VAR.RESULTS",
+  "VAL.SELECT_CRITERION",
+  "VAL.MAX_PEAK_DEBT",
+  "VAL.MAX_SALES_M",
+  "TIME.PRE_RNS_M",
+  "TIME.CONSTRUCTION_M",
+  "TIME.SALES_AFTER_RNS_M",
+  "CAPEX.ESTIMATE_RATES",
   "TEP.FOOTPRINT_AREA",
   "TEP.AVG_FLOORS",
   "TEP.MAX_FLOORS",
@@ -340,6 +359,20 @@ export const FORMULA_IDS = [
   "F.BENCH.HEIGHT_BAND",
   "F.BENCH.APART_DISCOUNT",
   "F.BENCH.APART_PRICE",
+  "F.SITE.BUILDABLE_AREA",
+  "F.SITE.MAX_GFA",
+  "F.SITE.FOOTPRINT",
+  "F.MARKET.PRICE",
+  "F.MARKET.PACE",
+  "F.MARKET.CAPACITY",
+  "F.VAR.FLOORS",
+  "F.VAR.CLASSES",
+  "F.VAR.LIST",
+  "F.VAR.PHASES",
+  "F.VAR.MILESTONES",
+  "F.VAR.PRODUCTS",
+  "F.VAR.CAPEX",
+  "F.VAR.BEST",
 ] as const;
 export type FormulaId = (typeof FORMULA_IDS)[number];
 

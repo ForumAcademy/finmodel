@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { plot, projectFile, text } from "@fm/engine";
+import { plot, projectFile, site, siteView, text } from "@fm/engine";
 import { readJson, saveProjectFile, storedFiles } from "@/lib/files";
 import { deleteFile, getReference, listProjects, newId, nowIso, saveProject, saveStoredFile } from "@/lib/store";
 import { NewProjectModal } from "./NewProjectModal";
@@ -33,6 +33,11 @@ function Card({ p, onMenu }: { p: LandProject; onMenu: (p: LandProject, el: HTML
         {s.missing > 0 && <Chip tone="yel">Не хватает {s.missing} {text.plural(s.missing, ["значения", "значений", "значений"])}</Chip>}
         {!s.noCadastralNumber && s.missing === 0 && <Chip tone="grn">Данные участка заполнены</Chip>}
       </div>
+      {siteView.snapshotText(site.siteOf(p).snapshot) && (
+        <div className="small" style={{ marginTop: 8 }}>
+          {siteView.snapshotText(site.siteOf(p).snapshot)}
+        </div>
+      )}
       <div className="small muted" style={{ marginTop: 8 }}>
         Обновлено {text.date(p.updatedAt.slice(0, 10))}
       </div>

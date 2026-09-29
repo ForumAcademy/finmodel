@@ -359,6 +359,9 @@ export function projectQuestions(project: CalcProject, versions: AssumptionVersi
   return dataQuestions(project.legacyCase, projectInput(legacy, versions), computeProject(legacy, versions).result);
 }
 
+/** Версия справочника, заполненная из исходного Excel. */
+const LEGACY_VERSION = 1;
+
 /**
  * Проект из кейса исходного Excel (tests/cases/*_legacy.yaml). Значения справочника допущений проект берёт из
  * справочника: версия 1 заполнена из этого же Excel, поэтому числа те же. Расчёт «как в исходном Excel» берёт их
@@ -366,11 +369,13 @@ export function projectQuestions(project: CalcProject, versions: AssumptionVersi
  */
 export function legacyProject(c: LegacyCase, name: string, versions: AssumptionVersion[] = SPEC_ASSUMPTIONS): CalcProject {
   const excel = legacyCaseInput(c);
-  const params = assumptionParams(versions);
+  // Проект из Excel создаётся на версии 1 справочника: её значения взяты из этого же Excel. Параметры, которые
+  // появились в справочнике позже (коэффициенты площадей, рост цен), у проекта остаются своими значениями из Excel.
+  const params = assumptionParams(versions.filter((v) => v.version === LEGACY_VERSION));
   const values = Object.fromEntries(Object.entries(excel.values).filter(([k]) => !params.has(k as ParameterId)));
   return {
     input: { ...excel, values: { ...values, "GEN.PROJECT_NAME": name } },
-    assumptionsVersion: 1,
+    assumptionsVersion: LEGACY_VERSION,
     legacyCase: c,
     legacyWarnings: legacyChecks(c),
     fromFile: legacyAssumptions(c),

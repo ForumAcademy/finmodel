@@ -8,7 +8,7 @@ import { FORMULAS } from "./registry";
 import type { CalcOptions, ProjectInput, ResultSet } from "./types";
 
 export { Engine, CalcError, MissingInputError, sinkFormulas, stepwise, stepGroups, type FormulaContext, type FormulaFn, type StepFormulaFn } from "./context";
-export { FORMULAS, IMPLEMENTED_MODULES } from "./registry";
+export { ANALYSIS_FORMULAS, FORMULAS, IMPLEMENTED_MODULES } from "./registry";
 export { STAGE_UPLIFT_NOT_COUNTED } from "./modules/sales";
 export { legacyAssumptions, legacyCaseInput, type LegacyAssumption, type LegacyCase, type LegacyChecks } from "./legacy";
 export { legacyChecks } from "./legacy-checks";
@@ -36,10 +36,13 @@ export {
   type ProjectModel,
 } from "./project";
 export { cellQty, hasUnsold, paceLine, parkingWarning, rowName, salesRows, salesTotal, salesWarnings, type SalesRow, type SalesTotal, type SalesWarning } from "./explain/sales-summary";
+export * as siteView from "./explain/site-view";
 export { aggregate, PERIOD_LABEL, periodKey, type Period } from "./explain/periods";
 export { amount, compatDiff, exampleFocus, howExample, inputFields, shortSource, templateExample } from "./explain/how";
 export { dataQuestions, LEGACY_QUESTION_MAX_NO, type DataQuestion, type Impact, type ImpactKind, type QuestionBlock } from "./legacy-questions";
 export * as plot from "./plot";
+export * as site from "./site";
+export * as analysis from "./analysis";
 export * as reference from "./reference";
 export * as book from "./book";
 export * as projectFile from "./projectfile";

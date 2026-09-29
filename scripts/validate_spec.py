@@ -229,6 +229,13 @@ def assumption_problem(p, v):
                 if cols[k].get("options") and str(cell) not in cols[k]["options"]:
                     return f"{k} = {cell} нет среди вариантов"
         return None
+    if p["kind"] == "enum":
+        return None if str(v) in (p.get("options") or []) else f"{v} нет среди вариантов"
+    if p["kind"] == "series":
+        by = v.get("by_year") if isinstance(v, dict) else None
+        if not isinstance(by, dict) or not by or not all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in by.values()):
+            return "нужен ряд по годам: {by_year: {год: значение}}"
+        return None
     return f"вид параметра {p['kind']} в справочнике допущений не поддерживается"
 
 for i, v in enumerate(assumptions):
@@ -250,8 +257,8 @@ for i, v in enumerate(assumptions):
             errors.append(f"{owner}: {pid} — status: unverified | check | approved")
         if it.get("status") == "check" and not it.get("check"):
             errors.append(f"{owner}: {pid} — статус check без поля check (что проверить)")
-        if it.get("group") not in ("sales", "budget", "escrow", "fin"):
-            errors.append(f"{owner}: {pid} — group: sales | budget | escrow | fin")
+        if it.get("group") not in ("analysis", "areas", "sales", "budget", "escrow", "fin"):
+            errors.append(f"{owner}: {pid} — group: analysis | areas | sales | budget | escrow | fin")
         if not (it.get("from") or {}).get("text"):
             errors.append(f"{owner}: {pid} — нет from.text («Откуда»)")
         if i == len(assumptions) - 1:

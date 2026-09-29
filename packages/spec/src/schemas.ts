@@ -249,6 +249,9 @@ export const FORMULA_MODULES = [
   "KPI",
   "CHECK",
   "BENCH",
+  "SITE",
+  "MARKET",
+  "VAR",
 ] as const;
 export const FORMULA_STATUSES = ["verified", "needs_verification"] as const;
 
@@ -298,7 +301,7 @@ export const formulaSchema = z
 // ---------- company_assumptions.yaml ----------
 
 /** Раздел справочника допущений; порядок значений в версии задаёт номера вопросов к данным. */
-export const ASSUMPTION_GROUPS = ["sales", "budget", "escrow", "fin"] as const;
+export const ASSUMPTION_GROUPS = ["analysis", "areas", "sales", "budget", "escrow", "fin"] as const;
 /** unverified — «не проверено», check — «проверить …» (что именно — в поле check), approved — «утверждено». */
 export const ASSUMPTION_STATUSES = ["unverified", "check", "approved"] as const;
 
