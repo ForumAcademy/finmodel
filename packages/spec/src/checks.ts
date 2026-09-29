@@ -74,6 +74,10 @@ export function checkSpec(spec: SpecData): SpecCheckResult {
     if (r.vri_fee.formula && !F.has(r.vri_fee.formula)) {
       warnings.push(`регион ${r.code}: vri_fee.formula ${r.vri_fee.formula} нет в formulas.yaml`);
     }
+    if (r.lookup) checkSources(owner, r.lookup.source_ids);
+  }
+  for (const d of duplicates(spec.regions.flatMap((r) => r.lookup?.cadastral_districts ?? []))) {
+    errors.push(`regions.yaml: кадастровый округ ${d} указан у нескольких регионов`);
   }
 
   for (const c of spec.capexItems) {

@@ -1,5 +1,5 @@
 {
-  "specVersion": "bed0e970ade7",
+  "specVersion": "d2948dee3fcd",
   "actualizedAt": "2026-09-28",
   "sources": [
     {
@@ -3429,6 +3429,7 @@
       "columns": [
         {
           "key": "stage",
+          "title": "Стадия",
           "unit": "enum",
           "options": [
             "старт продаж",
@@ -3441,6 +3442,7 @@
         },
         {
           "key": "uplift",
+          "title": "Прирост цены к предыдущей стадии",
           "unit": "доля прироста к стадии строкой выше"
         }
       ],
@@ -3535,6 +3537,7 @@
       "columns": [
         {
           "key": "product",
+          "title": "Продукт",
           "unit": "enum",
           "options": [
             "квартиры",
@@ -3547,28 +3550,34 @@
         },
         {
           "key": "mortgage_share",
+          "title": "Ипотека",
           "unit": "доля",
           "note": "доля сделок с ипотекой, вместе с первоначальным взносом покупателя"
         },
         {
           "key": "mortgage_down_payment",
+          "title": "Первоначальный взнос по ипотеке",
           "unit": "доля",
           "note": "первоначальный взнос покупателя по ипотеке, доля выручки продукта; входит в mortgage_share. Кредит = mortgage_share − взнос; база комиссии банка по ипотеке — только кредит"
         },
         {
           "key": "full_payment_share",
+          "title": "Оплата 100 %",
           "unit": "доля"
         },
         {
           "key": "installment_share",
+          "title": "Рассрочка",
           "unit": "доля"
         },
         {
           "key": "installment_months",
+          "title": "Срок рассрочки",
           "unit": "мес"
         },
         {
           "key": "installment_down_payment",
+          "title": "Взнос по рассрочке",
           "unit": "доля"
         }
       ],
@@ -4050,6 +4059,28 @@
           "channel": "ДКП",
           "taxable": true,
           "basis": "не жилые помещения"
+        }
+      ],
+      "columns": [
+        {
+          "key": "product",
+          "title": "Продукт",
+          "unit": "enum"
+        },
+        {
+          "key": "channel",
+          "title": "Договор",
+          "unit": "enum"
+        },
+        {
+          "key": "taxable",
+          "title": "НДС",
+          "unit": "bool"
+        },
+        {
+          "key": "basis",
+          "title": "Основание",
+          "unit": "текст"
         }
       ],
       "source_ids": [
@@ -8130,7 +8161,21 @@
         "status": "to_fill"
       },
       "ngp_source_ids": [],
-      "status": "structure_only"
+      "status": "structure_only",
+      "lookup": {
+        "cadastral_districts": [
+          "50"
+        ],
+        "address_names": [
+          "Московская область",
+          "Московская обл",
+          "обл Московская"
+        ],
+        "source_ids": [
+          "S_NSPD"
+        ],
+        "note": "Кадастровый округ 50 — Московская область; по этому же номеру округа учтены и часть участков Новой Москвы, поэтому регион сверяется с адресом в выписке ЕГРН"
+      }
     },
     {
       "code": "51",
@@ -9108,7 +9153,19 @@
       "ngp_source_ids": [
         "S_MSK_NGP_TRANSPORT_945PP"
       ],
-      "status": "reference_filled"
+      "status": "reference_filled",
+      "lookup": {
+        "cadastral_districts": [
+          "77"
+        ],
+        "address_names": [
+          "Москва"
+        ],
+        "source_ids": [
+          "S_NSPD"
+        ],
+        "note": "Кадастровый округ 77 — Москва. Участки Новой Москвы могут иметь номер округа 50: регион сверяется с адресом в выписке ЕГРН"
+      }
     },
     {
       "code": "78",

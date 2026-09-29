@@ -195,8 +195,15 @@ for r in regions:
     for i in (r.get("land_tax_rate_housing") or {}).get("source_ids") or []:
         if i not in S:
             errors.append(f"регион {r['code']}: источник ставки земельного налога {i} не найден")
+    for i in (r.get("lookup") or {}).get("source_ids") or []:
+        if i not in S:
+            errors.append(f"регион {r['code']}: источник определения региона {i} не найден")
     if (r.get("land_tax_rate_housing") or {}).get("status") == "needs_verification":
         warns.append(f"регион {r['code']}: ставка земельного налога {r['land_tax_rate_housing']['value']} — подтвердить у налогового консультанта")
+
+districts = [d for r in regions for d in (r.get("lookup") or {}).get("cadastral_districts") or []]
+if len(set(districts)) != len(districts):
+    errors.append("regions.yaml: один кадастровый округ указан у нескольких регионов")
 
 # справочник допущений компании
 def assumption_problem(p, v):

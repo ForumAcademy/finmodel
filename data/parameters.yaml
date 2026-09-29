@@ -1281,8 +1281,8 @@ parameters:
     unit: table
     kind: table
     columns:
-      - {key: stage, unit: enum, options: [старт продаж, котлован, 25%, 50%, 75%, РНВ]}
-      - {key: uplift, unit: "доля прироста к стадии строкой выше"}
+      - {key: stage, title: "Стадия", unit: enum, options: [старт продаж, котлован, 25%, 50%, 75%, РНВ]}
+      - {key: uplift, title: "Прирост цены к предыдущей стадии", unit: "доля прироста к стадии строкой выше"}
     scope: project
     default: null
     source_ids: [S_EISZHS_SERIES, S_COMPANY_ACTUALS]
@@ -1330,13 +1330,13 @@ parameters:
     unit: table
     kind: table
     columns:
-      - {key: product, unit: enum, options: [квартиры, апартаменты, ПСН, машино-места, кладовые], note: "структура оплат задаётся по продуктам"}
-      - {key: mortgage_share, unit: доля, note: "доля сделок с ипотекой, вместе с первоначальным взносом покупателя"}
-      - {key: mortgage_down_payment, unit: доля, note: "первоначальный взнос покупателя по ипотеке, доля выручки продукта; входит в mortgage_share. Кредит = mortgage_share − взнос; база комиссии банка по ипотеке — только кредит"}
-      - {key: full_payment_share, unit: доля}
-      - {key: installment_share, unit: доля}
-      - {key: installment_months, unit: мес}
-      - {key: installment_down_payment, unit: доля}
+      - {key: product, title: "Продукт", unit: enum, options: [квартиры, апартаменты, ПСН, машино-места, кладовые], note: "структура оплат задаётся по продуктам"}
+      - {key: mortgage_share, title: "Ипотека", unit: доля, note: "доля сделок с ипотекой, вместе с первоначальным взносом покупателя"}
+      - {key: mortgage_down_payment, title: "Первоначальный взнос по ипотеке", unit: доля, note: "первоначальный взнос покупателя по ипотеке, доля выручки продукта; входит в mortgage_share. Кредит = mortgage_share − взнос; база комиссии банка по ипотеке — только кредит"}
+      - {key: full_payment_share, title: "Оплата 100 %", unit: доля}
+      - {key: installment_share, title: "Рассрочка", unit: доля}
+      - {key: installment_months, title: "Срок рассрочки", unit: мес}
+      - {key: installment_down_payment, title: "Взнос по рассрочке", unit: доля}
     scope: project
     default: null
     source_ids: [S_CBR_MORTGAGE, S_EISZHS_SALES]
@@ -1545,6 +1545,11 @@ parameters:
     name: "Режим НДС по продуктам и каналам продаж"
     unit: table
     kind: table
+    columns:
+      - {key: product, title: "Продукт", unit: enum}
+      - {key: channel, title: "Договор", unit: enum}
+      - {key: taxable, title: "НДС", unit: bool}
+      - {key: basis, title: "Основание", unit: текст}
     scope: template
     default:
       - {product: квартиры,     channel: ДДУ, taxable: false, basis: "пп.23.1 п.3 ст.149 НК РФ"}

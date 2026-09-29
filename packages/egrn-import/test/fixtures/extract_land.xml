@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Условная выписка для теста: структура электронной выписки Росреестра об объекте недвижимости, данные выдуманы -->
+<extract_about_property_land>
+  <details_statement>
+    <group_top_requisites>
+      <organ_registr_rights>Федеральная служба государственной регистрации, кадастра и картографии</organ_registr_rights>
+      <date_formation>2026-09-28</date_formation>
+      <registration_number>КУВИ-001/2026-0000000</registration_number>
+    </group_top_requisites>
+  </details_statement>
+  <land_record>
+    <object>
+      <common_data>
+        <type><code>002001001000</code><value>Земельный участок</value></type>
+        <cad_number>77:05:0004012:1873</cad_number>
+        <quarter_cad_number>77:05:0004012</quarter_cad_number>
+      </common_data>
+    </object>
+    <cad_links>
+      <included_objects><included_object><cad_number>77:05:0004012:9999</cad_number></included_object></included_objects>
+    </cad_links>
+    <params>
+      <category><type><code>003002000000</code><value>Земли населенных пунктов</value></type></category>
+      <permitted_use>
+        <permitted_use_established>
+          <by_document>Многоэтажная жилая застройка (высотная застройка) (2.6)</by_document>
+        </permitted_use_established>
+      </permitted_use>
+      <area><value>32000</value><inaccuracy>63</inaccuracy></area>
+    </params>
+    <address_location>
+      <address>
+        <address_fias>
+          <level_settlement>
+            <oktmo>45000000</oktmo>
+            <region><code>77</code><value>Москва</value></region>
+          </level_settlement>
+        </address_fias>
+        <readable_address>г. Москва, Каширское шоссе, вл. 64 (условный адрес)</readable_address>
+      </address>
+    </address_location>
+    <cost><value>2900000000.00</value></cost>
+  </land_record>
+  <right_records>
+    <right_record>
+      <right_data><right_type><code>001001000000</code><value>Собственность</value></right_type></right_data>
+    </right_record>
+  </right_records>
+  <restrict_records>
+    <restrict_record>
+      <restrictions_encumbrances_data><restriction_encumbrance_type><code>022006000000</code><value>Аренда (в том числе, субаренда)</value></restriction_encumbrance_type></restrictions_encumbrances_data>
+    </restrict_record>
+  </restrict_records>
+</extract_about_property_land>
