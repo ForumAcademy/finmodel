@@ -371,6 +371,14 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
           </div>
         </aside>
         <main className="main">
+          {/* Узкий экран: меню слева скрыто, разделы — строкой над содержимым */}
+          <nav className="mnav">
+            {[{ sec: "plot" as ProjectSection, short: "Участок" }, ...ANALYSIS_MENU, { sec: "docs" as ProjectSection, short: "Документы" }].map((m) => (
+              <Link key={m.sec} className={sec === m.sec ? "on" : ""} href={href(p.id, m.sec)}>
+                {m.short}
+              </Link>
+            ))}
+          </nav>
           {sec === "site" || sec === "market" || sec === "variants" || sec === "compare" ? (
             <AnalysisArea
               p={p}
