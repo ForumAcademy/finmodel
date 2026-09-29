@@ -43,6 +43,7 @@ export { dataQuestions, LEGACY_QUESTION_MAX_NO, type DataQuestion, type Impact, 
 export * as plot from "./plot";
 export * as site from "./site";
 export * as analysis from "./analysis";
+export * as zcyc from "./zcyc";
 export * as reference from "./reference";
 export * as book from "./book";
 export * as projectFile from "./projectfile";

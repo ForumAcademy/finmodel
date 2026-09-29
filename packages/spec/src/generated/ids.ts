@@ -1,7 +1,7 @@
 // Файл сгенерирован packages/spec/scripts/build-spec.ts из data/*.yaml. Не редактировать вручную.
 
 /** Версия справочника: хеш содержимого data/*.yaml. Сохраняется в каждой версии расчёта. */
-export const SPEC_VERSION = "8835b3e19180";
+export const SPEC_VERSION = "6d2f46c363ba";
 /** Дата актуализации справочника: самая поздняя дата проверки источника. */
 export const SPEC_ACTUALIZED_AT = "2026-09-29";
 
@@ -61,6 +61,7 @@ export const SOURCE_IDS = [
   "S_CBR_KEYRATE_DECISION",
   "S_CBR_MACROSURVEY",
   "S_CBR_ZCYC",
+  "S_MOEX_ZCYC",
   "S_CBR_PF_STATS",
   "S_CBR_RESERVE",
   "S_CBR_MORTGAGE",
@@ -228,6 +229,8 @@ export const PARAMETER_IDS = [
   "OPEX.OVERHEAD_VAT_SHARE",
   "OPEX.DEV_FEE_RATE",
   "VAL.RISK_FREE",
+  "VAL.ZCYC",
+  "VAL.ZCYC_DATE",
   "VAL.EQUITY_PREMIUM",
   "VAL.HURDLE_IRR",
   "BENCH.MARKET_MIN_COMPS",
@@ -333,6 +336,7 @@ export const FORMULA_IDS = [
   "F.CF.FCFE",
   "F.CF.CASH_BALANCE",
   "F.CF.HORIZON",
+  "F.KPI.RISK_FREE",
   "F.KPI.DISCOUNT_RATE",
   "F.KPI.NPV",
   "F.KPI.IRR",

@@ -57,6 +57,7 @@ const siteSchema = z.object({
   customVariants: z.array(z.object({ id: z.string(), housing_class: z.string(), floors: z.number(), apart: z.boolean() })),
   selectedVariant: nstr,
   snapshot: z.object({ at: z.string(), best: nstr, bestTitle: nstr, netProfit: nstr, variants: z.number() }).nullable(),
+  curve: z.object({ date: z.string(), points: z.array(z.object({ term: z.number(), yield: z.number() })), loadedAt: z.string() }).nullable().optional(),
 });
 
 const projectSchema = z.object({

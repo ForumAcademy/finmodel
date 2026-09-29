@@ -1891,14 +1891,40 @@ parameters:
   # =====================================================================
 
   - id: VAL.RISK_FREE
-    name: "Безрисковая ставка"
+    name: "Безрисковая ставка (ручной ввод)"
     unit: "%годовых"
     kind: scalar
     scope: template
     default: null
-    source_ids: [S_CBR_ZCYC]
-    basis: "Доходность ОФЗ со сроком, равным сроку проекта, на дату оценки (G-curve ЦБ)"
+    source_ids: [S_MOEX_ZCYC, S_CBR_ZCYC]
+    basis: "Доходность ОФЗ со сроком, равным сроку проекта, на дату оценки. Основной путь — кривая бескупонной доходности Мосбиржи (VAL.ZCYC), её сервис загружает сам; ручной ввод — только если кривая не загружена (F.KPI.RISK_FREE)"
     status: needs_verification
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.ZCYC
+    name: "Кривая бескупонной доходности ОФЗ на дату оценки"
+    unit: table
+    kind: table
+    columns:
+      - {key: term, title: "Срок", unit: лет}
+      - {key: yield, title: "Доходность", unit: "доля годовых"}
+    scope: project
+    default: null
+    source_ids: [S_MOEX_ZCYC]
+    basis: "Официальные данные Мосбиржи, не экспертное значение (решение пользователя 29.09.2026). Сервис загружает доходности по срокам на дату оценки или ближайший предыдущий торговый день; из кривой берётся точка, равная сроку проекта (F.KPI.RISK_FREE)"
+    how_to_fill: "Экран «Сравнение»: кнопка загрузки кривой; дата кривой — VAL.ZCYC_DATE"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.ZCYC_DATE
+    name: "Дата кривой бескупонной доходности"
+    unit: дата
+    kind: date
+    scope: project
+    default: null
+    source_ids: [S_MOEX_ZCYC]
+    basis: "Торговый день, на который взята кривая VAL.ZCYC: дата оценки или ближайший предыдущий торговый день"
+    status: project_input
     legacy: [{cell: null, verdict: new}]
 
   - id: VAL.EQUITY_PREMIUM
@@ -1908,7 +1934,7 @@ parameters:
     scope: project
     default: null
     source_ids: [S_EXPERT]
-    basis: "Экспертная (уровень 5): обязательны автор и диапазон. Ставка дисконтирования = безрисковая + премия"
+    basis: "Экспертная (уровень 5): закона или методики, задающих премию, нет; утверждает руководитель, обязательны автор и диапазон. Опорная точка — исходная финмодель Дербеневской: ставка дисконтирования 25 % (CF1!D139) минус КБД на дату оценки ≈ 9 п.п. (решение пользователя 29.09.2026). Ставка дисконтирования = безрисковая + премия"
     status: expert_allowed
     legacy: [{cell: "CF1!D139", value: 0.25, verdict: fix, note: "cost of equity 25% без разложения на безрисковую ставку и премию"}]
 
