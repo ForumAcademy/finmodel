@@ -247,6 +247,14 @@ interface EstimateRate {
 
 const ALL_CLASSES = "все";
 
+/** Строка CAPEX.CLASS_RATIO. */
+interface ClassRatio {
+  item?: string | null;
+  housing_class?: string | null;
+  base_class?: string | null;
+  ratio?: number | null;
+}
+
 export function F_VAR_CAPEX(ctx: FormulaContext): Record<string, unknown>[] {
   const cls = ctx.require<string>("GEN.HOUSING_CLASS");
   const rates = ctx.param<EstimateRate[]>("CAPEX.ESTIMATE_RATES") ?? [];
@@ -258,6 +266,14 @@ export function F_VAR_CAPEX(ctx: FormulaContext): Record<string, unknown>[] {
     if (r.housing_class !== cls && r.housing_class !== ALL_CLASSES) continue;
     const had = chosen.get(r.item);
     if (!had || (had.housing_class === ALL_CLASSES && r.housing_class === cls)) chosen.set(r.item, r);
+  }
+  // Класс без своей ставки статьи: доля от ставки класса-основы (CAPEX.CLASS_RATIO)
+  const ratios = ctx.param<ClassRatio[]>("CAPEX.CLASS_RATIO") ?? [];
+  for (const q of Array.isArray(ratios) ? ratios : []) {
+    if (q.housing_class !== cls || typeof q.ratio !== "number" || !q.item || !q.base_class) continue;
+    if (chosen.get(q.item)?.housing_class === cls) continue;
+    const base = rates.find((r) => r.item === q.item && r.housing_class === q.base_class && typeof r.rate === "number");
+    if (base) chosen.set(q.item, { ...base, housing_class: cls, rate: new Decimal(base.rate as number).mul(q.ratio).toNumber() });
   }
   const rows: Record<string, unknown>[] = [];
   for (const [name, r] of chosen) {
@@ -273,6 +289,54 @@ export function F_VAR_CAPEX(ctx: FormulaContext): Record<string, unknown>[] {
     rows.push(row);
   }
   return rows;
+}
+
+// ---------- контроль по НЦС ----------
+
+/** Строка BENCH.NCS_RATES. */
+export interface NcsRow {
+  floors_min: number | null;
+  floors_max: number | null;
+  rate: number | null;
+}
+
+export interface NcsCheck {
+  /** Границы норматива той же этажности, руб/м² наземной ГНС с НДС; null — строк нет. */
+  min: Decimal | null;
+  max: Decimal | null;
+  /** Ставка СМР надземной части варианта, руб/м² наземной ГНС с НДС; null — ставки нет. */
+  rate: Decimal | null;
+  below: boolean;
+}
+
+/** Диапазон НЦС для этажности, пересчитанный коэффициентом k (регион, площади, НДС). */
+export function ncsRange(rows: readonly NcsRow[], floors: number, k: Decimal): { min: Decimal; max: Decimal } | null {
+  const xs = rows
+    .filter((r) => typeof r.rate === "number" && (r.floors_min === null || r.floors_min <= floors) && (r.floors_max === null || floors <= r.floors_max))
+    .map((r) => new Decimal(r.rate as number));
+  if (xs.length === 0) return null;
+  return { min: Decimal.min(...xs).mul(k), max: Decimal.max(...xs).mul(k) };
+}
+
+const SMR_ABOVE = "SMR_ABOVE";
+
+export function F_VAR_NCS_CHECK(ctx: FormulaContext): NcsCheck {
+  const rows = ctx.require<NcsRow[]>("BENCH.NCS_RATES");
+  const floors = ctx.requireNum("GPZU.MAX_FLOORS").toNumber();
+  const kPer = ctx.region().ncs_k_per;
+  if (kPer === null || kPer === undefined) throw new CalcError("Коэффициент перехода НЦС для региона не задан", "GEN.REGION_CODE");
+  const vat = ONE.add(ctx.requireNum("TAX.VAT_RATE"));
+  const apt = ctx.formula<Decimal>("F.TEP.APT_AREA");
+  const gfa = ctx.formula<Decimal>("F.TEP.GFA_ABOVE");
+  if (gfa.isZero()) throw new CalcError("Наземная площадь варианта равна нулю");
+  const range = ncsRange(rows, floors, new Decimal(kPer).mul(apt).div(gfa).mul(vat));
+  const smr = ctx.formula<Record<string, unknown>[]>("F.VAR.CAPEX").find((r) => r.item_id === SMR_ABOVE);
+  const rate = typeof smr?.rate === "number" ? (smr.vat_included ? new Decimal(smr.rate) : new Decimal(smr.rate).mul(vat)) : null;
+  const below = !!range && rate !== null && rate.lt(range.min);
+  if (below && range && rate) {
+    ctx.message("warning", `Ставка СМР надземной части ${fmt(rate.round())} руб/м² ниже норматива цены строительства той же этажности (от ${fmt(range.min.round())} руб/м² с НДС): проверьте ставку класса в справочнике`);
+  }
+  return { min: range?.min ?? null, max: range?.max ?? null, rate, below };
 }
 
 /** Условие отбора: порог, значение варианта и текст причины, если вариант его не проходит. */
@@ -328,6 +392,7 @@ export const VAR_FORMULAS = {
   "F.VAR.FLOORS": F_VAR_FLOORS,
   "F.VAR.CLASSES": F_VAR_CLASSES,
   "F.VAR.LIST": F_VAR_LIST,
+  "F.VAR.NCS_CHECK": F_VAR_NCS_CHECK,
   "F.VAR.PHASES": F_VAR_PHASES,
   "F.VAR.MILESTONES": F_VAR_MILESTONES,
   "F.VAR.PRODUCTS": F_VAR_PRODUCTS,

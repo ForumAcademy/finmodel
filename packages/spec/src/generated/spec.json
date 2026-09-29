@@ -1,5 +1,5 @@
 {
-  "specVersion": "6d2f46c363ba",
+  "specVersion": "fcf24124044e",
   "actualizedAt": "2026-09-29",
   "sources": [
     {
@@ -2327,6 +2327,523 @@
           "cell": "Бюджет!D17:D52",
           "verdict": "new",
           "note": "первичные ставки — из сумм исходного Excel, пересчитанных на базу статьи"
+        }
+      ]
+    },
+    {
+      "id": "CAPEX.CLASS_RATIO",
+      "name": "Ставка статьи для класса как доля ставки другого класса",
+      "unit": "table",
+      "kind": "table",
+      "scope": "template",
+      "default": null,
+      "columns": [
+        {
+          "key": "item",
+          "title": "Статья",
+          "unit": "enum",
+          "options": [
+            "Покупка участка / прав",
+            "Юридические расходы, due diligence",
+            "Агентское вознаграждение за участок",
+            "Земельный налог или арендная плата",
+            "Плата за изменение ВРИ",
+            "Обязательства перед городом: денежная компенсация",
+            "Обязательства перед городом: строительство и передача объектов",
+            "Получение ИРД (ППТ, ГПЗУ, ТУ)",
+            "Предпроектные проработки (концепция)",
+            "Инженерные изыскания",
+            "Проектирование, стадия П",
+            "Проектирование, стадия РД",
+            "Экспертиза проектной документации",
+            "Подготовка площадки (включая снос)",
+            "СМР надземной части (в т.ч. стилобат)",
+            "СМР подземной части (паркинг)",
+            "Отделка МОП",
+            "Прочие СМР",
+            "Расходы по вводу в эксплуатацию",
+            "ТУ и плата за технологическое присоединение",
+            "Наружные сети и сооружения",
+            "Благоустройство",
+            "Улично-дорожная сеть",
+            "Социальные объекты (отдельно стоящие)",
+            "Непредвиденные расходы",
+            "Услуги технического заказчика",
+            "Авторский надзор",
+            "Строительный контроль (технадзор)",
+            "Мониторинг окружающей застройки",
+            "Охрана и содержание площадки",
+            "Вознаграждение за управление проектом",
+            "Содержание застройщика (СЗ)",
+            "Маркетинг",
+            "Брокеридж"
+          ]
+        },
+        {
+          "key": "housing_class",
+          "title": "Класс",
+          "unit": "enum",
+          "options": [
+            "эконом",
+            "комфорт",
+            "бизнес",
+            "премиум"
+          ]
+        },
+        {
+          "key": "base_class",
+          "title": "От ставки класса",
+          "unit": "enum",
+          "options": [
+            "эконом",
+            "комфорт",
+            "бизнес",
+            "премиум"
+          ]
+        },
+        {
+          "key": "ratio",
+          "title": "Доля",
+          "unit": "доля"
+        }
+      ],
+      "source_ids": [
+        "S_EXPERT"
+      ],
+      "basis": "Экспертное значение (уровень 5), утверждает руководитель (решение пользователя 29.09.2026). Для класса без своей ставки статья считается как ставка класса-основы × доля. Государственный норматив НЦС для этого не подходит: он в 3–4 раза ниже коммерческой ставки бизнес-класса из исходного Excel и показывается только как нижняя граница (F.VAR.NCS_CHECK). Своя ставка класса в CAPEX.ESTIMATE_RATES главнее доли",
+      "status": "expert_allowed",
+      "legacy": [
+        {
+          "cell": null,
+          "verdict": "new"
+        }
+      ]
+    },
+    {
+      "id": "BENCH.NCS_RATES",
+      "name": "Нормативы цены строительства многоквартирных жилых домов (НЦС 81-02-01-2026)",
+      "unit": "table",
+      "kind": "table",
+      "scope": "template",
+      "default": [
+        {
+          "code": "01-02-001-01",
+          "floors_min": 1,
+          "floors_max": 3,
+          "design": "кирпичные стены, облицовка кирпичом",
+          "apt_area": 1050,
+          "rate": 60160
+        },
+        {
+          "code": "01-02-002-01",
+          "floors_min": 1,
+          "floors_max": 3,
+          "design": "легкобетонные блоки, штукатурка",
+          "apt_area": 550,
+          "rate": 80180
+        },
+        {
+          "code": "01-02-002-02",
+          "floors_min": 1,
+          "floors_max": 3,
+          "design": "легкобетонные блоки, штукатурка",
+          "apt_area": 1200,
+          "rate": 69010
+        },
+        {
+          "code": "01-02-003-01",
+          "floors_min": 1,
+          "floors_max": 3,
+          "design": "ж/б панели",
+          "apt_area": 1700,
+          "rate": 64800
+        },
+        {
+          "code": "01-03-001-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "кирпичные стены, облицовка кирпичом",
+          "apt_area": 930,
+          "rate": 99920
+        },
+        {
+          "code": "01-03-001-02",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "кирпичные стены, облицовка кирпичом",
+          "apt_area": 1200,
+          "rate": 95720
+        },
+        {
+          "code": "01-03-001-03",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "кирпичные стены, облицовка кирпичом",
+          "apt_area": 3200,
+          "rate": 72420
+        },
+        {
+          "code": "01-03-002-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "кирпичные стены, вентфасад",
+          "apt_area": 3850,
+          "rate": 61730
+        },
+        {
+          "code": "01-03-003-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "керамические блоки, облицовка кирпичом",
+          "apt_area": 1650,
+          "rate": 73010
+        },
+        {
+          "code": "01-03-004-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "бетонные камни, штукатурка",
+          "apt_area": 900,
+          "rate": 91870
+        },
+        {
+          "code": "01-03-005-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "легкобетонные блоки, облицовка кирпичом",
+          "apt_area": 300,
+          "rate": 103940
+        },
+        {
+          "code": "01-03-006-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "легкобетонные блоки, вентфасад",
+          "apt_area": 850,
+          "rate": 73540
+        },
+        {
+          "code": "01-03-007-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "легкобетонные блоки, штукатурка",
+          "apt_area": 550,
+          "rate": 80240
+        },
+        {
+          "code": "01-03-007-03",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "легкобетонные блоки, штукатурка",
+          "apt_area": 1700,
+          "rate": 75770
+        },
+        {
+          "code": "01-03-008-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "монолитные ж/б стены, штукатурка",
+          "apt_area": 840,
+          "rate": 74590
+        },
+        {
+          "code": "01-03-009-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "сборный ж/б каркас, легкобетонные блоки, штукатурка",
+          "apt_area": 2300,
+          "rate": 73290
+        },
+        {
+          "code": "01-03-010-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "ж/б панели, окраска",
+          "apt_area": 1800,
+          "rate": 75650
+        },
+        {
+          "code": "01-03-010-02",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "ж/б панели, окраска",
+          "apt_area": 4800,
+          "rate": 73340
+        },
+        {
+          "code": "01-03-010-03",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "ж/б панели, окраска",
+          "apt_area": 5400,
+          "rate": 72970
+        },
+        {
+          "code": "01-03-011-01",
+          "floors_min": 3,
+          "floors_max": 5,
+          "design": "сборно-монолитный каркас, ж/б панели, штукатурка",
+          "apt_area": 5100,
+          "rate": 68330
+        },
+        {
+          "code": "01-04-001-01",
+          "floors_min": 6,
+          "floors_max": 10,
+          "design": "монолитные ж/б стены, штукатурка",
+          "apt_area": 3400,
+          "rate": 74490
+        },
+        {
+          "code": "01-04-002-01",
+          "floors_min": 6,
+          "floors_max": 10,
+          "design": "монолитные ж/б стены, вентфасад",
+          "apt_area": 4600,
+          "rate": 77910
+        },
+        {
+          "code": "01-04-003-01",
+          "floors_min": 6,
+          "floors_max": 10,
+          "design": "монолитный каркас, легкобетонные блоки, облицовка кирпичом",
+          "apt_area": 4000,
+          "rate": 99850
+        },
+        {
+          "code": "01-04-003-02",
+          "floors_min": 6,
+          "floors_max": 10,
+          "design": "монолитный каркас, легкобетонные блоки, облицовка кирпичом",
+          "apt_area": 9600,
+          "rate": 80900
+        },
+        {
+          "code": "01-04-003-03",
+          "floors_min": 6,
+          "floors_max": 10,
+          "design": "монолитный каркас, легкобетонные блоки, облицовка кирпичом",
+          "apt_area": 14400,
+          "rate": 70240
+        },
+        {
+          "code": "01-04-004-01",
+          "floors_min": 6,
+          "floors_max": 10,
+          "design": "монолитный каркас, легкобетонные блоки, штукатурка",
+          "apt_area": 5000,
+          "rate": 94500
+        },
+        {
+          "code": "01-04-005-01",
+          "floors_min": 6,
+          "floors_max": 10,
+          "design": "ж/б панели, окраска",
+          "apt_area": null,
+          "rate": 65920
+        },
+        {
+          "code": "01-05-001-01",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "кирпичные стены, облицовка кирпичом",
+          "apt_area": 18235,
+          "rate": 85700
+        },
+        {
+          "code": "01-05-001-02",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "кирпичные стены, облицовка кирпичом",
+          "apt_area": 18340,
+          "rate": 86380
+        },
+        {
+          "code": "01-05-002-01",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "монолитный каркас, заполнение кирпичом",
+          "apt_area": 8700,
+          "rate": 90870
+        },
+        {
+          "code": "01-05-002-02",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "монолитный каркас, заполнение кирпичом",
+          "apt_area": 18200,
+          "rate": 83180
+        },
+        {
+          "code": "01-05-003-01",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "сборно-монолитный каркас, легкобетонные блоки, облицовка кирпичом",
+          "apt_area": 7650,
+          "rate": 64150
+        },
+        {
+          "code": "01-05-004-01",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "сборно-монолитный каркас, легкобетонные блоки, вентфасад",
+          "apt_area": 4000,
+          "rate": 107560
+        },
+        {
+          "code": "01-05-004-02",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "сборно-монолитный каркас, легкобетонные блоки, вентфасад",
+          "apt_area": 8000,
+          "rate": 105090
+        },
+        {
+          "code": "01-05-004-03",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "сборно-монолитный каркас, легкобетонные блоки, вентфасад",
+          "apt_area": 17300,
+          "rate": 92270
+        },
+        {
+          "code": "01-05-004-04",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "сборно-монолитный каркас, легкобетонные блоки, вентфасад",
+          "apt_area": 23000,
+          "rate": 93710
+        },
+        {
+          "code": "01-05-005-01",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "ж/б панели, окраска",
+          "apt_area": 17300,
+          "rate": 73680
+        },
+        {
+          "code": "01-05-005-02",
+          "floors_min": 11,
+          "floors_max": 16,
+          "design": "ж/б панели, окраска",
+          "apt_area": 20200,
+          "rate": 70080
+        },
+        {
+          "code": "01-06-001-01",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "монолитный каркас, заполнение кирпичом, облицовка кирпичом",
+          "apt_area": 24500,
+          "rate": 82880
+        },
+        {
+          "code": "01-06-001-02",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "монолитный каркас, заполнение кирпичом, облицовка кирпичом",
+          "apt_area": 27400,
+          "rate": 80020
+        },
+        {
+          "code": "01-06-002-01",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "монолитный каркас, заполнение кирпичом, вентфасад",
+          "apt_area": 5700,
+          "rate": 96280
+        },
+        {
+          "code": "01-06-002-02",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "монолитный каркас, заполнение кирпичом, вентфасад",
+          "apt_area": 6250,
+          "rate": 106950
+        },
+        {
+          "code": "01-06-003-01",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "ж/б панели",
+          "apt_area": 7500,
+          "rate": 67720
+        },
+        {
+          "code": "01-06-004-01",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "ж/б панели, вентфасад",
+          "apt_area": 9850,
+          "rate": 61630
+        },
+        {
+          "code": "01-06-005-01",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "ж/б панели, штукатурка «Шуба-Глимс»",
+          "apt_area": 10640,
+          "rate": 76860
+        },
+        {
+          "code": "01-06-006-01",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "ж/б панели, окраска",
+          "apt_area": 19000,
+          "rate": 74040
+        },
+        {
+          "code": "01-06-006-02",
+          "floors_min": 17,
+          "floors_max": null,
+          "design": "ж/б панели, окраска",
+          "apt_area": 24500,
+          "rate": 69010
+        }
+      ],
+      "columns": [
+        {
+          "key": "code",
+          "title": "Код показателя",
+          "unit": "текст"
+        },
+        {
+          "key": "floors_min",
+          "title": "Этажей от",
+          "unit": "шт"
+        },
+        {
+          "key": "floors_max",
+          "title": "Этажей до",
+          "unit": "шт"
+        },
+        {
+          "key": "design",
+          "title": "Конструктив и фасад",
+          "unit": "текст"
+        },
+        {
+          "key": "apt_area",
+          "title": "Площадь квартир объекта-представителя",
+          "unit": "м2"
+        },
+        {
+          "key": "rate",
+          "title": "Норматив",
+          "unit": "руб/м2 общей площади квартир"
+        }
+      ],
+      "source_ids": [
+        "S_NCS_2026_01"
+      ],
+      "basis": "Разделы 2–6 сборника НЦС 81-02-01-2026 «Жилые здания», таблицы 01-02-001 … 01-06-006: цены на 01.01.2026 без НДС, базовый район — Московская область, измеритель — 1 м² общей площади квартир. Перенесено со скриншотов страниц 20–24, присланных пользователем 29.09.2026 (/mnt/project-files/ncs/). Группы этажности НЦС: до 3, 3–5, 6–10, 11–16, более 16. Используется как нижняя граница ставки СМР надземной части (F.VAR.NCS_CHECK): в НЦС уже входят ПИР, стройконтроль и резерв, поэтому ставка компании только на СМР не должна быть ниже",
+      "status": "verified",
+      "legacy": [
+        {
+          "cell": null,
+          "verdict": "new"
         }
       ]
     },
@@ -8120,7 +8637,7 @@
       "code": "31",
       "name": "Белгородская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn31/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8155,7 +8672,7 @@
       "code": "32",
       "name": "Брянская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn32/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.85,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8190,7 +8707,7 @@
       "code": "33",
       "name": "Владимирская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn33/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.86,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8260,7 +8777,7 @@
       "code": "35",
       "name": "Вологодская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn35/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.97,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8295,7 +8812,7 @@
       "code": "36",
       "name": "Воронежская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn36/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.83,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8330,7 +8847,7 @@
       "code": "37",
       "name": "Ивановская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn37/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.85,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8435,7 +8952,7 @@
       "code": "40",
       "name": "Калужская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn40/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8575,7 +9092,7 @@
       "code": "44",
       "name": "Костромская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn44/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.83,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8645,7 +9162,7 @@
       "code": "46",
       "name": "Курская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn46/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.93,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8715,7 +9232,7 @@
       "code": "48",
       "name": "Липецкая область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn48/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.86,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -8785,7 +9302,7 @@
       "code": "50",
       "name": "Московская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn50/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 1,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9044,7 +9561,7 @@
       "code": "57",
       "name": "Орловская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn57/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.84,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9219,7 +9736,7 @@
       "code": "62",
       "name": "Рязанская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn62/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.84,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9394,7 +9911,7 @@
       "code": "67",
       "name": "Смоленская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn67/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.82,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9429,7 +9946,7 @@
       "code": "68",
       "name": "Тамбовская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn68/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.82,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9464,7 +9981,7 @@
       "code": "69",
       "name": "Тверская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn69/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9534,7 +10051,7 @@
       "code": "71",
       "name": "Тульская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn71/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9709,7 +10226,7 @@
       "code": "76",
       "name": "Ярославская область",
       "fns_rates_url": "https://www.nalog.gov.ru/rn76/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 0.87,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -9744,7 +10261,7 @@
       "code": "77",
       "name": "г. Москва",
       "fns_rates_url": "https://www.nalog.gov.ru/rn77/service/tax/",
-      "ncs_k_per": null,
+      "ncs_k_per": 1.03,
       "ncs_k_per_source_ids": [
         "S_NCS_2026_01"
       ],
@@ -14829,7 +15346,7 @@
       "dims": [
         "статья"
       ],
-      "expr": "rows  = строки CAPEX.ESTIMATE_RATES, где housing_class = GEN.HOUSING_CLASS или «все» (строка класса главнее «все»)\nbase  = «сумма на проект» → фикс; «м² участка» → LAND.AREA; «м² наземной ГНС» → F.TEP.GFA_ABOVE;\n        «м² общей ГНС» → F.TEP.GFA_TOTAL; «м² продаваемой площади» → F.TEP.SALEABLE_AREA; «м² благоустройства» → F.TEP.LANDSCAPE_AREA\nстрока CAPEX.ITEMS: статья справочника с тем же названием, base, rate, price_date, vat_included = (vat = «с НДС»)\nграфик — по справочнику статей; если его вехи на вехах варианта совпадают (F.VAR.MILESTONES: начало СМР = РНС,\nокончание СМР = РНВ) или график ручной — платёж в веху начала графика (для ручного — РНС)\n",
+      "expr": "rows  = строки CAPEX.ESTIMATE_RATES, где housing_class = GEN.HOUSING_CLASS или «все» (строка класса главнее «все»)\nдоля  = строка CAPEX.CLASS_RATIO с housing_class = GEN.HOUSING_CLASS и заданной ratio: если у статьи нет строки этого класса\n        в CAPEX.ESTIMATE_RATES, но есть строка класса base_class, то rate = rate[base_class] × ratio (база, дата цен и НДС — из неё)\nbase  = «сумма на проект» → фикс; «м² участка» → LAND.AREA; «м² наземной ГНС» → F.TEP.GFA_ABOVE;\n        «м² общей ГНС» → F.TEP.GFA_TOTAL; «м² продаваемой площади» → F.TEP.SALEABLE_AREA; «м² благоустройства» → F.TEP.LANDSCAPE_AREA\nстрока CAPEX.ITEMS: статья справочника с тем же названием, base, rate, price_date, vat_included = (vat = «с НДС»)\nграфик — по справочнику статей; если его вехи на вехах варианта совпадают (F.VAR.MILESTONES: начало СМР = РНС,\nокончание СМР = РНВ) или график ручной — платёж в веху начала графика (для ручного — РНС)\n",
       "terms": {
         "rows": "результат: строки бюджета варианта"
       },
@@ -14839,13 +15356,15 @@
       },
       "depends_on": [
         "CAPEX.ESTIMATE_RATES",
+        "CAPEX.CLASS_RATIO",
         "GEN.HOUSING_CLASS",
         "F.VAR.MILESTONES"
       ],
-      "rationale": "Пока по участку нет сметы и расчёта по НЦС, бюджет варианта — ставки компании × база статьи (задание, раздел 4.F: затраты по укрупнённым показателям). Платёж в начале графика, когда отдельного срока нет, — осторожный вариант: деньги уходят раньше, долг и проценты не занижены",
+      "rationale": "Пока по участку нет сметы и расчёта по НЦС, бюджет варианта — ставки компании × база статьи (задание, раздел 4.F: затраты по укрупнённым показателям). Для класса без своей ставки — доля от ставки другого класса, заданная руководителем (решение пользователя 29.09.2026): так ставки классов остаются сопоставимыми. Платёж в начале графика, когда отдельного срока нет, — осторожный вариант: деньги уходят раньше, долг и проценты не занижены",
       "rejected": [
         "Сумма статьи из исходного Excel без пересчёта на базу: не меняется с объёмом варианта",
-        "Ставка статьи без источника «по аналогии»: запрещено (CLAUDE.md, правило 7)"
+        "Ставка статьи без источника «по аналогии»: запрещено (CLAUDE.md, правило 7)",
+        "Ставка СМР комфорта напрямую по НЦС: около 67 тыс. руб/м² наземной ГНС с НДС против 237,8 тыс. у бизнеса из Excel — разница норматива и коммерческой стоимости, а не классов; выбор варианта сместился бы в пользу комфорта (решение пользователя 29.09.2026)"
       ],
       "source_ids": [
         "S_COMPANY_ACTUALS",
@@ -14856,6 +15375,79 @@
         "verdict": "new"
       },
       "status": "verified"
+    },
+    {
+      "id": "F.VAR.NCS_CHECK",
+      "module": "VAR",
+      "name": "Контроль ставки СМР варианта по НЦС",
+      "unit": "руб/м2",
+      "dims": [],
+      "expr": "rows  = строки BENCH.NCS_RATES, где floors_min <= этажность варианта <= floors_max (floors_max пусто — без верхней границы)\nk     = region.ncs_k_per × F.TEP.APT_AREA / F.TEP.GFA_ABOVE × (1 + TAX.VAT_RATE)\nmin   = MIN(rows.rate) × k;   max = MAX(rows.rate) × k        (руб/м² наземной ГНС с НДС)\nrate  = ставка статьи «СМР надземной части» из F.VAR.CAPEX, с НДС (без НДС — × (1 + TAX.VAT_RATE))\nbelow = rate < min\n",
+      "terms": {
+        "min": "результат: нижняя граница по НЦС, руб/м² наземной ГНС с НДС",
+        "max": "результат: верхняя граница по НЦС, руб/м² наземной ГНС с НДС",
+        "rate": "результат: ставка СМР надземной части варианта, руб/м² наземной ГНС с НДС; пусто — ставки нет",
+        "below": "результат: ставка ниже нижней границы"
+      },
+      "plain": {
+        "title": "Нижняя граница стоимости строительства по нормативу",
+        "how": "Норматив цены строительства жилого дома той же этажности (НЦС) пересчитывается на регион, на наземную площадь варианта и с НДС. Ставка СМР надземной части ниже минимального норматива — сигнал перепроверить ставку."
+      },
+      "depends_on": [
+        "BENCH.NCS_RATES",
+        "GPZU.MAX_FLOORS",
+        "GEN.REGION_CODE",
+        "F.TEP.APT_AREA",
+        "F.TEP.GFA_ABOVE",
+        "TAX.VAT_RATE",
+        "F.VAR.CAPEX"
+      ],
+      "rationale": "НЦС — государственный норматив, в нём уже учтены ПИР, строительный контроль и резерв (S_NCS_TECHPART), поэтому коммерческая ставка только на СМР не должна быть ниже норматива той же этажности. Измеритель НЦС — м² площади квартир, ставка компании — м² наземной ГНС: пересчёт через площади варианта. Цены НЦС на 01.01.2026, ставки справочника — на 31.12.2025: разница в один день не пересчитывается",
+      "rejected": [
+        "Один показатель НЦС по конструктиву: конструктив на стадии оценки участка не известен, поэтому показан диапазон по всем конструктивам группы этажности",
+        "НЦС как ставка комфорт-класса: см. F.VAR.CAPEX"
+      ],
+      "source_ids": [
+        "S_NCS_2026_01",
+        "S_NCS_TECHPART"
+      ],
+      "legacy": {
+        "cells": null,
+        "verdict": "new"
+      },
+      "status": "verified",
+      "example": {
+        "input": {
+          "ncs": [
+            [
+              17,
+              null,
+              80000
+            ],
+            [
+              17,
+              null,
+              100000
+            ],
+            [
+              6,
+              10,
+              70000
+            ]
+          ],
+          "floors": 24,
+          "k_per": 1.03,
+          "apt_area": 6500,
+          "gfa_above": 10000,
+          "vat": 0.22,
+          "rate": 60000
+        },
+        "output": {
+          "min": 65343.2,
+          "max": 81679,
+          "below": true
+        }
+      }
     },
     {
       "id": "F.VAR.BEST",
@@ -15975,6 +16567,567 @@
             "url": null
           },
           "note": "СМР — только для бизнес-класса: для комфорта и премиума ставки нет. Подземная часть, соцобъекты, УДС и мониторинг в исходнике не посчитаны или привязаны к участку — в вариантах не учтены"
+        },
+        {
+          "param": "OPEX.MARKETING_RATE",
+          "group": "sales",
+          "value": 0.035,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: маркетинг 3,5% выручки",
+            "url": null
+          }
+        },
+        {
+          "param": "OPEX.BROKERAGE_RATE",
+          "group": "sales",
+          "value": 0.035,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: брокеридж 3,5% выручки",
+            "url": null
+          }
+        },
+        {
+          "param": "SALES.PAYMENT_MIX",
+          "group": "sales",
+          "value": [
+            {
+              "product": "квартиры",
+              "mortgage_share": 0.9,
+              "mortgage_down_payment": 0.2,
+              "full_payment_share": 0.1,
+              "installment_share": 0,
+              "installment_months": 18,
+              "installment_down_payment": 0
+            },
+            {
+              "product": "ПСН",
+              "mortgage_share": 0.9,
+              "mortgage_down_payment": 0.2,
+              "full_payment_share": 0.1,
+              "installment_share": 0,
+              "installment_months": 18,
+              "installment_down_payment": 0
+            },
+            {
+              "product": "машино-места",
+              "mortgage_share": 0.9,
+              "mortgage_down_payment": 0.2,
+              "full_payment_share": 0.1,
+              "installment_share": 0,
+              "installment_months": 18,
+              "installment_down_payment": 0
+            }
+          ],
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Эскроу»: ипотека 0,7 (кредит) и первоначальный взнос 0,2, оплата 100% — 0,1, рассрочки нет; одна структура для всех продуктов",
+            "url": null
+          },
+          "note": "Для апартаментов и кладовых стандарта нет: в исходном Excel их не было"
+        },
+        {
+          "param": "SALES.MORTGAGE_BANK_FEE_RATE",
+          "group": "sales",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel комиссии банку по ипотеке нет",
+            "url": null
+          },
+          "note": "Нужно значение из договора с банком-партнёром"
+        },
+        {
+          "param": "SALES.PRICE_STAGE_UPLIFT",
+          "group": "sales",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel цена растёт на 2% в квартал без деления на рост рынка и надбавки за готовность",
+            "url": null
+          },
+          "note": "Надбавки по стадиям готовности не заданы"
+        },
+        {
+          "param": "CAPEX.CONTINGENCY_RATE",
+          "group": "budget",
+          "value": 0.02,
+          "status": "unverified",
+          "from": {
+            "text": "Методика Минстроя 421/пр: 2% для объектов непроизводственного назначения",
+            "url": "https://www.consultant.ru/document/cons_doc_LAW_362957/"
+          },
+          "note": "Нижняя граница для оценки участка. В исходном Excel задумано 10% от расценок СМР (48 958 руб/м² × 153 882 м² = 7,53 млрд), но Бюджет!F42 складывает площадь со ставкой — 202 840 руб. Решение владельца продукта 27.09.2026: в расчёте сервиса 2%, на 10% не переходим"
+        },
+        {
+          "param": "OPEX.DEV_FEE_RATE",
+          "group": "budget",
+          "value": 0.02,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: вознаграждение за управление проектом 2% выручки",
+            "url": null
+          }
+        },
+        {
+          "param": "TIME.ESCROW_RELEASE_LAG_M",
+          "group": "escrow",
+          "value": 3,
+          "status": "approved",
+          "from": {
+            "text": "Решение владельца продукта 27.09.2026: 3 месяца после ввода в эксплуатацию; закон — не позднее 10 рабочих дней после представления разрешения (ч.6 ст.15.5 214-ФЗ)",
+            "url": "https://www.consultant.ru/document/cons_doc_LAW_51038/7e20edcc51ba599c70fb328204e3ac1226e7d912/"
+          }
+        },
+        {
+          "param": "FIN.EQUITY_SHARE",
+          "group": "fin",
+          "value": 0.1,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: собственные средства 10% бюджета",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.RATE_PREFERENTIAL",
+          "group": "fin",
+          "value": 0.05,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: льготная ставка 5% на часть долга, покрытую эскроу",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.RATE_BASE_SPREAD",
+          "group": "fin",
+          "value": 0.0575,
+          "status": "check",
+          "check": "условия банка",
+          "from": {
+            "text": "Расчёт из исходного Excel, лист «CF1»: базовая ставка 20% − ключевая 14,25% = 5,75 п.п.",
+            "url": null
+          },
+          "note": "В исходном Excel базовая ставка задана целиком, без привязки к ключевой"
+        },
+        {
+          "param": "FIN.RATE_DISCOUNT_COEF",
+          "group": "fin",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: скидка к ставке −2 п.п. при избыточном покрытии эскроу",
+            "url": null
+          },
+          "note": "Стандарта нет: скидка считается, только если она есть в договоре банка (решение владельца продукта 28.09.2026)"
+        },
+        {
+          "param": "FIN.RATE_MIN",
+          "group": "fin",
+          "value": 0.001,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: минимальная ставка 0,1%",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.ESCROW_RESERVE_RATE",
+          "group": "fin",
+          "value": 0,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: остатки эскроу для ставки не уменьшаются",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.FEE_ARRANGEMENT",
+          "group": "fin",
+          "value": 0.01,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: комиссия за выдачу 1% лимита",
+            "url": null
+          }
+        },
+        {
+          "param": "FIN.FEE_COMMITMENT",
+          "group": "fin",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel комиссии за неиспользованный лимит нет",
+            "url": null
+          },
+          "note": "Нужно значение из кредитного решения банка"
+        },
+        {
+          "param": "FIN.COLLATERAL_DISCOUNT",
+          "group": "fin",
+          "value": 0.15,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «CF1»: дисконт залоговой стоимости 15%",
+            "url": null
+          }
+        }
+      ]
+    },
+    {
+      "version": 4,
+      "date": "2026-09-29",
+      "author": "Первичное наполнение",
+      "note": "Ставка СМР надземной части комфорт- и премиум-класса — доля от ставки бизнес-класса, её задаёт руководитель; нижняя граница — норматив цены строительства НЦС 81-02-01-2026 той же этажности (решение пользователя 29.09.2026).",
+      "items": [
+        {
+          "param": "VAL.SELECT_CRITERION",
+          "group": "analysis",
+          "value": "NPV",
+          "status": "unverified",
+          "from": {
+            "text": "Задание, раздел 4.G: максимальный NPV, пока руководитель не утвердил критерий; решение пользователя 29.09.2026 оставить NPV",
+            "url": null
+          }
+        },
+        {
+          "param": "VAL.HURDLE_IRR",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Инвестиционная политика компании — порог не утверждён",
+            "url": null
+          },
+          "note": "Пока не задан, условие «IRR не ниже порога» не проверяется"
+        },
+        {
+          "param": "VAL.MAX_PEAK_DEBT",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Лимит компании на долг проекта — не утверждён",
+            "url": null
+          },
+          "note": "Пока не задан, условие «пиковый долг не выше лимита» не проверяется"
+        },
+        {
+          "param": "VAL.MAX_SALES_M",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Предел срока продаж — не утверждён",
+            "url": null
+          },
+          "note": "Пока не задан, условие «срок продаж не больше предела» не проверяется"
+        },
+        {
+          "param": "VAL.RISK_FREE",
+          "group": "analysis",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "Кривая бескупонной доходности ОФЗ Мосбиржи на дату оценки в точке срока проекта — сервис загружает её в проекте сам",
+            "url": "https://www.moex.com/ru/marketdata/indices/state/g-curve/"
+          },
+          "note": "Вводится вручную, только если кривую не удалось загрузить: доходность и дата, на которую она взята"
+        },
+        {
+          "param": "VAL.EQUITY_PREMIUM",
+          "group": "analysis",
+          "value": 0.09,
+          "status": "unverified",
+          "from": {
+            "text": "Исходная финмодель Дербеневской: ставка дисконтирования 25 % (лист «CF1», D139) минус кривая бескупонной доходности ОФЗ на дату оценки (около 16 %) ≈ 9 п.п. Экспертное значение, утверждает руководитель (решение пользователя 29.09.2026)",
+            "url": null
+          },
+          "note": "Закона или методики, задающих премию, нет"
+        },
+        {
+          "param": "VAR.LOWER_LEVELS",
+          "group": "analysis",
+          "value": 2,
+          "status": "unverified",
+          "from": {
+            "text": "Задание, раздел 4.E: максимум этажности по регламенту и 1–2 уровня ниже",
+            "url": null
+          }
+        },
+        {
+          "param": "VAR.MAX_VARIANTS",
+          "group": "analysis",
+          "value": 6,
+          "status": "unverified",
+          "from": {
+            "text": "Задание, раздел 4.E: система строит 4–6 вариантов",
+            "url": null
+          }
+        },
+        {
+          "param": "TIME.PRE_RNS_M",
+          "group": "analysis",
+          "value": 0,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: покупка участка и РНС в 4 кв 2025 (C6, C7)",
+            "url": null
+          },
+          "note": "Для нового участка обычно нужен срок на ГПЗУ, проект и экспертизу — уточните"
+        },
+        {
+          "param": "TIME.CONSTRUCTION_M",
+          "group": "analysis",
+          "value": 45,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: РНС 31.12.2025 → ввод очереди 1 30.09.2029 (C7, C10) = 45 мес",
+            "url": null
+          },
+          "note": "Одинаков для всех очередей и этажности"
+        },
+        {
+          "param": "TIME.SALES_AFTER_RNS_M",
+          "group": "analysis",
+          "value": 3,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: РНС 4 кв 2025 → старт продаж 1 кв 2026 (C7, C8) = 3 мес",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.RES_GFA_SHARE",
+          "group": "areas",
+          "value": 0.9481,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: ГНС жилая 210 458 м² / ГНС наземная 221 967 м² (C20, C18)",
+            "url": null
+          },
+          "note": "Остальное — нежилая часть (ПСН). В исходнике жилая и нежилая вместе больше наземной на 7 500 м² — расхождение исходника"
+        },
+        {
+          "param": "TEP.APT_EFFICIENCY",
+          "group": "areas",
+          "value": 0.6821,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: площадь квартир 143 560 м² / ГНС жилая 210 458 м²",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.COMM_EFFICIENCY",
+          "group": "areas",
+          "value": 0.543,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: площадь ПСН 10 322 м² / ГНС нежилая 19 009 м²",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.APART_EFFICIENCY",
+          "group": "areas",
+          "value": null,
+          "status": "unverified",
+          "from": {
+            "text": "В исходном Excel апартаментов нет",
+            "url": null
+          },
+          "note": "Пока не задан, варианты с апартаментами не строятся"
+        },
+        {
+          "param": "TEP.APT_MIX",
+          "group": "areas",
+          "value": [
+            {
+              "type_name": "Тип 1",
+              "area_share": 0.235,
+              "avg_area": 35.108
+            },
+            {
+              "type_name": "Тип 2",
+              "area_share": 0.3036,
+              "avg_area": 60.53
+            },
+            {
+              "type_name": "Тип 3",
+              "area_share": 0.4614,
+              "avg_area": 92
+            }
+          ],
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: 961 × 35,108 м², 720 × 60,53 м², 720 × 92 м² — доли в площади квартир (D41:F43)",
+            "url": null
+          },
+          "note": "Квартирография проекта бизнес-класса; для других классов уточните"
+        },
+        {
+          "param": "TEP.STORAGE_PER_APT",
+          "group": "areas",
+          "value": 0,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы», строка 50: прочие помещения (кладовые) = 0",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.PARKING_AREA_PER_SPACE",
+          "group": "areas",
+          "value": 40.945,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: площадь паркинга на машино-место с проездами 40,945 м²",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.LANDSCAPE_SHARE",
+          "group": "areas",
+          "value": 0.3,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: благоустройство 30% площади участка",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.ROAD_SHARE",
+          "group": "areas",
+          "value": 0.1,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: проезды 10% благоустройства",
+            "url": null
+          }
+        },
+        {
+          "param": "TEP.GREEN_SHARE",
+          "group": "areas",
+          "value": 0.1,
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «ТЭПы»: озеленение 10% благоустройства",
+            "url": null
+          }
+        },
+        {
+          "param": "SALES.PRICE_MARKET_GROWTH",
+          "group": "sales",
+          "value": {
+            "by_year": {
+              "2026": 0.056,
+              "2027": 0.04,
+              "2028": 0.04,
+              "2029": 0.04
+            },
+            "after_last": "last"
+          },
+          "status": "unverified",
+          "from": {
+            "text": "Прогноз инфляции Минэкономразвития (сценарные условия от 21.05.2026, базовый вариант): цены растут вместе с инфляцией, пока нет данных о росте цен в локации",
+            "url": "https://www.garant.ru/products/ipo/prime/doc/414115625/"
+          },
+          "note": "Для анализа нового участка (решение владельца продукта 29.09.2026); у проекта из Excel остаётся своё значение"
+        },
+        {
+          "param": "CAPEX.ESTIMATE_RATES",
+          "group": "budget",
+          "value": [
+            {
+              "item": "Предпроектные проработки (концепция)",
+              "housing_class": "все",
+              "per": "сумма на проект",
+              "rate": 2000000,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Проектирование, стадия П",
+              "housing_class": "все",
+              "per": "м² общей ГНС",
+              "rate": 2919.75,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Подготовка площадки (включая снос)",
+              "housing_class": "все",
+              "per": "м² участка",
+              "rate": 1465.79,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "СМР надземной части (в т.ч. стилобат)",
+              "housing_class": "бизнес",
+              "per": "м² наземной ГНС",
+              "rate": 237794.88,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "ТУ и плата за технологическое присоединение",
+              "housing_class": "все",
+              "per": "м² общей ГНС",
+              "rate": 4461.08,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Наружные сети и сооружения",
+              "housing_class": "все",
+              "per": "м² общей ГНС",
+              "rate": 4461.08,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            },
+            {
+              "item": "Благоустройство",
+              "housing_class": "все",
+              "per": "м² благоустройства",
+              "rate": 46.8,
+              "price_date": "2025-12-31",
+              "vat": "с НДС"
+            }
+          ],
+          "status": "unverified",
+          "from": {
+            "text": "Исходный Excel, лист «Бюджет»: суммы статей Дербеневской, делённые на базу статьи (ГНС общая 257 261,59 м², наземная 221 967 м², участок 96 572 м², благоустройство 28 971,6 м²); цены на 31.12.2025 с НДС",
+            "url": null
+          },
+          "note": "СМР — только для бизнес-класса: для комфорта и премиума ставки нет. Подземная часть, соцобъекты, УДС и мониторинг в исходнике не посчитаны или привязаны к участку — в вариантах не учтены"
+        },
+        {
+          "param": "CAPEX.CLASS_RATIO",
+          "group": "budget",
+          "value": [
+            {
+              "item": "СМР надземной части (в т.ч. стилобат)",
+              "housing_class": "комфорт",
+              "base_class": "бизнес",
+              "ratio": null
+            },
+            {
+              "item": "СМР надземной части (в т.ч. стилобат)",
+              "housing_class": "премиум",
+              "base_class": "бизнес",
+              "ratio": null
+            }
+          ],
+          "status": "unverified",
+          "from": {
+            "text": "Экспертное значение, утверждает руководитель: доля ставки СМР класса от ставки бизнес-класса; нижняя граница — НЦС 81-02-01-2026 той же этажности (решение пользователя 29.09.2026)",
+            "url": null
+          },
+          "note": "Пока доля не задана, ставки СМР надземной части для комфорта и премиума нет и такие варианты не проходят в выбор"
         },
         {
           "param": "OPEX.MARKETING_RATE",
