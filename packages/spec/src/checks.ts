@@ -11,7 +11,7 @@ export interface SpecCheckResult {
   warnings: string[];
 }
 
-/** Число субъектов РФ в справочнике регионов (docs/01, scripts/validate_spec.py). */
+/** Число субъектов РФ в справочнике регионов (docs/passports/spec.md, scripts/validate_spec.py). */
 const REGIONS_EXPECTED = 89;
 
 /** Базы статей бюджета, которые не являются ID параметра/формулы (шапка capex_items.yaml). */

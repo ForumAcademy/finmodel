@@ -49,7 +49,7 @@ export * as book from "./book";
 export * as projectFile from "./projectfile";
 export type * from "./types";
 
-/** Модули ядра в порядке расчёта (docs/01_architecture.md). */
+/** Модули ядра в порядке расчёта (docs/passports/engine.md). */
 export const ENGINE_MODULES = [
   { id: "TIME", title: "Временная шкала и флаги", stage: 2 },
   { id: "TEP", title: "ТЭП", stage: 2 },
