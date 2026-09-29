@@ -256,7 +256,7 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
   async function toFile() {
     const missing = await saveProjectFile(p);
     setMissingDocs(missing);
-    if (!missing.length) flash("Файл проекта сохранён в папку загрузок");
+    if (!missing.length) flash("Файл проекта скачан");
   }
 
   async function updateRef() {
@@ -550,7 +550,7 @@ export function ProjectScreen({ id, sec, tab }: { id: string; sec: ProjectSectio
           }
         >
           <p>
-            Версия {latest.version} от {text.date(latest.date)}, {latest.author}: {latest.note}
+            Версия {latest.version} от {text.date(latest.date)} · {latest.author} · {latest.note}
           </p>
           {refChanges.length ? (
             <div className="tw">

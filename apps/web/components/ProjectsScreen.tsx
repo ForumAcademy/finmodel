@@ -78,7 +78,7 @@ export function ProjectsScreen() {
     setMenu(null);
     const missing = await saveProjectFile(p);
     if (missing.length) setNotice({ title: "Проект сохранён без части документов", lines: [`В этом браузере нет файлов: ${missing.join(", ")}. Остальное сохранено. Загрузите эти документы в проект заново и сохраните файл ещё раз.`] });
-    else flash("Файл проекта сохранён в папку загрузок");
+    else flash("Файл проекта скачан");
   }
 
   async function fromFile(f: File | undefined) {
