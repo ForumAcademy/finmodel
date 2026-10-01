@@ -47,6 +47,7 @@ export * as zcyc from "./zcyc";
 export * as reference from "./reference";
 export * as book from "./book";
 export * as projectFile from "./projectfile";
+export * as competitors from "./competitors";
 export type * from "./types";
 
 /** Модули ядра в порядке расчёта (docs/01_architecture.md). */

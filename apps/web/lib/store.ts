@@ -3,17 +3,19 @@
  * отдельную базу не подключаем, проекты и справочник передаются коллегам файлами (lib/files.ts).
  * Сервер, если понадобится, подключается заменой этого файла; экраны работают только через эти функции.
  */
-import { book, type plot } from "@fm/engine";
+import { book, type competitors, type plot } from "@fm/engine";
 
 type LandProject = plot.LandProject;
 
 const DB = "finmodel";
-const VERSION = 2;
+const VERSION = 3;
 const PROJECTS = "projects";
 const FILES = "files";
 /** Справочник допущений компании: одна запись — все версии по порядку. */
 const REFERENCE = "reference";
 const REFERENCE_KEY = "versions";
+/** Проекты конкурентов: общие для всех проектов компании, привязка к проекту — в карточке. */
+const COMPETITORS = "competitors";
 
 export interface StoredFile {
   id: string;
@@ -32,6 +34,7 @@ function db(): Promise<IDBDatabase> {
       if (!d.objectStoreNames.contains(PROJECTS)) d.createObjectStore(PROJECTS, { keyPath: "id" });
       if (!d.objectStoreNames.contains(FILES)) d.createObjectStore(FILES, { keyPath: "id" });
       if (!d.objectStoreNames.contains(REFERENCE)) d.createObjectStore(REFERENCE);
+      if (!d.objectStoreNames.contains(COMPETITORS)) d.createObjectStore(COMPETITORS, { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error("Хранилище браузера недоступно"));
@@ -90,4 +93,17 @@ export async function getReference(): Promise<book.AssumptionVersion[]> {
 
 export async function saveReference(versions: book.AssumptionVersion[]): Promise<void> {
   await run(REFERENCE, "readwrite", (s) => s.put(versions, REFERENCE_KEY));
+}
+
+export async function listCompetitors(): Promise<competitors.Competitor[]> {
+  const all = await run<competitors.Competitor[]>(COMPETITORS, "readonly", (s) => s.getAll());
+  return all.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+export async function saveCompetitor(c: competitors.Competitor): Promise<void> {
+  await run(COMPETITORS, "readwrite", (s) => s.put(c));
+}
+
+export async function deleteCompetitor(id: string): Promise<void> {
+  await run(COMPETITORS, "readwrite", (s) => s.delete(id));
 }

@@ -52,7 +52,7 @@ const siteSchema = z.object({
   values: z.object(Object.fromEntries(siteKeys.map((k) => [k, plotValue.optional()]))),
   zouit: z.array(z.object({ id: z.string(), name: z.string(), area: nstr, noBuild: z.boolean(), restriction: z.string(), origin: z.enum(["source", "estimate", "expert", "reference"]), basis: basis.unwrap() })),
   analogs: z.array(
-    z.object({ id: z.string(), name: z.string(), product: z.string(), housingClass: z.string(), distanceKm: nstr, stage: nstr, price: nstr, pace: nstr, soldShare: nstr, url: z.string(), date: z.string() }),
+    z.object({ id: z.string(), name: z.string(), product: z.string(), housingClass: z.string(), distanceKm: nstr, stage: nstr, price: nstr, pace: nstr, soldShare: nstr, url: z.string(), date: z.string(), competitorId: z.string().optional(), paceOrigin: z.enum(["source", "estimate", "expert", "reference"]).nullish(), paceNote: z.string().optional() }),
   ),
   customVariants: z.array(z.object({ id: z.string(), housing_class: z.string(), floors: z.number(), apart: z.boolean() })),
   selectedVariant: nstr,

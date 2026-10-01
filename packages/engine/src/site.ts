@@ -173,6 +173,11 @@ export interface AnalogEntry {
   url: string;
   /** Дата данных, ГГГГ-ММ-ДД. */
   date: string;
+  /** Строка из карточки конкурента (вкладка «Конкуренты»): id конкурента. Нет — строка введена вручную. */
+  competitorId?: string;
+  /** Происхождение темпа, если он посчитан, а не взят из источника как есть; пояснение — как посчитан. */
+  paceOrigin?: Origin | null;
+  paceNote?: string;
 }
 
 export type AnalogForm = Record<"name" | "product" | "housingClass" | "distanceKm" | "stage" | "price" | "pace" | "soldShare" | "url" | "date", string>;
@@ -202,7 +207,7 @@ export function analogToForm(a: AnalogEntry | null): AnalogForm {
 }
 
 /** Проверить форму аналога: что не так → что сделать. */
-export function analogFromForm(f: AnalogForm, id: string): { analog: AnalogEntry | null; errors: string[] } {
+export function analogFromForm(f: AnalogForm, id: string, prev: AnalogEntry | null = null): { analog: AnalogEntry | null; errors: string[] } {
   const errors: string[] = [];
   const numOrNull = (label: string, text: string): string | null => {
     if (!text.trim()) return null;
@@ -238,6 +243,8 @@ export function analogFromForm(f: AnalogForm, id: string): { analog: AnalogEntry
       soldShare: sold === null ? null : new Decimal(sold).div(PERCENT).toString(),
       url: f.url.trim(),
       date: iso,
+      ...(prev?.competitorId ? { competitorId: prev.competitorId } : {}),
+      ...(prev?.paceOrigin && prev.pace === pace ? { paceOrigin: prev.paceOrigin, paceNote: prev.paceNote ?? "" } : {}),
     },
     errors: [],
   };

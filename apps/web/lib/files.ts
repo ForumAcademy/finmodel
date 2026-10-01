@@ -2,8 +2,8 @@
  * Файлы проекта и справочника: сохранить на компьютер и открыть. Формат и правила — в ядре (projectFile, book);
  * здесь только байты: base64, sha256, скачивание и чтение выбранного файла.
  */
-import { book, projectFile, type plot } from "@fm/engine";
-import { getFile, getReference, type StoredFile } from "./store";
+import { book, competitors, projectFile, type plot } from "@fm/engine";
+import { getFile, getReference, listCompetitors, type StoredFile } from "./store";
 
 function toBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
@@ -79,4 +79,23 @@ export async function storedFiles(entries: readonly projectFile.FileEntry[]): Pr
 export async function saveReferenceFile(versions: book.AssumptionVersion[]) {
   const at = new Date().toISOString();
   download(book.referenceFile(versions, at), book.referenceFileName(versions, at));
+}
+
+async function fileEntry(id: string): Promise<projectFile.FileEntry | null> {
+  const f = await getFile(id);
+  if (!f) return null;
+  const buf = await f.blob.arrayBuffer();
+  return { id, name: f.name, type: f.type, size: buf.byteLength, sha256: await sha256(buf), data: toBase64(buf) };
+}
+
+/** Сохранить все карточки конкурентов со скриншотами в файл. */
+export async function saveCompetitorsFile() {
+  const at = new Date().toISOString();
+  const list = await listCompetitors();
+  const entries: projectFile.FileEntry[] = [];
+  for (const c of list) for (const s of c.snapshots) if (s.fileId) {
+    const e = await fileEntry(s.fileId);
+    if (e) entries.push(e);
+  }
+  download(competitors.buildCompetitorsFile(list, entries, at), competitors.competitorsFileName(at));
 }

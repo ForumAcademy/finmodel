@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { analysis, book, plot, site, siteView, text, zcyc } from "@fm/engine";
-import { newId, nowIso } from "@/lib/store";
+import { analysis, book, competitors as cmp, plot, site, siteView, text, zcyc } from "@fm/engine";
+import { listCompetitors, newId, nowIso } from "@/lib/store";
 import { loadZcyc } from "@/lib/zcyc";
 import { Chip, ExpertFields, Modal, OriginTag } from "./ui";
 
@@ -462,18 +462,36 @@ export function MarketSection({ p, state, onSave }: { p: LandProject; state: Ana
   const analogs = site.siteOf(p).analogs;
   const rows = siteView.marketRows(p, state.sa);
   const minComps = site.minAnalogs();
+  const [linked, setLinked] = useState<cmp.Competitor[]>([]);
+  const [syncErrors, setSyncErrors] = useState<string[]>([]);
+  useEffect(() => {
+    void listCompetitors().then((all) => setLinked(all.filter((c) => cmp.linkOf(c, p.id))), () => setLinked([]));
+  }, [p.id]);
+  function sync() {
+    const r = cmp.syncAnalogs(analogs, linked, p.id);
+    setSyncErrors(r.errors);
+    void onSave(site.updateSite(p, { analogs: r.analogs }, nowIso()), `Из конкурентов: добавлено ${r.added}, обновлено ${r.updated}, убрано ${r.removed}`);
+  }
   return (
     <>
       <div className="mhead">
         <h2>Рынок</h2>
         <span className="sp" />
+        <button className="btn" onClick={sync} disabled={!linked.length && !analogs.some((a) => a.competitorId)} title={linked.length ? "" : "Привяжите конкурентов к этому проекту на вкладке «Проекты конкурентов»"}>
+          Обновить из конкурентов · {linked.length}
+        </button>
         <button className="btn pri" onClick={() => setEditing("new")}>
           + Аналог
         </button>
       </div>
       <p className="small muted">
-        Аналоги в радиусе 1–3 км, по строке на ЖК и продукт, у каждой — ссылка на карточку ЖК. Цена класса — средняя по аналогам с весом по темпу продаж, темп проекта — медиана, ёмкость — сумма темпов. Для цены и темпа нужно не меньше {minComps} аналогов одного класса.
+        Аналоги в радиусе 1–3 км, по строке на ЖК и продукт, у каждой — ссылка на карточку ЖК. ЖК с вкладки <Link href="/competitors">«Проекты конкурентов»</Link>, привязанные к этому проекту, добавляются кнопкой «Обновить из конкурентов». Цена класса — средняя по аналогам с весом по темпу продаж, темп проекта — медиана, ёмкость — сумма темпов. Для цены и темпа нужно не меньше {minComps} аналогов одного класса.
       </p>
+      {syncErrors.map((e) => (
+        <div key={e} className="check warn">
+          Не добавлен: {e}
+        </div>
+      ))}
       {rows.length > 0 && (
         <div className="tw" style={{ marginBottom: 16 }}>
           <table className="t">
@@ -533,7 +551,14 @@ export function MarketSection({ p, state, onSave }: { p: LandProject; state: Ana
                   <td className="l">{a.housingClass}</td>
                   <td>{a.distanceKm === null ? "—" : `${text.num(Number(a.distanceKm), 1)} км`}</td>
                   <td>{a.price === null ? "—" : `${text.num(Number(a.price), 0)} ${site.analogPriceUnit(a.product)}`}</td>
-                  <td>{a.pace === null ? "—" : `${text.num(Number(a.pace), 0)} ${site.analogPaceUnit(a.product)}`}</td>
+                  <td title={a.paceNote}>
+                    {a.pace === null ? <span className="org miss" title={a.paceNote}>нет темпа</span> : `${text.num(Number(a.pace), 0)} ${site.analogPaceUnit(a.product)}`}
+                    {a.pace !== null && a.paceOrigin && a.paceOrigin !== "source" && (
+                      <div>
+                        <OriginTag origin={a.paceOrigin} />
+                      </div>
+                    )}
+                  </td>
                   <td>{site.analogSoldText(a)}</td>
                   <td className="l">{text.date(a.date)}</td>
                   <td className="l">
@@ -570,7 +595,7 @@ function EditAnalog({ analog, onApply, onClose }: { analog: site.AnalogEntry | n
   const [errors, setErrors] = useState<string[]>([]);
   const set = (k: keyof site.AnalogForm) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
   function apply() {
-    const r = site.analogFromForm(form, analog?.id ?? newId());
+    const r = site.analogFromForm(form, analog?.id ?? newId(), analog);
     if (!r.analog) return setErrors(r.errors);
     onApply(r.analog);
   }
