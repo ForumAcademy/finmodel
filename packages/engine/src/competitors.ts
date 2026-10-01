@@ -295,31 +295,31 @@ function structuralBreak(): IsoDate | null {
  */
 export function competitorPace(c: Competitor): CompetitorPace {
   const last = latestSnapshot(c);
-  if (!last) return { pace: null, origin: null, note: "Нет данных карточки: добавьте снимок." };
+  if (!last) return { pace: null, origin: null, note: "Нет данных карточки: добавьте данные за месяц." };
   const window = Number(getParameter("BENCH.PACE_WINDOW_M").default);
   if (last.soldArea12m !== null) {
     return { pace: new Decimal(last.soldArea12m).div(window), origin: "source", note: `Продано за ${window} мес. по выгрузке сделок на ${fmtDate(last.date)}, в среднем за месяц.` };
   }
   const soldLast = soldArea(last);
-  if (soldLast === null) return { pace: null, origin: null, note: "В снимке нет проектной площади или остатков по площади: темп не посчитать." };
+  if (soldLast === null) return { pace: null, origin: null, note: "В данных за месяц нет проектной площади или остатков по площади: темп не посчитать." };
   const brk = structuralBreak();
   const from = [edate(last.date, -window), brk].filter((d): d is IsoDate => !!d).sort().at(-1)!;
   const base = c.snapshots.find((s) => s.id !== last.id && s.date >= from && s.date < last.date && soldArea(s) !== null);
   if (base) {
     const months = monthsBetween(base.date, last.date);
     const pace = Decimal.max(soldLast.sub(soldArea(base)!), 0).div(months);
-    return { pace, origin: "estimate", note: `Проданная площадь выросла с ${fmtDate(base.date)} по ${fmtDate(last.date)} (${num(months, 1)} мес.): проектная площадь × (1 − остатки по площади).` };
+    return { pace, origin: "estimate", note: `Проданная площадь выросла с ${fmtDate(base.date)} по ${fmtDate(last.date)} (${num(months, 1)} мес.): проданная площадь — проектная площадь без остатков.` };
   }
   if (c.salesStart && (!brk || c.salesStart >= brk) && c.salesStart < last.date) {
     const months = monthsBetween(c.salesStart, last.date);
-    return { pace: soldLast.div(months), origin: "estimate", note: `Средний темп со старта продаж ${fmtDate(c.salesStart)}: проданная площадь / ${num(months, 1)} мес. Свежий темп будет после следующего снимка.` };
+    return { pace: soldLast.div(months), origin: "estimate", note: `Средний темп со старта продаж ${fmtDate(c.salesStart)}: проданная площадь / ${num(months, 1)} мес. Темп за последние месяцы появится после данных за следующий месяц.` };
   }
   return {
     pace: null,
     origin: null,
     note: c.salesStart
-      ? `Продажи стартовали до ${fmtDate(brk)}: средний темп со старта не сопоставим с текущим рынком. Добавьте снимок через месяц или проданную площадь за 12 месяцев из выгрузки сделок.`
-      : "Нет старта продаж и второго снимка: темп не посчитать. Добавьте снимок через месяц или проданную площадь за 12 месяцев из выгрузки сделок.",
+      ? `Продажи стартовали до ${fmtDate(brk)}: средний темп со старта не сопоставим с текущим рынком. Добавьте данные за следующий месяц или проданную площадь за 12 месяцев из выгрузки сделок.`
+      : "Нет старта продаж и данных за второй месяц: темп не посчитать. Добавьте данные за следующий месяц или проданную площадь за 12 месяцев из выгрузки сделок.",
   };
 }
 
@@ -329,7 +329,7 @@ export function competitorPace(c: Competitor): CompetitorPace {
 export function analogFromCompetitor(c: Competitor, projectId: string): { analog: AnalogEntry | null; error: string | null } {
   const last = latestSnapshot(c);
   if (!last) return { analog: null, error: `${c.name}: нет данных карточки.` };
-  if (last.avgPrice === null) return { analog: null, error: `${c.name}: в снимке нет средней цены 1 м².` };
+  if (last.avgPrice === null) return { analog: null, error: `${c.name}: в данных за месяц нет средней цены 1 м².` };
   const pace = competitorPace(c);
   const link = linkOf(c, projectId);
   return {

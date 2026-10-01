@@ -31,7 +31,7 @@ function CompetitorCard({ c, projects, onOpen }: { c: Competitor; projects: Map<
         </div>
         <div className="k">
           <b>{cmp.paceText(pace)}</b>
-          <div>{pace.origin ? <OriginTag origin={pace.origin} /> : "темп продаж"}</div>
+          <div>темп продаж {pace.origin && <OriginTag origin={pace.origin} />}</div>
         </div>
       </div>
       <div className="row" style={{ flexWrap: "wrap", gap: 8, marginTop: 10 }}>
@@ -590,7 +590,7 @@ function SnapshotModal({ c, snapshot, onClose, onSaved }: { c: Competitor; snaps
         </div>
         <div className="h3">Темп продаж</div>
         {field("soldArea12m", "Продано за последние 12 месяцев, м² — если есть выгрузка сделок bnMAP")}
-        <p className="small muted">Без выгрузки темп считается по двум месяцам: насколько выросла проданная площадь (проектная площадь × (1 − остатки по площади)).</p>
+        <p className="small muted">Без выгрузки темп считается по двум месяцам: насколько выросла проданная площадь, то есть проектная площадь без остатков.</p>
         {errors.map((e) => (
           <div key={e} className="err">
             {e}
