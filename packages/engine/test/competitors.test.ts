@@ -65,6 +65,15 @@ describe("темп продаж конкурента", () => {
     expect(p.pace!.toNumber()).toBe(1000);
   });
 
+  it("по сводке сделок за два месяца — из источника: прирост площади сделок / месяцев", () => {
+    let c = stone();
+    c = cmp.withSnapshot(c, snap("26.08.2026", "136959.6", "54", { dealsAreaTotal: "63 000" }), AT);
+    c = cmp.withSnapshot(c, snap("26.09.2026", "136959.6", "52.6", { dealsAreaTotal: "64 925,5" }), AT);
+    const p = cmp.competitorPace(c);
+    expect(p.origin).toBe("source");
+    expect(p.pace!.toNumber()).toBeCloseTo(1925.5 / (31 / (365 / 12)), 6);
+  });
+
   it("по двум снимкам — оценка: прирост проданной площади / месяцев", () => {
     let c = stone();
     c = cmp.withSnapshot(c, snap("26.03.2026", "45984.2", "50"), AT);

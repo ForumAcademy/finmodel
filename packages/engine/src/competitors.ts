@@ -57,6 +57,11 @@ export interface CompetitorSnapshot {
   rve: string | null;
   /** Проданная площадь за последние 12 месяцев по выгрузке сделок, м² (если выгрузка есть). */
   soldArea12m: string | null;
+  /**
+   * Площадь зарегистрированных сделок с физлицами нарастающим итогом, м² (сводка сделок bnMAP «Итого по лотам»).
+   * Нет у снимков, внесённых до появления поля, — undefined.
+   */
+  dealsAreaTotal?: string | null;
   /** Скриншот карточки или отчёт: id файла в хранилище, имя файла. */
   fileId: string | null;
   fileName: string | null;
@@ -166,7 +171,7 @@ export function competitorFromForm(f: CompetitorForm, prev: Competitor | null, i
   };
 }
 
-type SnapNumKey = "projectArea" | "projectLots" | "exposureLots" | "exposureArea" | "avgPrice" | "remainingAreaShare" | "remainingLotsShare" | "soldArea12m";
+type SnapNumKey = "projectArea" | "projectLots" | "exposureLots" | "exposureArea" | "avgPrice" | "remainingAreaShare" | "remainingLotsShare" | "soldArea12m" | "dealsAreaTotal";
 export type SnapshotForm = Record<SnapNumKey | "date" | "stage" | "rve", string> & { byType: Record<RoomType, Record<keyof RoomExposure, string>> };
 
 const SHARE_KEYS: readonly SnapNumKey[] = ["remainingAreaShare", "remainingLotsShare"];
@@ -179,6 +184,7 @@ const SNAP_LABEL: Record<SnapNumKey, string> = {
   remainingAreaShare: "Остатки по площади",
   remainingLotsShare: "Остатки по количеству",
   soldArea12m: "Продано за 12 месяцев",
+  dealsAreaTotal: "Сделки с физлицами, площадь",
 };
 
 const showNum = (s: string | null | undefined, digits = 1): string => (s ? num(new Decimal(s), digits) : "");
@@ -201,6 +207,7 @@ export function snapshotToForm(s: CompetitorSnapshot | null): SnapshotForm {
     remainingAreaShare: share(s?.remainingAreaShare),
     remainingLotsShare: share(s?.remainingLotsShare),
     soldArea12m: showNum(s?.soldArea12m),
+    dealsAreaTotal: showNum(s?.dealsAreaTotal),
     stage: s?.stage ?? "",
     rve: s?.rve ?? "",
     byType,
@@ -288,10 +295,12 @@ function structuralBreak(): IsoDate | null {
 /**
  * Темп продаж конкурента, м²/мес, по последнему снимку:
  * 1) продано за 12 месяцев по выгрузке сделок / 12 — из источника;
- * 2) иначе разница проданной площади между последним снимком и самым ранним снимком окна BENCH.PACE_WINDOW_M
+ * 2) иначе прирост площади сделок с физлицами (нарастающий итог из сводки сделок) между последним снимком и самым
+ *    ранним снимком окна, делённый на число месяцев между ними — из источника;
+ * 3) иначе разница проданной площади между последним снимком и самым ранним снимком окна BENCH.PACE_WINDOW_M
  *    (не раньше даты структурного сдвига), делённая на число месяцев между ними — оценка по аналогам;
- * 3) иначе, если продажи стартовали после сдвига, — проданная площадь / месяцев со старта продаж — оценка по аналогам;
- * 4) иначе темпа нет: нужен второй снимок или выгрузка сделок.
+ * 4) иначе, если продажи стартовали после сдвига, — проданная площадь / месяцев со старта продаж — оценка по аналогам;
+ * 5) иначе темпа нет: нужен второй снимок или выгрузка сделок.
  */
 export function competitorPace(c: Competitor): CompetitorPace {
   const last = latestSnapshot(c);
@@ -300,11 +309,18 @@ export function competitorPace(c: Competitor): CompetitorPace {
   if (last.soldArea12m !== null) {
     return { pace: new Decimal(last.soldArea12m).div(window), origin: "source", note: `Продано за ${window} мес. по выгрузке сделок на ${fmtDate(last.date)}, в среднем за месяц.` };
   }
-  const soldLast = soldArea(last);
-  if (soldLast === null) return { pace: null, origin: null, note: "В данных за месяц нет проектной площади или остатков по площади: темп не посчитать." };
   const brk = structuralBreak();
   const from = [edate(last.date, -window), brk].filter((d): d is IsoDate => !!d).sort().at(-1)!;
-  const base = c.snapshots.find((s) => s.id !== last.id && s.date >= from && s.date < last.date && soldArea(s) !== null);
+  const inWindow = (s: CompetitorSnapshot) => s.id !== last.id && s.date >= from && s.date < last.date;
+  const dealsBase = last.dealsAreaTotal ? c.snapshots.find((s) => inWindow(s) && !!s.dealsAreaTotal) : undefined;
+  if (dealsBase && last.dealsAreaTotal && dealsBase.dealsAreaTotal) {
+    const months = monthsBetween(dealsBase.date, last.date);
+    const pace = Decimal.max(new Decimal(last.dealsAreaTotal).sub(dealsBase.dealsAreaTotal), 0).div(months);
+    return { pace, origin: "source", note: `Площадь сделок с физлицами выросла с ${fmtDate(dealsBase.date)} по ${fmtDate(last.date)} (${num(months, 1)} мес.), по сводке сделок.` };
+  }
+  const soldLast = soldArea(last);
+  if (soldLast === null) return { pace: null, origin: null, note: "В данных за месяц нет проектной площади или остатков по площади: темп не посчитать." };
+  const base = c.snapshots.find((s) => inWindow(s) && soldArea(s) !== null);
   if (base) {
     const months = monthsBetween(base.date, last.date);
     const pace = Decimal.max(soldLast.sub(soldArea(base)!), 0).div(months);
@@ -418,6 +434,7 @@ const snapshotSchema = z.object({
   stage: nstr,
   rve: nstr,
   soldArea12m: nstr,
+  dealsAreaTotal: nstr.optional(),
   fileId: nstr,
   fileName: nstr,
 });
