@@ -12,7 +12,9 @@
 """
 import argparse
 import json
+import signal
 import socket
+import sys
 import ssl
 import time
 import urllib.error
@@ -21,6 +23,15 @@ import urllib.request
 
 UA = "finmodel-source-probe/0.1"
 TIMEOUT = 20
+HARD_LIMIT = 40  # общий предел на один запрос, с; urlopen ограничивает только паузы
+
+
+class Deadline(Exception):
+    pass
+
+
+def _alarm(signum, frame):
+    raise Deadline()
 
 
 def fetch(url, data=None, headers=None):
@@ -31,6 +42,8 @@ def fetch(url, data=None, headers=None):
     t0 = time.time()
     res = {"url": url, "status": None, "ms": None, "bytes": 0, "ctype": "", "error": ""}
     body = b""
+    signal.signal(signal.SIGALRM, _alarm)
+    signal.alarm(HARD_LIMIT)
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT, context=ssl.create_default_context()) as r:
             body = r.read(200_000)
@@ -43,8 +56,12 @@ def fetch(url, data=None, headers=None):
             body = e.read(20_000)
         except Exception:
             pass
+    except Deadline:
+        res["error"] = f"нет ответа за {HARD_LIMIT} с"
     except (urllib.error.URLError, socket.timeout, ssl.SSLError, ConnectionError, OSError) as e:
         res["error"] = f"{type(e).__name__}: {getattr(e, 'reason', e)}"[:160]
+    finally:
+        signal.alarm(0)
     res["ms"] = int((time.time() - t0) * 1000)
     res["bytes"] = len(body)
     return res, body
@@ -71,6 +88,8 @@ def main():
         if hint:
             note = (note + "; " if note else "") + f"похоже на защиту от ботов ({hint})"
         rows.append({"source": name, "purpose": purpose, **res, "note": note})
+        ans = f"HTTP {res['status']}" if res["status"] else res["error"]
+        print(f"... {name}: {ans}, {res['ms']} мс", file=sys.stderr, flush=True)
 
     # Публичный IP и страна сервера (чтобы понимать, откуда шёл запрос)
     r, b = fetch("https://ipinfo.io/json")

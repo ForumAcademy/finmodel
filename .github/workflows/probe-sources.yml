@@ -16,6 +16,7 @@ jobs:
   abroad:
     name: С зарубежного сервера (GitHub)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Проверка
@@ -26,6 +27,7 @@ jobs:
   russia:
     name: С сервера в России (Хостленд)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Проверка через SSH
