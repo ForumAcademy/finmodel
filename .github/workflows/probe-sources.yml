@@ -30,12 +30,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Проверка через SSH
         env:
-          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           HOST: ${{ secrets.SERVER_HOST }}
           USER_NAME: ${{ secrets.SERVER_USER }}
         run: |
-          sudo apt-get install -y -qq sshpass > /dev/null
-          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+          set -o pipefail
+          install -m 600 /dev/null key && printf '%s\n' "$SSH_KEY" > key
+          ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
             "$USER_NAME@$HOST" 'python3 - --label server' < scripts/probe_sources.py | tee out.txt
+          rm -f key
       - name: Итог
         run: grep -v '^JSON:' out.txt >> "$GITHUB_STEP_SUMMARY"
