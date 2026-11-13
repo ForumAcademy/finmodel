@@ -1,0 +1,43 @@
+name: Текст акта
+
+# Только чтение: скачивает с сервера в России тексты нормативных актов (pravo.gov.ru, mos.ru,
+# КонсультантПлюс, Гарант) — они не отвечают зарубежным серверам. На сервере ничего не сохраняет
+# и не устанавливает. Текст — в журнале шага, для выписки формул в data/*.yaml.
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Адреса через пробел (пусто — из scripts/acts.txt)"
+        required: false
+  push:
+    paths:
+      - scripts/acts.txt
+      - scripts/fetch_act.py
+      - .github/workflows/fetch-act.yml
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    name: Текст с сервера в России
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Скачать через SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+          URLS: ${{ github.event.inputs.urls }}
+        run: |
+          set -o pipefail
+          [ -n "$URLS" ] || URLS="$(grep -v '^#' scripts/acts.txt | tr '\n' ' ')"
+          install -m 600 /dev/null key
+          python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
+          # адреса передаются аргументами python, а не через оболочку сервера
+          printf "%s\n" $URLS > urls.txt
+          ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "$USER_NAME@$HOST" "python3 - $(python3 -c 'import shlex,sys; print(" ".join(shlex.quote(u) for u in open("urls.txt").read().split()))')" < scripts/fetch_act.py
+          rm -f key

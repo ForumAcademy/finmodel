@@ -23,3 +23,5 @@
 **Проверки.** `python3 -m unittest services/collector/test_collector.py`.
 
 **Не входит.** Разбор ответов в поля участка, ПЗЗ, зоны ОКН (isogd.mos.ru не отвечает), apidata.mos.ru (нужен ключ).
+
+**Тексты актов.** Workflow «Текст акта» (`fetch-act.yml`, только чтение) по SSH запускает на сервере `scripts/fetch_act.py`: скачивает страницу акта с pravo.gov.ru, mos.ru, consultant.ru, garant.ru, docs.cntd.ru и печатает текст в журнал. Адреса — в `scripts/acts.txt` (запуск при изменении файла) или вводом при ручном запуске. Проверено 13.11.2026: pravo.gov.ru отдаёт 593-ПП только в редакции 2019 года; КонсультантПлюс без JavaScript отдаёт обзоры, но не тексты актов.
