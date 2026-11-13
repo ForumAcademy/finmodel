@@ -41,6 +41,7 @@ export { aggregate, PERIOD_LABEL, periodKey, type Period } from "./explain/perio
 export { amount, compatDiff, exampleFocus, howExample, inputFields, shortSource, templateExample } from "./explain/how";
 export { dataQuestions, LEGACY_QUESTION_MAX_NO, type DataQuestion, type Impact, type ImpactKind, type QuestionBlock } from "./legacy-questions";
 export * as plot from "./plot";
+export * as passport from "./passport";
 export * as site from "./site";
 export * as analysis from "./analysis";
 export * as zcyc from "./zcyc";

@@ -10,11 +10,12 @@ import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject
 import { Chip, ExpertFields, Modal, OriginTag, Toast } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
 import { AnalysisArea, type AnalysisSec } from "./AnalysisScreens";
+import { ParcelOverview } from "./ParcelOverview";
 
 type LandProject = plot.LandProject;
 type PlotFieldKey = plot.PlotFieldKey;
 
-export type ProjectSection = "plot" | "docs" | AnalysisSec;
+export type ProjectSection = "overview" | "plot" | "docs" | AnalysisSec;
 const PLOT_TABS = ["Участок", "Проект", "История"] as const;
 type PlotTab = (typeof PLOT_TABS)[number];
 
@@ -293,8 +294,8 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
         </Link>
         <div className="ttl">
           <h1>{plot.projectTitle(view)}</h1>
-          {status.noCadastralNumber && <Chip tone="yel">Участок без кадастрового номера</Chip>}
-          {status.missing > 0 && (
+          {sec !== "overview" && status.noCadastralNumber && <Chip tone="yel">Участок без кадастрового номера</Chip>}
+          {sec !== "overview" && status.missing > 0 && (
             <Link href={href(p.id, "plot", "Участок")}>
               <Chip tone="yel">
                 Не хватает {status.missing} {text.plural(status.missing, ["значения", "значений", "значений"])}
@@ -320,12 +321,13 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
           )}
         </div>
       </div>
-      <div className="shell">
+      <div className={`shell ${sec === "overview" ? "po-shell" : ""}`}>
         <aside className={`side ${collapsed ? "col" : ""}`}>
           <button className="collapse" onClick={toggleMenu}>
             {collapsed ? "»" : "« Свернуть меню"}
           </button>
           <div className="grp">
+            <Link className={`it top1 ${sec === "overview" ? "on" : ""}`} href={href(p.id, "overview")}>Обзор участка</Link>
             {!collapsed && (
               <div className="gh open">
                 <span>Вводные</span>
@@ -363,13 +365,13 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
         <main className="main">
           {/* Узкий экран: меню слева скрыто, разделы — строкой над содержимым */}
           <nav className="mnav">
-            {[{ sec: "plot" as ProjectSection, short: "Участок" }, ...ANALYSIS_MENU, { sec: "docs" as ProjectSection, short: "Документы" }].map((m) => (
+            {[{ sec: "overview" as ProjectSection, short: "Обзор" }, { sec: "plot" as ProjectSection, short: "Участок" }, ...ANALYSIS_MENU, { sec: "docs" as ProjectSection, short: "Документы" }].map((m) => (
               <Link key={m.sec} className={sec === m.sec ? "on" : ""} href={href(p.id, m.sec)}>
                 {m.short}
               </Link>
             ))}
           </nav>
-          {sec === "site" || sec === "market" || sec === "variants" || sec === "compare" ? (
+          {sec === "overview" ? <ParcelOverview project={view} /> : sec === "site" || sec === "market" || sec === "variants" || sec === "compare" ? (
             <AnalysisArea
               p={p}
               sec={sec}
