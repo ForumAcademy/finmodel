@@ -1,4 +1,5 @@
 # Адреса текстов актов для workflow «Текст акта» (по одному в строке). Только чтение.
-# 2886-ПП от 27.10.2026 (изменения 593-ПП и 273-ПП) — поиск на официальном портале и в Консультанте
-http://publication.pravo.gov.ru/api/Documents?PageSize=10&Name=2886-%D0%9F%D0%9F
-https://www.consultant.ru/cons/cgi/online.cgi?req=doc&base=MLAW&n=449796
+# 2886-ПП от 27.10.2026 (изменения 593-ПП и 273-ПП)
+http://publication.pravo.gov.ru/api/Documents?PageSize=10&Number=2886-%D0%9F%D0%9F
+http://publication.pravo.gov.ru/api/Documents?PageSize=10&NumberSearchType=0&Number=2886-%D0%9F%D0%9F&Block=region77
+https://www.garant.ru/hotlaw/moscow/
