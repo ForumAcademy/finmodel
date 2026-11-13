@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { plot, projectFile, site, siteView, text } from "@fm/engine";
 import { readJson, saveProjectFile, storedFiles } from "@/lib/files";
 import { deleteFile, getReference, listProjects, newId, nowIso, saveProject, saveStoredFile } from "@/lib/store";
@@ -129,6 +130,7 @@ export function ProjectsScreen() {
       <div className="row">
         <h1>Проекты</h1>
         <div style={{ flex: 1 }} />
+        <Link className="btn" href="/demo/lyalin">Пример: Лялин, 21/2</Link>
         <button className="btn" onClick={() => fileInput.current?.click()}>
           Открыть проект из файла
         </button>
