@@ -1,0 +1,41 @@
+name: Проверка источников
+
+# Доступность открытых источников с сервера в России (Хостленд) и с зарубежного
+# сервера GitHub. Только чтение; на сервере ничего не устанавливает и не меняет.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/probe_sources.py
+      - .github/workflows/probe-sources.yml
+
+permissions:
+  contents: read
+
+jobs:
+  abroad:
+    name: С зарубежного сервера (GitHub)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверка
+        run: python3 scripts/probe_sources.py --label github | tee out.txt
+      - name: Итог
+        run: grep -v '^JSON:' out.txt >> "$GITHUB_STEP_SUMMARY"
+
+  russia:
+    name: С сервера в России (Хостленд)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверка через SSH
+        env:
+          SSHPASS: ${{ secrets.SERVER_PASSWORD }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+        run: |
+          sudo apt-get install -y -qq sshpass > /dev/null
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "$USER_NAME@$HOST" 'python3 - --label server' < scripts/probe_sources.py | tee out.txt
+      - name: Итог
+        run: grep -v '^JSON:' out.txt >> "$GITHUB_STEP_SUMMARY"
