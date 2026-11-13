@@ -1,0 +1,58 @@
+name: Сборщик данных
+
+# Проверка сборщика (без сети) и установка на сервер в России от пользователя
+# без root. Меняет только ~/collector и службу пользователя finmodel;
+# nginx, сертификаты сайтов и другие сайты не трогает.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - services/collector/**
+      - .github/workflows/collector-deploy.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collector-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Проверки
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest services/collector/test_collector.py -v
+
+  deploy:
+    name: Установка на сервер
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Установка через SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+        run: |
+          set -o pipefail
+          install -m 600 /dev/null key
+          python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
+          tar -czf bundle.tgz -C services/collector --exclude=__pycache__ --exclude=test_collector.py .
+          ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$USER_NAME@$HOST" 'bash -s' > out.txt 2>&1 <<EOF || rc=$?
+          set -e
+          mkdir -p ~/collector
+          echo "$(base64 -w0 bundle.tgz)" | base64 -d | tar -xzf - -C ~/collector
+          bash ~/collector/deploy/install.sh
+          EOF
+          rm -f key
+          cat out.txt
+          exit ${rc:-0}
+      - name: Итог
+        if: always()
+        run: |
+          { echo "### Установка сборщика"; echo '```'; cat out.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
