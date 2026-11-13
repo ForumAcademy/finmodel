@@ -1,4 +1,5 @@
 # Адреса для workflow «Текст акта», по одному в строке: URL или URL::регулярное-выражение (без пробелов).
-# 2886-ПП от 27.10.2026 (изменения 273-ПП и 593-ПП), КонсультантПлюс, текст без JavaScript
-https://www.consultant.ru/cons/cgi/online.cgi?req=export&type=html&base=MLAW&n=449796
-https://www.consultant.ru/cons/cgi/online.cgi?req=doc&base=MLAW&n=449796&print=1
+# С ::выражением печатаются только совпавшие строки и ссылки страницы — для поиска акта в списках.
+# КонсультантПлюс (online.cgi) без JavaScript текст не отдаёт; обзоры consultant.ru/law/review — отдаёт.
+# 593-ПП — плата за изменение ВРИ (Москва), pravo.gov.ru: редакция до 866-ПП от 10.07.2019
+http://pravo.gov.ru/proxy/ips/?doc_itself=&backlink=1&nd=120072552&page=1&rdk=4
