@@ -37,7 +37,11 @@ jobs:
           USER_NAME: ${{ secrets.SERVER_USER }}
         run: |
           set -o pipefail
-          install -m 600 /dev/null key && printf '%s\n' "$SSH_KEY" > key
+          # Ключ, скопированный из консоли Windows, может прийти с \r, пробелами
+          # или склеенным в одну строку: собираем его заново из base64-части.
+          install -m 600 /dev/null key
+          python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
+          ssh-keygen -y -f key > /dev/null && echo "ключ прочитан"
           ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
             "$USER_NAME@$HOST" 'python3 - --label server' < scripts/probe_sources.py | tee out.txt
           rm -f key
