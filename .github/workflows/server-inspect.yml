@@ -33,3 +33,21 @@ jobs:
           rm -f key
       - name: Итог
         run: cat out.md >> "$GITHUB_STEP_SUMMARY"
+
+  public:
+    name: Сайты снаружи (только чтение)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Проверка адресов
+        run: |
+          {
+          echo "### Сайты снаружи"; echo '```'
+          curl -sS --max-time 20 https://finmodel.orientirgpz.com/health; echo
+          curl -sS --max-time 20 -o /dev/null -w "сборщик без токена: HTTP %{http_code}\n" "https://finmodel.orientirgpz.com/v1/geocode?address=x"
+          curl -sS --max-time 20 -o /dev/null -w "http → %{http_code} %{redirect_url}\n" http://finmodel.orientirgpz.com/health
+          for d in orientirgpz.com statusforumsnabtech.com peregovornye.com; do
+            curl -sS --max-time 20 -o /dev/null -w "$d: HTTP %{http_code}\n" "https://$d/" || echo "$d: нет ответа"
+          done
+          echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
