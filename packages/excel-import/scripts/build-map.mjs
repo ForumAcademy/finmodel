@@ -1,7 +1,7 @@
 // Карта исходного Excel для загрузки файла в новый проект: legacy/legacy_values_map.csv → src/generated/legacy-map.json.
 // Ячейки с вердиктом remove (дубли, вычисляемые значения) не читаются. С флагом --check только проверяет, что файл актуален.
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const csv = readFileSync(resolve(root, "../../legacy/legacy_values_map.csv"), "utf8").trim().split("\n");
@@ -38,4 +38,7 @@ if (process.argv.includes("--check")) {
     process.exit(1);
   }
   console.log(`Карта исходного Excel актуальна: ${map.length} ячеек`);
-} else if (current !== text) writeFileSync(out, text);
+} else if (current !== text) {
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, text);
+}

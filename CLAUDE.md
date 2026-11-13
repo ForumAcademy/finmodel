@@ -23,18 +23,14 @@
 - `data/parameters.yaml`, `data/capex_items.yaml`, `data/regions.yaml`, `data/company_assumptions.yaml` — исходные параметры.
 - `data/formulas.yaml` — формулы: `expr`, `depends_on`, `rationale`, `rejected`, `source_ids`, `example`.
 - `docs/03–05` собираются в CI, файл `docs-03-05` на странице прогона; локально — `python scripts/render_docs.py`. **Не редактируй и не коммить их.**
-- `docs/00_principles.md`, `01_architecture.md`, `02_legacy_audit.md` — пишутся руками.
+- `docs/00_principles.md`, `01_architecture.md` (стек и целевая схема), `02_legacy_audit.md`, `docs/MAP.md` и `docs/passports/` — пишутся руками.
 - `legacy/` — исходный Excel и полная карта его ячеек. Ни одно значение не удалять.
 
 ## Устройство репозитория
 
-- `packages/spec` — справочник из `data/*.yaml`: схемы и типы ID.
-- `packages/engine` — расчётное ядро: `src/modules` (формулы), `src/project.ts` (проект целиком), `src/explain` (пояснения, отчёты), `src/plot.ts` (участок), `src/reference.ts` и `src/book.ts` (справочник и его версии), `src/projectfile.ts` (файл проекта).
-- `packages/excel-import` — загрузка готовой финмодели из Excel по карте `legacy/legacy_values_map.csv`.
-- `packages/egrn-import` — распознавание выписки ЕГРН (XML, ZIP Росреестра, PDF) в поля участка.
-- `apps/web` — интерфейс. **В интерфейсе нет расчётов, вся арифметика — в ядре с тестом.**
-- Хранение — в браузере (IndexedDB, `apps/web/lib/store.ts`) и файлами (`apps/web/lib/files.ts`), отдельной базы нет (решение 29.09.2026); формат — docs/01, «Хранение сейчас».
-- `legacy/` — исходный Excel и карта его ячеек; `tests/cases/` — регрессия по Дербеневской; `scripts/` — валидатор и сборки.
+Карта модулей и где какое правило — `docs/MAP.md`; по каждому модулю — паспорт в `docs/passports/`. Главное:
+- `apps/web` — интерфейс. **В интерфейсе нет расчётов, вся арифметика — в ядре (`packages/engine`) с тестом.**
+- Хранение — в браузере и файлами, отдельной базы нет (решение 29.09.2026); формат — `docs/passports/project.md`.
 
 ## Обязательные правила
 
@@ -58,9 +54,15 @@
 
 ## Работа агента с репозиторием
 
+- **Начинать с `docs/MAP.md`**, затем паспорт нужного модуля; `docs/01` и `docs/06` целиком не читать без нужды. Изменил модуль — обнови его паспорт в том же PR.
 - **Данные читать точечно.** `data/*.yaml` и `legacy/*.csv` не читать целиком: найти нужный ID через `grep -n` и читать ±40 строк вокруг (`sed -n`/`Read` с `offset` и `limit`).
-- Сгенерированное не читать: `packages/spec/src/generated/**`, `packages/excel-import/src/generated/**`, `docs/03–05`. Чтение запрещено в `.claude/settings.json`; смотреть надо исходные `data/*.yaml` и `legacy/*.csv`.
+- Сгенерированное не читать и не коммитить: `packages/spec/src/generated/**`, `packages/excel-import/src/generated/**` (собираются при `pnpm install` и сборке), `docs/03–05` (в CI). Чтение запрещено в `.claude/settings.json`; смотреть надо исходные `data/*.yaml` и `legacy/*.csv`.
 - **Не запускать много субагентов параллельно.** Каждый заново загружает CLAUDE.md и заново ищет по тем же большим YAML и CSV. Работу этапа вести в одной сессии; субагент — только для действительно независимой задачи, и тогда передать ему в задании уже найденные ID, файлы и строки.
+
+## Размер задачи (решение пользователя 29.09.2026)
+
+- Мелкие правки (текст, вёрстка, одно значение) и быстрая проверка текстов — короткий отдельный тред; для него достаточно модели подешевле. Модель выбирает пользователь при запуске треда.
+- Большой этап делится на части: каждая часть — свой короткий тред по очереди, коммиты в ветку этапа, PR этапа по-прежнему один (правило 9). В описании PR — список частей и что сделано в каждой.
 
 ## Команды
 
@@ -69,7 +71,7 @@ python scripts/validate_spec.py      # проверка реестров, ссы
 python scripts/render_docs.py        # docs/03–05 локально (в git не коммитятся, в CI — файл docs-03-05 на странице прогона)
 python scripts/build_legacy_map.py   # пересборка карты исходного Excel (код выхода 0 = всё сопоставлено)
 python scripts/build_legacy_case.py  # пересборка tests/cases/derbenevskaya_legacy.yaml
-pnpm spec:build                      # data/*.yaml → packages/spec/src/generated (после любого изменения data/)
+pnpm spec:build                      # data/*.yaml → packages/spec/src/generated (после изменения data/; при pnpm install — сам)
 pnpm map:build                       # legacy/legacy_values_map.csv → packages/excel-import/src/generated
 pnpm test                            # vitest: примеры формул + регрессия по Дербеневской + сверка с исходным Excel
 pnpm typecheck && pnpm lint

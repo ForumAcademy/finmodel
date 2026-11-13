@@ -8,7 +8,7 @@
  * Код выхода 1 — ошибки в справочнике или устаревшие сгенерированные файлы.
  */
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "yaml";
 import type { z } from "zod";
@@ -99,6 +99,7 @@ const files: Record<string, string> = {
 };
 
 let stale = false;
+if (!checkOnly) mkdirSync(OUT, { recursive: true });
 for (const [name, content] of Object.entries(files)) {
   const path = resolve(OUT, name);
   const current = existsSync(path) ? readFileSync(path, "utf8") : null;

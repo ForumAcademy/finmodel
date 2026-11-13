@@ -7,6 +7,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "postinstall": "pnpm spec:build && pnpm map:build",
     "validate:spec": "python3 scripts/validate_spec.py",
     "spec:build": "pnpm --filter @fm/spec spec:build",
     "spec:check": "pnpm --filter @fm/spec spec:check",
