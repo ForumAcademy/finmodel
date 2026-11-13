@@ -1,0 +1,35 @@
+name: Осмотр сервера
+
+# Только чтение: что установлено на сервере в России (Хостленд), какие порты и
+# ресурсы заняты. Выполняется от пользователя без root, ничего не меняет.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/server/inspect.sh
+      - .github/workflows/server-inspect.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Осмотр (только чтение)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Осмотр через SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+        run: |
+          set -o pipefail
+          install -m 600 /dev/null key
+          python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
+          ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "$USER_NAME@$HOST" 'bash -s' < scripts/server/inspect.sh | tee out.md
+          rm -f key
+      - name: Итог
+        run: cat out.md >> "$GITHUB_STEP_SUMMARY"
