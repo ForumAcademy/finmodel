@@ -176,6 +176,34 @@ const LAW_PARAMS: readonly ParameterId[] = [
 ];
 
 const NEED: RefRow["status"] = { text: "нужно значение", tone: "yel" };
+const OPTIONAL: RefRow["status"] = { text: "не обязательно", tone: "gry" };
+const AUTO: RefRow["status"] = { text: "заполняется сам", tone: "gry" };
+const IN_PROJECT: RefRow["status"] = { text: "вводится в проекте", tone: "gry" };
+
+/**
+ * Стандартные значения, без которых расчёт идёт: ядро читает их через ctx.num и при пустом значении
+ * не проверяет условие или не начисляет статью (variant.ts F_VAR_BEST, tep.ts, sales.ts, fin.ts).
+ * Пустое такое значение — не «нужно значение», а «не обязательно» с пояснением, что происходит без него.
+ * null в карте — пояснение берётся из заметки справочника.
+ */
+const OPTIONAL_IF_EMPTY: Partial<Record<ParameterId, string | null>> = {
+  "VAL.HURDLE_IRR": null,
+  "VAL.MAX_PEAK_DEBT": null,
+  "VAL.MAX_SALES_M": null,
+  "TEP.APART_EFFICIENCY": null,
+  "SALES.PRICE_STAGE_UPLIFT": "Пока не заданы: цена растёт только вместе с рынком",
+  "SALES.MORTGAGE_BANK_FEE_RATE": "В расчёте пока не участвует; заполните, когда будет договор с банком-партнёром",
+  "FIN.RATE_DISCOUNT_COEF": null,
+  "FIN.FEE_COMMITMENT": "Пока не задана: комиссия за неиспользованный лимит не начисляется",
+};
+
+/** Стандартные значения, которые сервис загружает сам; в справочнике — только запасной ручной ввод. */
+const AUTO_FILLED: Partial<Record<ParameterId, { value: string; note: string }>> = {
+  "VAL.RISK_FREE": {
+    value: "кривая ОФЗ Мосбиржи на дату оценки",
+    note: "Сервис загружает кривую в проекте сам. Вручную — только если загрузить не удалось",
+  },
+};
 
 function assumptionStatus(status: string, check: string | undefined, value: unknown): RefRow["status"] {
   if (value === null || value === undefined) return NEED;
@@ -203,7 +231,7 @@ export function standardTabs(versions: readonly AssumptionVersion[] = SPEC_ASSUM
       .filter((i) => i.group === g)
       .map((i) => {
         const p = getParameter(i.param);
-        return {
+        const row: RefRow = {
           param: i.param,
           name: p.name,
           value: formatValue(p, i.value),
@@ -211,6 +239,14 @@ export function standardTabs(versions: readonly AssumptionVersion[] = SPEC_ASSUM
           sources: [{ title: humanize(i.from.text), url: i.from.url }],
           ...(i.note ? { note: humanize(i.note) } : {}),
         };
+        if (i.value !== null && i.value !== undefined) return row;
+        const auto = AUTO_FILLED[i.param];
+        if (auto) return { ...row, value: { text: auto.value }, status: AUTO, note: auto.note };
+        if (i.param in OPTIONAL_IF_EMPTY) {
+          const why = OPTIONAL_IF_EMPTY[i.param];
+          return { ...row, value: { text: "не задано" }, status: OPTIONAL, ...(why ? { note: why } : {}) };
+        }
+        return row;
       }),
   }));
   tabs.push({
@@ -225,6 +261,9 @@ export function standardTabs(versions: readonly AssumptionVersion[] = SPEC_ASSUM
 }
 
 // ---------- нормативы регионов ----------
+
+const NOT_ENTERED: RefValue = { text: "не внесён" };
+const NOT_IN_REFERENCE = "Норматив региона ещё не внесён в справочник: в проекте его вводят вручную со ссылкой на документ.";
 
 function regionRows(r: SpecRegion): RefRow[] {
   const rows: RefRow[] = [];
@@ -248,15 +287,15 @@ function regionRows(r: SpecRegion): RefRow[] {
   );
   rows.push({
     name: "Плата за изменение вида разрешённого использования",
-    value: r.vri_fee.exists === null ? null : { text: r.vri_fee.exists ? `есть${r.vri_fee.formula ? `, по формуле «${formulaNames.get(r.vri_fee.formula) ?? ""}»` : ""}` : "нет" },
+    value: r.vri_fee.exists === null ? NOT_ENTERED : { text: r.vri_fee.exists ? `есть${r.vri_fee.formula ? `, по формуле «${formulaNames.get(r.vri_fee.formula) ?? ""}»` : ""}` : "нет" },
     status:
       r.vri_fee.exists === null
-        ? { text: "нужно проверить", tone: "yel" }
+        ? IN_PROJECT
         : r.vri_fee.formula && isFormulaId(r.vri_fee.formula) && getFormula(r.vri_fee.formula).status === "needs_verification"
           ? { text: "перепроверить", tone: "red" }
           : { text: "по акту региона", tone: "grn" },
     sources: r.vri_fee.source_ids.map(link),
-    ...(r.vri_fee.note ? { note: humanize(r.vri_fee.note) } : {}),
+    ...(r.vri_fee.note ? { note: humanize(r.vri_fee.note) } : r.vri_fee.exists === null ? { note: NOT_IN_REFERENCE } : {}),
   });
   const pn = r.parking_norm;
   rows.push({
@@ -269,17 +308,19 @@ function regionRows(r: SpecRegion): RefRow[] {
               rows: pn.values.map((x, i, all) => [x.max_area === null ? `больше ${num(all[i - 1]?.max_area ?? 0)} м²` : `до ${num(x.max_area)} м²`, num(x.per_apt)]),
             },
           }
-        : null,
-    status: pn.values ? (pn.status === "verified" ? { text: "сверено с источником", tone: "grn" } : { text: "перепроверить", tone: "red" }) : NEED,
+        : NOT_ENTERED,
+    status: pn.values ? (pn.status === "verified" ? { text: "сверено с источником", tone: "grn" } : { text: "перепроверить", tone: "red" }) : IN_PROJECT,
     sources: pn.source_ids.map(link),
+    ...(pn.values ? {} : { note: NOT_IN_REFERENCE }),
   });
   rows.push({
     name: "Машино-места для апартаментов",
     value: Array.isArray(r.parking_norm_apart.values)
       ? { text: (r.parking_norm_apart.values as { max_area?: number | null; per_apt?: number }[]).map((x) => `${x.max_area === null || x.max_area === undefined ? "остальные" : `до ${num(x.max_area)} м²`} — ${num(x.per_apt ?? 0)}`).join("; ") }
-      : null,
-    status: r.parking_norm_apart.values ? (r.parking_norm_apart.status === "verified" ? { text: "сверено с источником", tone: "grn" } : { text: "перепроверить", tone: "red" }) : NEED,
+      : NOT_ENTERED,
+    status: r.parking_norm_apart.values ? (r.parking_norm_apart.status === "verified" ? { text: "сверено с источником", tone: "grn" } : { text: "перепроверить", tone: "red" }) : IN_PROJECT,
     sources: r.parking_norm_apart.source_ids.map(link),
+    ...(r.parking_norm_apart.values ? {} : { note: NOT_IN_REFERENCE }),
   });
   rows.push({
     name: "Коэффициент перехода к ценам региона (НЦС)",
@@ -288,12 +329,10 @@ function regionRows(r: SpecRegion): RefRow[] {
     sources: r.ncs_k_per_source_ids.map(link),
     note: "Таблица 1 сборника НЦС 81-02-01-2026.",
   });
-  rows.push({
-    name: "Орган регулирования тарифов на подключение",
-    value: r.tariff_authority === null ? null : { text: r.tariff_authority },
-    status: r.tariff_authority === null ? NEED : { text: "сверено с источником", tone: "grn" },
-    sources: [],
-  });
+  // справочная строка, в расчёте не участвует: пустую не показываем, чтобы она не выглядела как поле для ввода
+  if (r.tariff_authority !== null) {
+    rows.push({ name: "Орган регулирования тарифов на подключение", value: { text: r.tariff_authority }, status: { text: "сверено с источником", tone: "grn" }, sources: [] });
+  }
   return rows;
 }
 

@@ -36,7 +36,30 @@ describe("справочник для экрана", () => {
   it("шапка: пустые значения и источники на перепроверку", () => {
     const s = reference.referenceSummary();
     expect(s.version).toBe(4);
-    expect(s.needValue).toBeGreaterThan(0);
+    // всё, без чего расчёт не идёт, в справочнике заполнено; пустые — необязательные или вводятся в проекте
+    expect(s.needValue).toBe(0);
     expect(s.recheckSources).toBeGreaterThan(0);
+  });
+
+  it("пустое необязательное значение не просит ввода, обязательное — просит", () => {
+    const rows = reference.standardTabs().flatMap((t) => t.rows);
+    const irr = rows.find((r) => r.param === "VAL.HURDLE_IRR");
+    expect(irr?.status).toEqual({ text: "не обязательно", tone: "gry" });
+    expect(irr?.value).toEqual({ text: "не задано" });
+    expect(rows.find((r) => r.param === "VAL.RISK_FREE")?.status.text).toBe("заполняется сам");
+
+    const cur = reference.currentVersion();
+    if (!cur) throw new Error("нет версии справочника");
+    const emptied = [{ ...cur, items: cur.items.map((i) => (i.param === "OPEX.MARKETING_RATE" ? { ...i, value: null } : i)) }];
+    const marketing = reference.standardTabs(emptied).flatMap((t) => t.rows).find((r) => r.param === "OPEX.MARKETING_RATE");
+    expect(marketing?.status.tone).toBe("yel");
+    expect(reference.referenceSummary(emptied).needValue).toBe(1);
+  });
+
+  it("незаполненный норматив региона вводится в проекте", () => {
+    const mo = reference.regionTabs().find((t) => t.id === "50");
+    const parking = mo?.rows.find((r) => r.name === "Машино-места на квартиру");
+    expect(parking?.status.text).toBe("вводится в проекте");
+    expect(parking?.value).toEqual({ text: "не внесён" });
   });
 });
