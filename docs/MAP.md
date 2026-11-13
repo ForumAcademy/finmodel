@@ -11,6 +11,7 @@
 | Исходный Excel | Карта ячеек, загрузка из Excel, регрессия | `legacy/`, `packages/excel-import`, `engine/src/legacy*.ts`, `tests/cases/` | [legacy](passports/legacy.md) |
 | Выписка ЕГРН | XML, ZIP, PDF → поля участка | `packages/egrn-import`, `apps/web/lib/egrn.ts` | [egrn](passports/egrn.md) |
 | Интерфейс | Экраны Next.js, без расчётов | `apps/web` | [web](passports/web.md) |
+| Сборщик данных | Сервер в России: запросы к источникам, закрытым из-за рубежа (НСПД, геокодер); без расчётов. Установка — workflow «Сборщик данных», от пользователя без root | `services/collector`, `.github/workflows/collector-deploy.yml`, `scripts/server/inspect.sh` | [collector](passports/collector.md) |
 | Проверка источников | Доступность открытых источников с сервера в России и из-за рубежа (только чтение) | `scripts/probe_sources.py`, `.github/workflows/probe-sources.yml` | — |
 
 Стек: Next.js + TypeScript, монорепо pnpm, `decimal.js`, Vitest, GitHub Actions, Vercel (корень `apps/web`).

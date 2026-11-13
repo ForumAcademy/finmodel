@@ -1,0 +1,19 @@
+# Служба пользователя finmodel (systemd --user), без root.
+# Пределы, чтобы сборщик не мешал другим сайтам на сервере.
+[Unit]
+Description=finmodel: сборщик данных об участке
+
+[Service]
+WorkingDirectory=%h/collector
+EnvironmentFile=%h/collector/.env
+ExecStart=/usr/bin/python3 %h/collector/collector.py
+Restart=on-failure
+RestartSec=5
+MemoryMax=300M
+MemoryHigh=250M
+CPUQuota=25%
+TasksMax=64
+Nice=10
+
+[Install]
+WantedBy=default.target
