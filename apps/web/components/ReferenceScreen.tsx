@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { book, reference, text } from "@fm/engine";
+import { book, dataGuide, reference, text } from "@fm/engine";
 import { getParameter, type ParameterId } from "@fm/spec";
 import { readJson, saveReferenceFile } from "@/lib/files";
 import { getReference, listProjects, nowIso, saveProject, saveReference } from "@/lib/store";
@@ -514,6 +514,32 @@ export function ReferenceScreen({ section, tab }: { section: SectionId; tab: str
           </table>
         </div>
       </>
+    );
+  }
+  if (section === "where") {
+    body = (
+      <div className="guide">
+        <p className="small muted">Данные участка и ограничений вносятся вручную. Ниже — где их взять и как внести. Без документа-основания значение помечается как Экспертное.</p>
+        {dataGuide.dataGuideRows().map((r) => (
+          <section key={r.title}>
+            <h3>
+              {r.url ? (
+                <a href={r.url} target="_blank" rel="noopener">
+                  {r.title} ↗
+                </a>
+              ) : (
+                r.title
+              )}
+            </h3>
+            <p>
+              <b>Что даёт:</b> {r.gives}
+            </p>
+            <p>
+              <b>Как получить:</b> {r.how}
+            </p>
+          </section>
+        ))}
+      </div>
     );
   }
   if (section === "history") {

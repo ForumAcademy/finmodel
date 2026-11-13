@@ -421,6 +421,9 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       {t}
                     </div>
                   ))}
+                  <p className="small muted">
+                    Где взять данные участка и как их внести — <Link href="/reference/where">Справочник → Где взять данные</Link>
+                  </p>
                   <div className="fgrid">
                     {plot.PLOT_FIELDS.map((f) => (
                       <FieldRow key={f.key} p={view} field={f} onEdit={setEditing} />
