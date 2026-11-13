@@ -1,5 +1,5 @@
-# Адреса текстов актов для workflow «Текст акта» (по одному в строке). Только чтение.
-# 2886-ПП от 27.10.2026 (изменения 593-ПП и 273-ПП)
-http://publication.pravo.gov.ru/api/Documents?PageSize=10&Number=2886-%D0%9F%D0%9F
-http://publication.pravo.gov.ru/api/Documents?PageSize=10&NumberSearchType=0&Number=2886-%D0%9F%D0%9F&Block=region77
-https://www.garant.ru/hotlaw/moscow/
+# Адреса для workflow «Текст акта», по одному в строке: URL или URL::регулярное-выражение (без пробелов).
+# 2886-ПП от 27.10.2026 (изменения 593-ПП и 273-ПП) — поиск
+https://www.garant.ru/hotlaw/moscow/::2886|593-ПП|273-ПП|разрешенного\sиспользования|арендной\sплаты
+https://docs.cntd.ru/search?q=2886-%D0%9F%D0%9F::2886
+https://www.mos.ru/authority/documents/::2886|разрешенного|арендн

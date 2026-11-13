@@ -5,7 +5,9 @@
 Только чтение: скачивает страницу, убирает разметку, печатает текст. Ничего не сохраняет и не устанавливает.
 Только стандартная библиотека Python 3. Адреса — только с сайтов из ALLOWED (не открытый прокси).
 
-  python3 fetch_act.py URL [URL ...]
+  python3 fetch_act.py URL[::regex] ...
+С ::regex печатаются только строки текста и ссылки страницы, где есть совпадение (для поиска акта
+в списках и выдаче поиска); без него — весь текст.
 """
 import html
 import re
@@ -33,6 +35,13 @@ def text_of(raw, charset):
     return re.sub(r"\n\s*\n+", "\n\n", s).strip()
 
 
+def links(raw, charset, base):
+    s = raw.decode(charset or "utf-8", errors="replace")
+    for href, inner in re.findall(r'(?is)<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', s):
+        t = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", inner))).strip()
+        yield urllib.parse.urljoin(base, html.unescape(href)), t
+
+
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Language": "ru"})
     with urllib.request.urlopen(req, timeout=40, context=ssl.create_default_context()) as r:
@@ -43,19 +52,30 @@ def fetch(url):
         if not cs:
             m = re.search(rb'charset=["\']?([\w-]+)', raw[:4000])
             cs = m.group(1).decode() if m else "utf-8"
-        return r.status, ct, text_of(raw, cs)
+        return r.status, ct, text_of(raw, cs), list(links(raw, cs, url))
 
 
-def main(urls):
-    for url in urls:
+def main(args):
+    for arg in args:
+        url, _, pat = arg.partition("::")
         print(f"\n===== {url}")
         if not allowed(url):
             print(f"пропущено: сайт не из списка ({', '.join(ALLOWED)})")
             continue
         try:
-            status, ct, text = fetch(url)
+            status, ct, text, refs = fetch(url)
             print(f"HTTP {status}, {ct}, {len(text)} знаков\n")
-            print(text)
+            if not pat:
+                print(text)
+                continue
+            rx = re.compile(pat, re.I)
+            lines = text.split("\n")
+            for i, ln in enumerate(lines):
+                if rx.search(ln):
+                    print("> " + " | ".join(x.strip() for x in lines[max(0, i - 1): i + 3] if x.strip())[:1500])
+            for href, t in refs:
+                if rx.search(t) or rx.search(href):
+                    print(f"ссылка: {t[:200]} -> {href}")
         except Exception as e:  # noqa: BLE001 — печатаем причину и идём к следующему адресу
             print(f"ошибка: {type(e).__name__}: {e}"[:300])
 

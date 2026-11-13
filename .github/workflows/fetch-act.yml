@@ -37,7 +37,7 @@ jobs:
           install -m 600 /dev/null key
           python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
           # адреса передаются аргументами python, а не через оболочку сервера
-          printf '%s\n' $URLS > urls.txt
+          printf "%s\n" $URLS > urls.txt
           ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
             "$USER_NAME@$HOST" "python3 - $(python3 -c 'import shlex,sys; print(" ".join(shlex.quote(u) for u in open("urls.txt").read().split()))')" < scripts/fetch_act.py
           rm -f key
