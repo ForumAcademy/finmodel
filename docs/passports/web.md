@@ -13,7 +13,8 @@
 
 ## Прочее
 
-- `components/ui.tsx` — метка происхождения (`OriginTag`), поля экспертного значения, окна, уведомления.
+- `components/ui.tsx` — метка происхождения (`OriginTag`), поля экспертного значения, окна, уведомления, пометка «Где взять данные» (`WhereToFind`).
+- «Где взять данные» обязательна у каждого поля ручного ввода участка и ограничений: тексты — `where` в `PLOT_FIELDS` (`engine/src/plot.ts`), `hint` в `SITE_FIELDS` и `ZOUIT_WHERE` (`engine/src/site.ts`). Показывается в окне изменения поля, при создании проекта и под пустым полем.
 - `lib/store.ts`, `lib/files.ts` — хранение в браузере и файлы ([project](project.md)); `lib/egrn.ts` — выписка ЕГРН ([egrn](egrn.md)); `lib/zcyc.ts` — кривая ОФЗ.
 - Сборка: `pnpm build` (перед `next build` собирается справочник `packages/spec`). Vercel: корень `apps/web`.
 - Целевые вкладки проекта (ТЭП, Бюджет, План продаж, … Дашборд) — `docs/06_zadanie.md` §6.

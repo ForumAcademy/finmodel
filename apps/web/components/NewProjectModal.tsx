@@ -6,7 +6,7 @@ import { plot } from "@fm/engine";
 import { EGRN_ACCEPT, foundSummary, type EgrnResult } from "@fm/egrn-import";
 import { readEgrn } from "@/lib/egrn";
 import { getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
-import { Modal } from "./ui";
+import { Modal, WhereToFind } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
 
 interface Loaded {
@@ -93,6 +93,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
         <label>
           Кадастровый номер участка
           <input value={kn} onChange={(e) => setKn(e.target.value)} placeholder="77:05:0004012:1873" />
+          <WhereToFind className="hint" text={plot.plotField("cadastralNumber").where} />
           <span className="hint">Если номера нет, укажите площадь и местоположение участка.</span>
           {err("cadastralNumber")}
         </label>
@@ -140,6 +141,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
             <label>
               Площадь участка, м² *
               <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="32 000" inputMode="decimal" />
+              <WhereToFind className="hint" text={plot.plotField("area").where} />
               {err("area")}
             </label>
             <div className="frm" style={{ gap: 8 }}>
@@ -160,6 +162,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
                   <span className="hint">{point ? pointText(point) : "Нажмите на карту, чтобы поставить точку"}</span>
                 </>
               )}
+              {mode === "address" && <WhereToFind className="hint" text={plot.plotField("address").where} />}
               {err("location")}
             </div>
           </>
@@ -175,6 +178,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
+          <WhereToFind className="hint" text={plot.plotField("regionCode").where} />
           {!region && suggested?.how === "по кадастровому номеру" && suggested.region.note && <span className="hint">{suggested.region.note}.</span>}
           {err("regionCode")}
         </label>

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { analysis, book, plot, site, siteView, text, zcyc } from "@fm/engine";
 import { newId, nowIso } from "@/lib/store";
 import { loadZcyc } from "@/lib/zcyc";
-import { Chip, ExpertFields, Modal, OriginTag } from "./ui";
+import { Chip, ExpertFields, Modal, OriginTag, WhereToFind } from "./ui";
 
 type LandProject = plot.LandProject;
 type SiteFieldKey = site.SiteFieldKey;
@@ -114,7 +114,7 @@ function SiteFieldRow({ p, fieldKey, onEdit, required }: { p: LandProject; field
         </button>
         {f.unit && <span className="u">{f.unit}</span>}
       </div>
-      {plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x)) ? <div className="note">{plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x))}</div> : v.value === null && <div className="note">{f.hint}</div>}
+      {plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x)) ? <div className="note">{plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x))}</div> : v.value === null && <WhereToFind className="note" text={f.hint} />}
     </div>
   );
 }
@@ -172,7 +172,7 @@ function EditSiteField({ p, fieldKey, onApply, onClose }: { p: LandProject; fiel
             <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={f.kind === "date" ? "ДД.ММ.ГГГГ" : ""} inputMode={f.kind === "text" || f.kind === "date" ? "text" : "decimal"} autoFocus />
           )}
         </label>
-        <span className="hint">{f.hint}</span>
+        <WhereToFind className="hint" text={f.hint} />
         <label>
           Документ-основание
           <select value={docId} onChange={(e) => setDocId(e.target.value)}>
@@ -420,6 +420,7 @@ function EditZone({ p, zone, onApply, onClose }: { p: LandProject; zone: site.Zo
           Зона *
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Охранная зона газопровода" autoFocus />
         </label>
+        <WhereToFind className="hint" text={site.ZOUIT_WHERE} />
         <div className="row2">
           <label>
             Площадь на участке, м²

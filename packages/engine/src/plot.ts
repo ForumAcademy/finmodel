@@ -127,20 +127,22 @@ export interface PlotField {
   options?: readonly string[];
   /** Без значения показатель отмечается «не хватает значения» и входит в счётчик «Не хватает N значений». */
   required: boolean;
+  /** «Где взять данные»: документ или поле карточки участка на карте НСПД. */
+  where: string;
 }
 
 const tenureOptions = getParameter("LAND.TENURE").options ?? [];
 
 export const PLOT_FIELDS: readonly PlotField[] = [
-  { key: "cadastralNumber", label: "Кадастровый номер", param: "GEN.CADASTRAL_NUMBER", kind: "text", required: false },
-  { key: "quarter", label: "Кадастровый квартал", kind: "text", required: false },
-  { key: "address", label: "Адрес", kind: "text", required: false },
-  { key: "regionCode", label: "Регион", param: "GEN.REGION_CODE", kind: "region", required: true },
-  { key: "area", label: "Площадь участка", unit: "м²", param: "LAND.AREA", kind: "area", required: true },
-  { key: "category", label: "Категория земель", kind: "text", required: false },
-  { key: "vri", label: "Вид разрешённого использования", param: "LAND.VRI_CODES", kind: "text", required: true },
-  { key: "cadastralValue", label: "Кадастровая стоимость", unit: "руб", param: "LAND.CADASTRAL_VALUE", kind: "money", required: true },
-  { key: "tenure", label: "Форма права", param: "LAND.TENURE", kind: "enum", options: tenureOptions, required: true },
+  { key: "cadastralNumber", label: "Кадастровый номер", param: "GEN.CADASTRAL_NUMBER", kind: "text", required: false, where: "Карта НСПД nspd.gov.ru: найдите участок по адресу, поле «Кадастровый номер» в карточке участка. Также — выписка ЕГРН, ГПЗУ" },
+  { key: "quarter", label: "Кадастровый квартал", kind: "text", required: false, where: "Карта НСПД nspd.gov.ru: поле «Кадастровый квартал» в карточке участка. Это первые три части кадастрового номера, например 77:01:0001028" },
+  { key: "address", label: "Адрес", kind: "text", required: false, where: "Карта НСПД nspd.gov.ru: поле «Адрес» в карточке участка. Также — выписка ЕГРН (местоположение), ГПЗУ" },
+  { key: "regionCode", label: "Регион", param: "GEN.REGION_CODE", kind: "region", required: true, where: "Адрес участка в выписке ЕГРН или на карте НСПД nspd.gov.ru. Первая часть кадастрового номера: 77 — Москва, 50 — Московская область; у участков Новой Москвы бывает 50, поэтому сверяйте с адресом" },
+  { key: "area", label: "Площадь участка", unit: "м²", param: "LAND.AREA", kind: "area", required: true, where: "Карта НСПД nspd.gov.ru: поле «Площадь» в карточке участка. Также — выписка ЕГРН, ГПЗУ" },
+  { key: "category", label: "Категория земель", kind: "text", required: false, where: "Карта НСПД nspd.gov.ru: поле «Категория земель» в карточке участка. Также — выписка ЕГРН" },
+  { key: "vri", label: "Вид разрешённого использования", param: "LAND.VRI_CODES", kind: "text", required: true, where: "Карта НСПД nspd.gov.ru: поле «Вид разрешённого использования» в карточке участка. Также — выписка ЕГРН. Какие виды допускает зона, — в ГПЗУ или ПЗЗ" },
+  { key: "cadastralValue", label: "Кадастровая стоимость", unit: "руб", param: "LAND.CADASTRAL_VALUE", kind: "money", required: true, where: "Карта НСПД nspd.gov.ru: поле «Кадастровая стоимость» в карточке участка. Также — выписка ЕГРН" },
+  { key: "tenure", label: "Форма права", param: "LAND.TENURE", kind: "enum", options: tenureOptions, required: true, where: "Выписка ЕГРН: зарегистрированные права и ограничения (аренда — с реквизитами и сроком договора); договор аренды. На карте НСПД nspd.gov.ru — поле «Форма собственности» в карточке участка" },
 ];
 
 const fieldByKey = new Map(PLOT_FIELDS.map((f) => [f.key, f]));
