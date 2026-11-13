@@ -51,6 +51,9 @@ const siteFieldByKey = new Map(SITE_FIELDS.map((f) => [f.key, f]));
 export const siteField = (key: SiteFieldKey): SiteField => siteFieldByKey.get(key) as SiteField;
 
 /** Вкладка «Градрегламент»: ограничения объёма; «Сделка»: цена и дата. */
+/** «Где взять данные» для зон с особыми условиями использования территории. */
+export const ZOUIT_WHERE = "ГПЗУ, раздел об ограничениях использования участка; выписка ЕГРН, ограничения прав и обременения; карта НСПД nspd.gov.ru, слой зон с особыми условиями использования территории";
+
 export const REGULATION_FIELDS: readonly SiteFieldKey[] = ["zone", "maxGfa", "density", "maxFloors", "maxHeight", "builtShare", "apartAllowed"];
 export const DEAL_FIELDS: readonly SiteFieldKey[] = ["landPrice", "startDate"];
 /** Нормативы, которых нет в справочнике регионов: вводятся по проекту с документом. */

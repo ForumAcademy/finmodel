@@ -7,7 +7,7 @@ import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
 import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
-import { Chip, ExpertFields, Modal, OriginTag, Toast } from "./ui";
+import { Chip, ExpertFields, Modal, OriginTag, Toast, WhereToFind } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
 import { AnalysisArea, type AnalysisSec } from "./AnalysisScreens";
 
@@ -71,7 +71,7 @@ function FieldRow({ p, field, onEdit }: { p: LandProject; field: plot.PlotField;
         </button>
         {field.unit && <span className="u">{field.unit}</span>}
       </div>
-      {plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`) && <div className="note">{plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`)}</div>}
+      {plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`) ? <div className="note">{plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`)}</div> : v.value === null && <WhereToFind className="note" text={field.where} />}
     </div>
   );
 }
@@ -151,6 +151,7 @@ function EditField({ p, field, onApply, onClose }: { p: LandProject; field: plot
             <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={isKn ? "77:05:0004012:1873" : ""} inputMode={numeric ? "decimal" : "text"} autoFocus />
           )}
         </label>
+        <WhereToFind className="hint" text={field.where} />
         {isKn && <span className="hint">После ввода номера загрузите выписку ЕГРН: её данные заменят введённые значения.</span>}
         <label>
           Документ-основание
@@ -420,6 +421,9 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       {t}
                     </div>
                   ))}
+                  <p className="small muted">
+                    Где взять данные участка и как их внести — <Link href="/reference/where">Справочник → Где взять данные</Link>
+                  </p>
                   <div className="fgrid">
                     {plot.PLOT_FIELDS.map((f) => (
                       <FieldRow key={f.key} p={view} field={f} onEdit={setEditing} />

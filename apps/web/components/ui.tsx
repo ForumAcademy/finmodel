@@ -81,3 +81,27 @@ export function ExpertFields({ form, onChange, placeholder, unit, numeric }: { f
     </>
   );
 }
+
+const NSPD = "nspd.gov.ru";
+const NSPD_URL = "https://nspd.gov.ru/map";
+
+/** Обязательная пометка «Где взять данные» у поля ручного ввода; адрес карты НСПД — ссылкой. */
+export function WhereToFind({ text, className = "where" }: { text: string; className?: string }) {
+  const parts = text.split(NSPD);
+  return (
+    <div className={className}>
+      <b>Где взять данные:</b>{" "}
+      {parts.map((t, i) => (
+        <span key={i}>
+          {i > 0 && (
+            <a href={NSPD_URL} target="_blank" rel="noreferrer">
+              {NSPD}
+            </a>
+          )}
+          {t}
+        </span>
+      ))}
+      {text.endsWith(".") ? "" : "."}
+    </div>
+  );
+}
