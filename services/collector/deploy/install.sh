@@ -36,8 +36,7 @@ echo "Автозапуск после перезагрузки (Linger): $(login
 # Проверка: сборщик отвечает и ходит в источники.
 curl -fsS http://127.0.0.1:3300/health; echo
 TOK="$(sed -n 's/^COLLECTOR_TOKEN=//p' "$D/.env")"
-for q in "v1/geocode?address=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C%20%D0%9B%D1%8F%D0%BB%D0%B8%D0%BD%20%D0%BF%D0%B5%D1%80%D0%B5%D1%83%D0%BB%D0%BE%D0%BA%2C%2021" \
-         "v1/nspd/search?query=77%3A01%3A0001028%3A2999"; do
+for q in "v1/geocode?address=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C%20%D0%9B%D1%8F%D0%BB%D0%B8%D0%BD%20%D0%BF%D0%B5%D1%80%D0%B5%D1%83%D0%BB%D0%BE%D0%BA%2C%2021"; do
   code=$(curl -s -o /tmp/finmodel-collector-check.json -w '%{http_code}' -H "X-Collector-Token: $TOK" "http://127.0.0.1:3300/$q")
   echo "/${q%%\?*}: HTTP $code, $(head -c 300 /tmp/finmodel-collector-check.json)"
 done

@@ -60,7 +60,7 @@ class CollectorTest(unittest.TestCase):
     def test_source_error(self):
         with mock.patch.object(collector, "fetch_json",
                                side_effect=collector.SourceError("источник ответил HTTP 403")):
-            s, j = self.get("/v1/nspd/search?query=77:01:0001028:1")
+            s, j = self.get("/v1/geocode?address=x")
         self.assertEqual(s, 502)
         self.assertIn("403", j["error"])
 

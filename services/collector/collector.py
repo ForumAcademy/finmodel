@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Сборщик данных об участке. Работает на сервере в России (Хостленд).
 
-Зачем: источники по участку (НСПД, открытые данные Москвы, реестр ОКН)
+Зачем: источники по участку (открытые данные Москвы, реестр ОКН)
 не отвечают зарубежным серверам, а интерфейс и расчёт работают на Vercel.
 Сборщик принимает запрос от сервиса, сам обращается к источнику и возвращает
 ответ как есть, с отметкой источника и времени. Ничего не рассчитывает:
@@ -13,7 +13,6 @@
 Запросы (все GET, ответ JSON):
   /health                         — жив ли сборщик (без токена)
   /v1/geocode?address=...         — адрес → координаты (OSM Nominatim)
-  /v1/nspd/search?query=...       — НСПД: поиск по кадастровому номеру или адресу
 
 Доступ — по заголовку X-Collector-Token (значение в файле ~/collector/.env,
 переменная COLLECTOR_TOKEN). Без токена сборщик стал бы открытым прокси.
@@ -42,12 +41,13 @@ CACHE_TTL = 24 * 3600  # с; данные участка за сутки не м
 CACHE_MAX = 500
 MAX_BODY = 2_000_000  # байт, предел ответа источника
 # Российский корневой сертификат (Минцифры) — только для запросов сборщика,
-# в систему не ставится. Скачивается при развёртывании (deploy.sh).
+# в систему не ставится. Скачивается при установке (deploy/install.sh).
+# Нужен госсайтам (НСПД, Росреестр). НСПД отвечает программам 403, поэтому
+# кадастровые данные вносятся вручную (решение пользователя 13.11.2026).
 RU_CA = os.path.join(HERE, "certs", "russian_trusted_root_ca.pem")
 
 SOURCES = {
     "nominatim": "OSM Nominatim (nominatim.openstreetmap.org), ODbL",
-    "nspd": "НСПД (nspd.gov.ru), публичная кадастровая карта",
 }
 
 
@@ -150,20 +150,9 @@ def geocode(address):
     return cached(("geo", address.strip().lower()), run)
 
 
-def nspd_search(query):
-    q = urllib.parse.urlencode({"query": query})
-    url = f"https://nspd.gov.ru/api/geoportal/v2/search/geoportal?{q}"
-
-    def run():
-        data = fetch_json(url, headers={"Referer": "https://nspd.gov.ru/map"}, ru=True)
-        return envelope("nspd", url, data)
-
-    return cached(("nspd", query.strip().lower()), run)
-
 
 ROUTES = {
     "/v1/geocode": ("address", geocode),
-    "/v1/nspd/search": ("query", nspd_search),
 }
 
 
