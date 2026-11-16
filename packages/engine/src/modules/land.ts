@@ -6,6 +6,7 @@ import Decimal from "decimal.js";
 import type { FormulaContext } from "../context";
 import { CalcError } from "../context";
 import { dayBefore, daysBetween, eomonth, isIsoDate, prevMonthEnd, maxDate, minDate, monthDiff, overlapDays, quarterMonthEnds, type IsoDate } from "../lib/dates";
+import { fmt } from "../lib/format";
 import { isMilestoneKey, milestone, milestones, vriChangeDate, type MilestoneRow } from "./time";
 
 const ONE = new Decimal(1);
@@ -114,6 +115,7 @@ export function F_LAND_TAX_OR_RENT(ctx: FormulaContext): Decimal[] {
 
 interface VriFeeRate {
   min_density: number;
+  max_density: number | null;
   rate: number;
 }
 
@@ -130,15 +132,25 @@ export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
   const maxGfa = ctx.num("GPZU.MAX_GFA_ABOVE");
   if (rates === null || after === null || maxGfa === null) {
     // Не хватает данных для формулы региона — обязательный ручной ввод с документом (CLAUDE.md, правило 7)
-    const fee = ctx.requireNum("LAND.VRI_FEE");
-    return fee;
+    return ctx.requireNum("LAND.VRI_FEE");
   }
   const density = maxGfa.div(ctx.requireNum("LAND.AREA"));
-  const row = rates.filter((r) => density.gte(r.min_density)).reduce<VriFeeRate | null>((best, r) => (best === null || r.min_density > best.min_density ? r : best), null);
-  if (row === null) throw new CalcError(`Нет ставки платы за изменение ВРИ для плотности застройки ${density.toString()} в справочнике региона «${region.name}»`, "LAND.VRI_FEE_RATES");
   const growth = after.sub(ctx.requireNum("LAND.CADASTRAL_VALUE"));
   if (growth.isNegative()) throw new CalcError("Кадастровая стоимость после смены ВРИ меньше текущей — проверьте значение", "LAND.CADASTRAL_VALUE_AFTER_VRI");
-  return growth.mul(row.rate);
+  const inside = rates.find((r) => density.gte(r.min_density) && (r.max_density === null || density.lte(r.max_density)));
+  if (inside) return growth.mul(inside.rate);
+  // Плотность между строками таблицы: верхняя строка (осторожно), сумма по нижней — в предупреждении
+  const upper = rates.filter((r) => density.lt(r.min_density)).reduce<VriFeeRate | null>((b, r) => (b === null || r.min_density < b.min_density ? r : b), null);
+  const lower = rates.filter((r) => r.max_density !== null && density.gt(r.max_density)).reduce<VriFeeRate | null>((b, r) => (b === null || (r.max_density ?? 0) > (b.max_density ?? 0) ? r : b), null);
+  if (upper === null) throw new CalcError(`Нет ставки платы за изменение ВРИ для плотности застройки ${density.toString()} в справочнике региона «${region.name}»`, "LAND.VRI_FEE_RATES");
+  const fee = growth.mul(upper.rate);
+  ctx.message(
+    "warning",
+    `Плотность застройки по ГПЗУ ${fmt(density)} — между строками таблицы ставок 593-ПП. В расчёте бо́льшая ставка (от ${fmt(upper.min_density)}): ${fmt(fee.round())} руб.${lower ? ` По меньшей ставке (до ${fmt(lower.max_density ?? 0)}) — ${fmt(growth.mul(lower.rate).round())} руб.` : ""} Уточните у ДГИ`,
+    "LAND.VRI_FEE_RATES",
+    "LAND.VRI_FEE_DENSITY_GAP",
+  );
+  return fee;
 }
 
 export const LAND_FORMULAS = {

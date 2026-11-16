@@ -96,10 +96,17 @@ describe("LAND", () => {
     const fee = (extra: Record<string, unknown>) => calculate({ values: { ...vriInput, ...extra } }, {}, ["F.LAND.VRI_FEE"]).formulas["F.LAND.VRI_FEE"]?.value as Decimal;
     const growth = 12e9 - 5834907660;
     expect(fee({ "GPZU.MAX_GFA_ABOVE": 96572 * 4 }).toNumber()).toBeCloseTo(growth * 0.8, 2); // 4,0 — 80%
-    expect(fee({ "GPZU.MAX_GFA_ABOVE": 96572 * 3.95 }).toNumber()).toBeCloseTo(growth * 0.7, 2); // между строками — нижняя
+    expect(fee({ "GPZU.MAX_GFA_ABOVE": 96572 * 3.9 }).toNumber()).toBeCloseTo(growth * 0.7, 2); // 3,9 включительно — 70%
+    expect(fee({ "GPZU.MAX_GFA_ABOVE": 96572 * 3.95 }).toNumber()).toBeCloseTo(growth * 0.8, 2); // между строками — верхняя
     expect(fee({ "GPZU.MAX_GFA_ABOVE": 96572 * 0.3 }).toNumber()).toBeCloseTo(growth * 0.05, 2);
     expect(fee({ "LAND.VRI_FEE": 1000 }).toNumber()).toBe(1000);
     expect(fee({ "LAND.VRI_CHANGE": false }).toNumber()).toBe(0);
+  });
+
+  it("плата за ВРИ: плотность между строками — предупреждение с суммой по меньшей ставке", () => {
+    const r = calculate({ values: { ...vriInput, "GPZU.MAX_GFA_ABOVE": 96572 * 3.95 } }, {}, ["F.LAND.VRI_FEE"]);
+    const lower = new Intl.NumberFormat("ru-RU").format(Math.round((12e9 - 5834907660) * 0.7));
+    expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", key: "LAND.VRI_FEE_DENSITY_GAP", text: expect.stringContaining(lower) }));
   });
 
   it("плата за ВРИ: стоимость после смены ВРИ меньше текущей — ошибка", () => {
