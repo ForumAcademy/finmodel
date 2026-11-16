@@ -283,7 +283,7 @@ export function marketHeadline(p: LandProject, sa: SiteAnalysis): Headline {
   const need = minAnalogs();
   const short = rows.filter((r) => !r.enough);
   const shortText = short.length
-    ? `Нужно не меньше ${need} ${plural(need, ["аналога", "аналогов", "аналогов"])} одного класса: ${short.map((r) => `${r.product}, ${r.housingClass} — ${r.analogs}`).join("; ")}. Пока их нет, цена и темп этого класса не считаются.`
+    ? `Нужно не меньше ${need} ${plural(need, ["аналога", "аналогов", "аналогов"])} одного класса: ${short.map((r) => `${r.product}, ${r.housingClass} — ${r.analogs}`).join("; ")}. Пока аналогов меньше, цена и темп этого класса не считаются.`
     : null;
   if (!rows.length) return { ok: false, title: "Аналогов пока нет", note: `Добавьте не меньше ${need} ЖК рядом с участком: без цены и темпа продаж варианты не считаются.` };
   const ok = rows.filter((r) => r.enough);
@@ -434,7 +434,7 @@ export function compareTable(summaries: readonly VariantSummary[], choice: BestC
   const failed = summaries.filter((s) => (choice?.reasons[s.variant.id] ?? []).length > 0).map((s) => ({ title: variantTitle(s.variant), text: (choice?.reasons[s.variant.id] ?? []).join("; ") }));
   const lost = losers.map((s) => ({
     title: variantTitle(s.variant),
-    text: `${criterion} ${mln(metric(s))} млн руб — на ${mln((bestValue as Decimal).sub(metric(s) as Decimal))} млн руб меньше, чем у лучшего`,
+    text: ((gap) => (gap.replace("-", "") === "0" ? `${criterion} ${mln(metric(s))} млн руб — столько же, сколько у лучшего (в пределах 0,1 млн руб)` : `${criterion} ${mln(metric(s))} млн руб — на ${gap} млн руб меньше, чем у лучшего`))(mln((bestValue as Decimal).sub(metric(s) as Decimal))),
   }));
   return {
     headers: summaries.map((s) => variantTitle(s.variant)),

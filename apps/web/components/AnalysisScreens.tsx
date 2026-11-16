@@ -130,7 +130,7 @@ function siteItem(p: LandProject, fieldKey: SiteFieldKey, onEdit: (k: SiteFieldK
           <OriginTag origin={v.origin} /> <BasisText basis={v.basis} />
         </>
       ),
-    note: plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x)),
+    note: v.value === null ? (site.EMPTY_NOTE[fieldKey] ?? null) : plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x)),
     why,
     where: f.hint,
     onEdit: () => onEdit(fieldKey),

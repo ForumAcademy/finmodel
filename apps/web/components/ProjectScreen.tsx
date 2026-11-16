@@ -24,7 +24,7 @@ const href = (id: string, sec: ProjectSection, tab?: string) => `/projects/${id}
 const STEPS: readonly { sec: ProjectSection; num: string; title: string; short: string; later?: boolean }[] = [
   { sec: "summary", num: "★", title: "Итог", short: "Итог" },
   { sec: "plot", num: "1", title: "Участок", short: "Участок" },
-  { sec: "site", num: "2", title: "Что можно построить", short: "Строить" },
+  { sec: "site", num: "2", title: "Что можно построить", short: "Что строить" },
   { sec: "market", num: "3", title: "Рынок", short: "Рынок" },
   { sec: "variants", num: "4", title: "Варианты", short: "Варианты" },
   { sec: "model", num: "5", title: "Финмодель", short: "Финмодель", later: true },
