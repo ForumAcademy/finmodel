@@ -260,7 +260,7 @@ export function ReportBlock({ p, state, s, href }: { p: plot.LandProject; state:
             <table className="t">
               <thead>
                 <tr>
-                  <th>Цена продаж \ ключевая ставка</th>
+                  <th>Цена продаж (строки), ключевая ставка (столбцы)</th>
                   {sens.cols.map((c) => (
                     <th key={c}>{c}</th>
                   ))}

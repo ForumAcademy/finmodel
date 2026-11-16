@@ -34,7 +34,7 @@ export interface LandView {
 
 export function landReportView(land: LandMax, rate: Decimal | null, hurdle: Decimal | null = null): LandView {
   const max = land.max_price;
-  const how = `Цена участка, при которой NPV акционера равен нулю${rate ? ` при ставке дисконтирования ${pct(rate)}` : ""}: проект приносит ровно требуемую доходность. При каждой пробной цене вариант пересчитан целиком, с кредитом, процентами и налогом на прибыль.`;
+  const how = `Цена участка, при которой чистая приведённая стоимость для акционера (NPV) равна нулю${rate ? ` при ставке дисконтирования ${pct(rate)}` : ""}: проект приносит ровно требуемую доходность. При каждой пробной цене вариант пересчитан целиком, с кредитом, процентами и налогом на прибыль.`;
   const reserve = land.reserve;
   return {
     value: land.unprofitable ? "проект невыгоден при любой цене" : max === null ? "не найдена" : mln(max),
