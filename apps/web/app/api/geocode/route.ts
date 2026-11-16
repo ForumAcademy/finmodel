@@ -36,7 +36,7 @@ export async function GET(req: Request): Promise<Response> {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return Response.json(hit.body);
   try {
-    const r = await paced(() => fetch(geocode.geocodeUrl(q), { cache: "no-store", headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(20_000) }));
+    const r = await paced(() => fetch(geocode.geocodeUrl(q), { cache: "no-store", headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(40_000) }));
     if (!r.ok) return Response.json({ error: `Геокодер ответил ${r.status}` }, { status: 502 });
     const body: unknown = await r.json();
     if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
