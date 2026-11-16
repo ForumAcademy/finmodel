@@ -202,6 +202,19 @@ export const regionSchema = z
         exists: z.boolean().nullable(),
         source_ids: idList,
         formula: z.string().nullable(),
+        /**
+         * Ставки по показателю плотности застройки (Москва — приложение к Порядку 593-ПП): строка «от min_density до
+         * max_density включительно» (null — без верхней границы). Нет поля — ставки не выписаны.
+         */
+        rates: z
+          .array(
+            z
+              .object({ min_density: z.number().nonnegative(), max_density: z.number().nonnegative().nullable(), rate: z.number().nonnegative().max(1) })
+              .strict(),
+          )
+          .min(1)
+          .optional(),
+        status: z.enum(["needs_verification", "verified"]).optional(),
         note: z.string().optional(),
       })
       .strict(),

@@ -1093,7 +1093,27 @@ regions:
       status: needs_verification
       note: "Закон Москвы № 74, п.2 ч.1 ст.2: 0,1% для участков, предоставленных для жилищного строительства; исключения для участков дороже 300 млн руб. нет (законы № 34 от 22.11.2023 и № 27 от 25.06.2025 его не вводили). Подтвердить у налогового консультанта: в законе Москвы — «предоставленных», а не «приобретённых (предоставленных)», как в ст.394 НК РФ"
     land_rent_source_ids: [S_MSK_RENT_273PP]
-    vri_fee: {exists: true, source_ids: [S_MSK_VRI_593PP], formula: "F.LAND.VRI_FEE"}
+    vri_fee:
+      exists: true
+      source_ids: [S_MSK_VRI_593PP, S_MSK_2886PP]
+      formula: "F.LAND.VRI_FEE"
+      # Приложение к Порядку 593-ПП: ставка С — доля прироста кадастровой стоимости по показателю плотности застройки
+      # (предельная площадь ОКС по ГПЗУ ÷ площадь участка). Строки 1–8 сверены с действующей редакцией на Гаранте
+      # 16.11.2026, строки 9–11 — по официальному тексту pravo.gov.ru (ред. 866-ПП от 10.07.2019).
+      rates:
+        - {min_density: 4.0, max_density: null, rate: 0.80}
+        - {min_density: 3.6, max_density: 3.9, rate: 0.70}
+        - {min_density: 3.2, max_density: 3.5, rate: 0.60}
+        - {min_density: 2.8, max_density: 3.1, rate: 0.50}
+        - {min_density: 2.4, max_density: 2.7, rate: 0.40}
+        - {min_density: 2.0, max_density: 2.3, rate: 0.30}
+        - {min_density: 1.6, max_density: 1.9, rate: 0.25}
+        - {min_density: 1.2, max_density: 1.5, rate: 0.20}
+        - {min_density: 0.8, max_density: 1.1, rate: 0.15}
+        - {min_density: 0.4, max_density: 0.7, rate: 0.10}
+        - {min_density: 0, max_density: 0.3, rate: 0.05}
+      status: needs_verification
+      note: "Акт задаёт плотность с одним знаком после запятой («от 3,6 до 3,9 включительно»); промежуточное значение (например, 3,95) в сервисе относится к верхней строке — осторожно, бо́льшая плата; в предупреждении — сумма по нижней строке. Уточнить у ДГИ. Реконструкция с приростом площади не более 20% (п. 2.1(1) в ред. 2886-ПП) и ставка 0,01% за ТТК для нежилых объектов в сервисе не применяются: сервис оценивает новое жилое строительство"
     parking_norm:
       source_ids: [S_MSK_PARKING_2118PP, S_MSK_NGP_TRANSPORT_945PP]
       rule: by_apartment_area
