@@ -1105,8 +1105,8 @@ function SummarySection({
       {state.done && bestIdx < 0 && (
         <div className="check warn">
           <div>
-            {state.summaries.length ? table.why : "Варианты пока не построены: не хватает значений из списка ниже."}
-            {!state.summaries.length && errors.map((t) => <div key={t}>{t}</div>)}
+            {state.summaries.length ? table.why : todo.length ? "Варианты пока не построены: не хватает значений из списка ниже." : "Варианты пока не построены."}
+            {!state.summaries.length && !todo.length && errors.map((t) => <div key={t}>{t}</div>)}
           </div>
         </div>
       )}

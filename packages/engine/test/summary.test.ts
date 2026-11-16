@@ -26,6 +26,8 @@ describe("что нужно ввести", () => {
     expect(keys).toContain("site.maxFloors");
     expect(keys).toContain("site.landPrice");
     expect(keys).toContain("market.analogs");
+    // ни одного ограничения объёма — одна строка на все три
+    expect(keys).toContain("site.density");
     // у каждого пункта — где взять и куда перейти
     for (const i of list) {
       expect(i.where.length).toBeGreaterThan(0);
