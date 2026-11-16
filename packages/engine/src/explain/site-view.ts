@@ -8,7 +8,7 @@ import { versionOf } from "../project";
 import { formatValue } from "../reference";
 import { date, num, plural } from "../lib/text";
 import type { Origin } from "../plot";
-import { siteDisplay, siteOf, siteValue, variantTitle, HOUSING_CLASSES, ANALOG_PRODUCTS, analogPaceUnit, analogPriceUnit, type AnalysisSnapshot, type SiteFieldKey } from "../site";
+import { minAnalogs, siteDisplay, siteOf, siteValue, variantTitle, HOUSING_CLASSES, ANALOG_PRODUCTS, analogPaceUnit, analogPriceUnit, type AnalysisSnapshot, type SiteFieldKey } from "../site";
 import type { LandProject } from "../plot";
 import type { SiteAnalysis, VariantSummary, BestChoice } from "../analysis";
 import type { GfaLimit } from "../modules/site";
@@ -205,6 +205,37 @@ export function potentialRows(p: LandProject, sa: SiteAnalysis): PotentialRow[] 
   return rows;
 }
 
+/** Ответ экрана одной фразой: заголовок и пояснение под ним; ok — ответ есть. */
+export interface Headline {
+  ok: boolean;
+  title: string;
+  note: string | null;
+}
+
+/** Что ограничивает объём — в пояснении под ответом «Что можно построить». */
+const LIMIT_SHORT: Record<GfaLimit, string> = {
+  gfa: "предельная наземная площадь по ГПЗУ",
+  density: "плотность застройки",
+  share: "процент застройки при предельной этажности",
+};
+
+/** «Что можно построить» одной фразой: максимум наземной площади и этажности, что ограничивает объём. */
+export function potentialHeadline(sa: SiteAnalysis): Headline {
+  if (!sa.maxGfa || !sa.floors.length) {
+    return {
+      ok: false,
+      title: "Пока не посчитано: нужны предельная этажность и хотя бы одно ограничение объёма",
+      note: "Возьмите их из ГПЗУ участка или регламента зоны ПЗЗ и введите на вкладке «Ограничения».",
+    };
+  }
+  const top = sa.floors.reduce((m, f) => (f > m ? f : m));
+  return {
+    ok: true,
+    title: `Максимум ${m2(sa.maxGfa.value)} наземной площади, до ${top} ${plural(top, ["этажа", "этажей", "этажей"])}`,
+    note: `Объём ограничивает ${LIMIT_SHORT[sa.maxGfa.limit]}.`,
+  };
+}
+
 // ---------- рынок ----------
 
 export interface MarketRow {
@@ -244,6 +275,21 @@ export function marketRows(p: LandProject, sa: SiteAnalysis): MarketRow[] {
     }
   }
   return rows;
+}
+
+/** Итог рынка одной фразой: цена и темп по каждому классу, где хватает аналогов. */
+export function marketHeadline(p: LandProject, sa: SiteAnalysis): Headline {
+  const rows = marketRows(p, sa);
+  const need = minAnalogs();
+  const short = rows.filter((r) => !r.enough);
+  const shortText = short.length
+    ? `Нужно не меньше ${need} ${plural(need, ["аналога", "аналогов", "аналогов"])} одного класса: ${short.map((r) => `${r.product}, ${r.housingClass} — ${r.analogs}`).join("; ")}. Пока аналогов меньше, цена и темп этого класса не считаются.`
+    : null;
+  if (!rows.length) return { ok: false, title: "Аналогов пока нет", note: `Добавьте не меньше ${need} ЖК рядом с участком: без цены и темпа продаж варианты не считаются.` };
+  const ok = rows.filter((r) => r.enough);
+  if (!ok.length) return { ok: false, title: "Цены и темпа продаж пока нет", note: shortText };
+  const cap = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1);
+  return { ok: true, title: ok.map((r) => `${cap(r.product)}, ${r.housingClass}: ${r.price}, темп ${r.pace}`).join("; "), note: shortText };
 }
 
 // ---------- варианты ----------
@@ -388,7 +434,7 @@ export function compareTable(summaries: readonly VariantSummary[], choice: BestC
   const failed = summaries.filter((s) => (choice?.reasons[s.variant.id] ?? []).length > 0).map((s) => ({ title: variantTitle(s.variant), text: (choice?.reasons[s.variant.id] ?? []).join("; ") }));
   const lost = losers.map((s) => ({
     title: variantTitle(s.variant),
-    text: `${criterion} ${mln(metric(s))} млн руб — на ${mln((bestValue as Decimal).sub(metric(s) as Decimal))} млн руб меньше, чем у лучшего`,
+    text: ((gap) => (gap.replace("-", "") === "0" ? `${criterion} ${mln(metric(s))} млн руб — столько же, сколько у лучшего (в пределах 0,1 млн руб)` : `${criterion} ${mln(metric(s))} млн руб — на ${gap} млн руб меньше, чем у лучшего`))(mln((bestValue as Decimal).sub(metric(s) as Decimal))),
   }));
   return {
     headers: summaries.map((s) => variantTitle(s.variant)),
@@ -399,6 +445,41 @@ export function compareTable(summaries: readonly VariantSummary[], choice: BestC
     needsRiskFree: !choice?.best && riskFreeMissing(summaries),
     reasons: [...failed, ...lost],
   };
+}
+
+/** Отметка варианта в сравнении: лучший, наибольшая прибыль, наименьший пиковый долг. */
+export interface Leader {
+  mark: string;
+  id: string;
+  title: string;
+  /** Пояснение для «Итога»: чем вариант лучше по этому показателю. */
+  text: string;
+}
+
+const pick = (summaries: readonly VariantSummary[], get: (s: VariantSummary) => Decimal | null, better: (a: Decimal, b: Decimal) => boolean): VariantSummary | null =>
+  summaries.reduce<VariantSummary | null>((m, s) => {
+    const v = get(s);
+    if (v === null) return m;
+    const mv = m ? get(m) : null;
+    return mv === null || better(v, mv) ? s : m;
+  }, null);
+
+/** Лучший и лидеры по прибыли и пиковому долгу: отметки в таблице «Варианты» и строки «Итога». У лучшего своих отметок нет. */
+export function leaders(summaries: readonly VariantSummary[], choice: BestChoice | null): Leader[] {
+  const best = summaries.find((s) => s.variant.id === choice?.best) ?? null;
+  const out: Leader[] = best ? [{ mark: "лучший", id: best.variant.id, title: variantTitle(best.variant), text: "" }] : [];
+  // Лидер отмечается, только если он строго лучше лучшего варианта по своему показателю
+  const beats = (s: VariantSummary | null, get: (x: VariantSummary) => Decimal | null, better: (a: Decimal, b: Decimal) => boolean): s is VariantSummary => {
+    if (!s || s === best) return false;
+    const v = get(s);
+    const bv = best ? get(best) : null;
+    return v !== null && (bv === null || better(v, bv));
+  };
+  const profit = pick(summaries, (s) => s.netProfit, (a, b) => a.gt(b));
+  if (beats(profit, (s) => s.netProfit, (a, b) => a.gt(b))) out.push({ mark: "наибольшая прибыль", id: profit.variant.id, title: variantTitle(profit.variant), text: `чистая прибыль ${mln(profit.netProfit)} млн руб` });
+  const debt = pick(summaries, (s) => s.peakDebt, (a, b) => a.lt(b));
+  if (beats(debt, (s) => s.peakDebt, (a, b) => a.lt(b))) out.push({ mark: "наименьший долг", id: debt.variant.id, title: variantTitle(debt.variant), text: `пиковый долг ${mln(debt.peakDebt)} млн руб` });
+  return out;
 }
 
 /** Критерий выбора лучшего утверждён в справочнике проекта (статус «утверждено»). */

@@ -5,13 +5,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { analysis, book, plot, site, siteView, summary, text, zcyc } from "@fm/engine";
 import { newId, nowIso } from "@/lib/store";
 import { loadZcyc } from "@/lib/zcyc";
-import { Chip, ExpertFields, Modal, OriginTag, WhereToFind } from "./ui";
+import { Chip, ExpertFields, FieldTable, Modal, OriginTag, WhereToFind, type FieldItem } from "./ui";
 
 type LandProject = plot.LandProject;
 type SiteFieldKey = site.SiteFieldKey;
 type VariantSummary = analysis.VariantSummary;
 
-export const SITE_TABS = ["Градрегламент", "Зоны с ограничениями", "Нормативы", "Сделка", "Градпотенциал"] as const;
+export const SITE_TABS = ["Ограничения", "Расчёт по нормативам"] as const;
 export type SiteTab = (typeof SITE_TABS)[number];
 
 const today = () => nowIso().slice(0, 10);
@@ -112,26 +112,58 @@ function BasisText({ basis }: { basis: plot.ValueBasis | { title: string; url: s
   return <span className="org basis">{label}</span>;
 }
 
-function SiteFieldRow({ p, fieldKey, onEdit, required }: { p: LandProject; fieldKey: SiteFieldKey; onEdit: (k: SiteFieldKey) => void; required?: boolean }) {
+/** Поле ограничения или сделки строкой шага: пустое обязательное — в «Не хватает». */
+function siteItem(p: LandProject, fieldKey: SiteFieldKey, onEdit: (k: SiteFieldKey) => void, required: boolean, why: string | null): FieldItem {
   const f = site.siteField(fieldKey);
   const v = site.siteValue(p, fieldKey);
-  const miss = !!required && v.value === null;
+  const shown = site.siteText(fieldKey, v.value);
+  return {
+    key: fieldKey,
+    label: f.label,
+    value: shown ? `${shown}${f.unit ? ` ${f.unit}` : ""}` : "",
+    missing: required && v.value === null,
+    origin:
+      v.value === null ? (
+        <span className="small muted">необязательно</span>
+      ) : (
+        <>
+          <OriginTag origin={v.origin} /> <BasisText basis={v.basis} />
+        </>
+      ),
+    note: v.value === null ? (site.EMPTY_NOTE[fieldKey] ?? null) : plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x)),
+    why,
+    where: f.hint,
+    onEdit: () => onEdit(fieldKey),
+  };
+}
+
+/** Поля ограничений или сделки: «Не хватает» и таблица введённого, правка — в окне. */
+export function SiteFields({ p, keys, required, onSave }: { p: LandProject; keys: readonly SiteFieldKey[]; required: Partial<Record<SiteFieldKey, string>>; onSave: Save }) {
+  const [editing, setEditing] = useState<SiteFieldKey | null>(null);
   return (
-    <div className={`fld ${miss ? "miss" : ""}`}>
-      <div className="lb">
-        <span>{f.label}</span>
-        <div className="meta">
-          {(v.value !== null || required) && <OriginTag origin={v.origin} />}
-          <BasisText basis={v.basis} />
-        </div>
-      </div>
-      <div className="val">
-        <button className={`shown ${f.kind === "text" ? "text" : ""}`} onClick={() => onEdit(fieldKey)} title="Изменить">
-          {site.siteText(fieldKey, v.value) || (required ? "нет значения" : "—")}
-        </button>
-        {f.unit && <span className="u">{f.unit}</span>}
-      </div>
-      {plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x)) ? <div className="note">{plot.basisNote(v.basis, (x) => site.siteShow(fieldKey, x))}</div> : v.value === null && <WhereToFind className="note" text={f.hint} />}
+    <>
+      <FieldTable items={keys.map((k) => siteItem(p, k, setEditing, k in required, required[k] ?? null))} />
+      {editing && (
+        <EditSiteField
+          p={p}
+          fieldKey={editing}
+          onClose={() => setEditing(null)}
+          onApply={(c) => {
+            setEditing(null);
+            if (c) void onSave(site.applySiteChange(p, c, nowIso()), "Значение сохранено");
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+/** Ответ шага одной фразой — сверху экрана. */
+function Answer({ h }: { h: siteView.Headline }) {
+  return (
+    <div className={`answer ${h.ok ? "ok" : "warn"}`}>
+      <b>{h.title}</b>
+      {h.note && <div className="small">{h.note}</div>}
     </div>
   );
 }
@@ -218,37 +250,38 @@ export function SiteSection({ p, tab, state, onSave, tabHref }: { p: LandProject
   const norms = siteView.normRows(p, state.versions);
   const siteErrors = uniqueTexts(state.sa.result.messages.filter((m) => m.formulaId.startsWith("F.SITE.")));
   const needVolume = site.siteValue(p, "maxGfa").value === null && site.siteValue(p, "density").value === null && site.siteValue(p, "builtShare").value === null;
+  const head = siteView.potentialHeadline(state.sa);
 
   return (
     <>
       <div className="mhead">
-        <h2>Участок и ограничения</h2>
+        <h2>2. Что можно построить</h2>
       </div>
+      <Answer h={head} />
       <div className="tabs">
         {SITE_TABS.map((t) => (
           <Link key={t} className={t === tab ? "on" : ""} href={tabHref(t)}>
             {t}
-            {t === "Градрегламент" && (needVolume || site.siteValue(p, "maxFloors").value === null) && <span className="tdot" />}
+            {t === "Ограничения" && (needVolume || site.siteValue(p, "maxFloors").value === null) && <span className="tdot" />}
           </Link>
         ))}
       </div>
-      {tab === "Градрегламент" && (
+      {tab === "Ограничения" && (
         <>
-          {(needVolume || site.siteValue(p, "maxFloors").value === null) && (
+          {needVolume && head.ok === false && site.siteValue(p, "maxFloors").value !== null && (
             <div className="check warn">
-              <div>Для вариантов нужны предельная этажность и хотя бы одно ограничение объёма: предельная наземная площадь по ГПЗУ, плотность застройки или процент застройки. Возьмите их из ГПЗУ участка или регламента зоны ПЗЗ.</div>
+              <div>Нужно хотя бы одно ограничение объёма: предельная наземная площадь по ГПЗУ, плотность застройки или процент застройки.</div>
             </div>
           )}
-          <div className="fgrid">
-            {site.REGULATION_FIELDS.map((k) => (
-              <SiteFieldRow key={k} p={p} fieldKey={k} onEdit={setEditing} required={k === "maxFloors"} />
-            ))}
-          </div>
-        </>
-      )}
-      {tab === "Зоны с ограничениями" && (
-        <>
-          <p className="small muted">Зоны с особыми условиями использования территории: охранные зоны сетей, санитарно-защитные, водоохранные. Площадь зон, где строить нельзя, вычитается из площади под застройку.</p>
+          <h3 className="h3">Градрегламент</h3>
+          <SiteFields
+            p={p}
+            keys={site.REGULATION_FIELDS}
+            required={{ maxFloors: "Без неё не строятся варианты.", ...(needVolume ? { density: "Нужно хотя бы одно ограничение объёма: плотность, предельная наземная площадь по ГПЗУ или процент застройки." } : {}) }}
+            onSave={onSave}
+          />
+          <h3 className="h3">Зоны с ограничениями</h3>
+          <p className="small muted">Охранные зоны сетей, санитарно-защитные, водоохранные. Площадь зон, где строить нельзя, вычитается из площади под застройку.</p>
           {site.siteOf(p).zouit.length ? (
             <div className="tw">
               <table className="t">
@@ -258,7 +291,7 @@ export function SiteSection({ p, tab, state, onSave, tabHref }: { p: LandProject
                     <th>Площадь на участке</th>
                     <th className="l">Строить нельзя</th>
                     <th className="l">Ограничение</th>
-                    <th className="l">Основание</th>
+                    <th className="l">Откуда</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -268,7 +301,7 @@ export function SiteSection({ p, tab, state, onSave, tabHref }: { p: LandProject
                       <td>{z.area === null ? "—" : `${text.num(Number(z.area), 0)} м²`}</td>
                       <td className="l">{z.noBuild ? "да" : "нет"}</td>
                       <td className="l">{z.restriction || "—"}</td>
-                      <td className="l">
+                      <td className="l ftab">
                         <OriginTag origin={z.origin} /> <BasisText basis={z.basis} />
                       </td>
                     </tr>
@@ -277,34 +310,16 @@ export function SiteSection({ p, tab, state, onSave, tabHref }: { p: LandProject
               </table>
             </div>
           ) : (
-            <div className="card empty">Зон с ограничениями не внесено. Если по выписке ЕГРН или ГПЗУ зон нет, оставьте список пустым.</div>
+            <p className="small muted">Зон не внесено. Если по выписке ЕГРН или ГПЗУ зон нет, оставьте список пустым.</p>
           )}
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 10 }}>
             <button className="btn" onClick={() => setZone("new")}>
               + Зона
             </button>
           </div>
         </>
       )}
-      {tab === "Нормативы" && (
-        <>
-          <h3 className="h3">Нормативы региона</h3>
-          <NormTable rows={norms.region} p={p} onEdit={setEditing} />
-          <h3 className="h3">Стандартные значения компании для вариантов</h3>
-          <NormTable rows={norms.standard} p={p} onEdit={setEditing} />
-          <p className="small muted">
-            Стандартные значения меняются в <Link href="/reference/values?tab=analysis">справочнике</Link>; проект считается на своей версии справочника.
-          </p>
-        </>
-      )}
-      {tab === "Сделка" && (
-        <div className="fgrid">
-          {site.DEAL_FIELDS.map((k) => (
-            <SiteFieldRow key={k} p={p} fieldKey={k} onEdit={setEditing} required={k === "landPrice"} />
-          ))}
-        </div>
-      )}
-      {tab === "Градпотенциал" && (
+      {tab === "Расчёт по нормативам" && (
         <>
           {siteErrors.map((t) => (
             <div key={t} className="check warn">
@@ -331,6 +346,13 @@ export function SiteSection({ p, tab, state, onSave, tabHref }: { p: LandProject
               </tbody>
             </table>
           </div>
+          <h3 className="h3">Нормативы региона</h3>
+          <NormTable rows={norms.region} p={p} onEdit={setEditing} />
+          <h3 className="h3">Стандартные значения компании для вариантов</h3>
+          <NormTable rows={norms.standard} p={p} onEdit={setEditing} />
+          <p className="small muted">
+            Стандартные значения меняются в <Link href="/reference/values?tab=analysis">справочнике</Link>; проект считается на своей версии справочника.
+          </p>
         </>
       )}
       {editing && (
@@ -483,12 +505,13 @@ export function MarketSection({ p, state, onSave }: { p: LandProject; state: Ana
   return (
     <>
       <div className="mhead">
-        <h2>Рынок</h2>
+        <h2>3. Рынок</h2>
         <span className="sp" />
         <button className="btn pri" onClick={() => setEditing("new")}>
           + Аналог
         </button>
       </div>
+      <Answer h={siteView.marketHeadline(p, state.sa)} />
       <p className="small muted">
         Аналоги в радиусе 1–3 км, по строке на ЖК и продукт, у каждой — ссылка на карточку ЖК. Цена класса — средняя по аналогам с весом по темпу продаж, темп проекта — медиана, ёмкость — сумма темпов. Для цены и темпа нужно не меньше {minComps} аналогов одного класса.
       </p>
@@ -713,73 +736,149 @@ function SetupHints({ state, p }: { state: AnalysisState; p: LandProject }) {
   );
 }
 
-export function VariantsSection({ p, state, onSave, compareHref }: { p: LandProject; state: AnalysisState; onSave: Save; compareHref: string }) {
+/** Варианты и сравнение — один экран: таблица показателей по вариантам с отметками лучшего и лидеров, выбор варианта. */
+export function VariantsSection({ p, state, onSave }: { p: LandProject; state: AnalysisState; onSave: Save }) {
   const [adding, setAdding] = useState(false);
   const custom = new Set(site.siteOf(p).customVariants.map((v) => v.id));
   const selected = site.siteOf(p).selectedVariant;
   const common = state.done ? siteView.commonNotCounted(state.summaries) : [];
+  const table = siteView.compareTable(state.summaries, state.choice, siteView.criterionApproved(p, state.versions));
+  const marks = state.done ? siteView.leaders(state.summaries, state.choice) : [];
+  const notes = state.done
+    ? state.summaries.flatMap((s) => {
+        const out: { key: string; tone: "bad" | "muted"; text: string }[] = [];
+        const ncs = siteView.ncsLine(s);
+        // Ставка СМР ниже норматива — красным; в пределах норматива — строкой без заливки
+        if (ncs) out.push({ key: `${s.variant.id}-ncs`, tone: ncs.tone === "red" ? "bad" : "muted", text: `${site.variantTitle(s.variant)}: ${ncs.text}` });
+        const problems = siteView.variantProblems(s);
+        if (!s.computed && problems.length) out.push({ key: `${s.variant.id}-p`, tone: "bad", text: `${site.variantTitle(s.variant)} не посчитан полностью: ${problems.join(" ")}` });
+        const own = siteView.ownNotCounted(s, common);
+        if (own.length) out.push({ key: `${s.variant.id}-n`, tone: "muted", text: `${site.variantTitle(s.variant)}: не учтено ${own.join(", ")}.` });
+        return out;
+      })
+    : [];
   return (
     <>
       <div className="mhead">
-        <h2>Варианты освоения</h2>
+        <h2>4. Варианты</h2>
         <span className="sp" />
         <button className="btn" onClick={() => setAdding(true)}>
           + Свой вариант
         </button>
-        <Link className="btn pri" href={compareHref}>
-          Сравнение
-        </Link>
       </div>
       <SetupHints state={state} p={p} />
       <Progress state={state} />
-      {common.length > 0 && (
-        <div className="check warn">
-          <div>
-            Во всех вариантах не учтено: {common.join(", ")}. Нет ставки в <Link href="/reference/values?tab=budget">справочнике</Link>, цены или темпа по аналогам. Эти затраты и продажи в итоги не входят.
+      {state.done && state.summaries.length > 0 && (
+        <>
+          <div className={table.best ? "cmp-reason" : "check warn"}>
+            <div>{table.why}</div>
+            {table.needsReference && (
+              <Link className="btn sm" href="/reference/values?tab=analysis">
+                Открыть справочник
+              </Link>
+            )}
           </div>
-        </div>
-      )}
-      <div className="vgrid">
-        {state.summaries.map((s) => {
-          const best = state.choice?.best === s.variant.id;
-          const problems = siteView.variantProblems(s);
-          const ncs = siteView.ncsLine(s);
-          return (
-            <div key={s.variant.id} className={`card vcard ${best ? "best" : ""}`}>
-              <div className="vh">
-                <b>{site.variantTitle(s.variant)}</b>
-                {best && <Chip tone="grn">лучший</Chip>}
-                {selected === s.variant.id && <Chip tone="acc">выбран</Chip>}
-                {custom.has(s.variant.id) && <Chip tone="gry">свой</Chip>}
-                <span className="sp" />
-                {custom.has(s.variant.id) && (
-                  <button
-                    className="btn sm"
-                    onClick={() => void onSave(site.updateSite(p, { customVariants: site.siteOf(p).customVariants.filter((v) => v.id !== s.variant.id) }, nowIso()), "Вариант удалён")}
-                  >
-                    Удалить
-                  </button>
-                )}
+          {common.length > 0 && (
+            <div className="check warn">
+              <div>
+                Во всех вариантах не учтено: {common.join(", ")}. Нет ставки в <Link href="/reference/values?tab=budget">справочнике</Link>, цены или темпа по аналогам. Эти затраты и продажи в итоги не входят.
               </div>
-              <div className="vnums" style={{ marginTop: 10 }}>
-                {siteView.variantFacts(s).map((f) => (
-                  <div key={f.label}>
-                    <b>{f.value}</b>
-                    <div>{f.label}</div>
-                  </div>
-                ))}
-              </div>
-              {ncs && <div className={`check ${ncs.tone === "red" ? "bad" : "ok"}`}>{ncs.text}</div>}
-              {!s.computed && problems.length > 0 && (
-                <div className="check bad">
-                  <div>Вариант не посчитан полностью: {problems.join(" ")}</div>
-                </div>
-              )}
-              {state.done && siteView.ownNotCounted(s, common).length > 0 && <div className="vreason">Не учтено{common.length ? " в этом варианте" : ""}: {siteView.ownNotCounted(s, common).join(", ")}.</div>}
             </div>
-          );
-        })}
-      </div>
+          )}
+          <p className="small muted">NPV — чистая приведённая стоимость денежного потока акционера, IRR — его внутренняя норма доходности. Деньги — в млн руб.</p>
+          <div className="tw">
+            <table className="t">
+              <thead>
+                <tr>
+                  <th>Показатель</th>
+                  {state.summaries.map((s, i) => (
+                    <th key={s.variant.id} className={table.best === s.variant.id ? "best" : ""}>
+                      {table.headers[i]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="vmarks">
+                  <td />
+                  {state.summaries.map((s) => (
+                    <td key={s.variant.id} className={table.best === s.variant.id ? "best" : ""}>
+                      {marks
+                        .filter((m) => m.id === s.variant.id)
+                        .map((m) => (
+                          <Chip key={m.mark} tone={m.mark === "лучший" ? "grn" : "gry"}>
+                            {m.mark}
+                          </Chip>
+                        ))}
+                      {custom.has(s.variant.id) && <Chip tone="gry">свой</Chip>}
+                    </td>
+                  ))}
+                </tr>
+                {table.rows.map((r) => (
+                  <tr key={r.label}>
+                    <td>{r.label}</td>
+                    {r.cells.map((c, i) => (
+                      <td key={i} className={table.best === state.summaries[i]?.variant.id ? "best" : ""}>
+                        {c}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr>
+                  <td />
+                  {state.summaries.map((s) => (
+                    <td key={s.variant.id} className={table.best === s.variant.id ? "best" : ""}>
+                      {selected === s.variant.id ? (
+                        <Chip tone="acc">выбран</Chip>
+                      ) : (
+                        <button className="btn sm" onClick={() => void onSave(site.updateSite(p, { selectedVariant: s.variant.id }, nowIso()), `Выбран вариант «${site.variantTitle(s.variant)}»`)}>
+                          Выбрать
+                        </button>
+                      )}
+                      {custom.has(s.variant.id) && (
+                        <button
+                          className="btn sm"
+                          style={{ marginLeft: 6 }}
+                          onClick={() => void onSave(site.updateSite(p, { customVariants: site.siteOf(p).customVariants.filter((v) => v.id !== s.variant.id) }, nowIso()), "Вариант удалён")}
+                        >
+                          Удалить
+                        </button>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {table.reasons.length > 0 && (
+            <>
+              <h3 className="h3">Почему не лучший</h3>
+              {table.reasons.map((r) => (
+                <div key={r.title} className="vreason">
+                  <b>{r.title}:</b> {r.text}.
+                </div>
+              ))}
+            </>
+          )}
+          {notes.length > 0 && (
+            <>
+              <h3 className="h3">Замечания по вариантам</h3>
+              {notes.map((n) =>
+                n.tone === "muted" ? (
+                  <div key={n.key} className="vreason">
+                    {n.text}
+                  </div>
+                ) : (
+                  <div key={n.key} className={`check ${n.tone}`}>
+                    {n.text}
+                  </div>
+                ),
+              )}
+            </>
+          )}
+        </>
+      )}
+      <RateBlock p={p} state={state} onSave={onSave} />
       {adding && (
         <AddVariant
           p={p}
@@ -844,86 +943,6 @@ function AddVariant({ p, generated, onAdd, onClose }: { p: LandProject; generate
   );
 }
 
-// ---------- сравнение ----------
-
-export function CompareSection({ p, state, onSave }: { p: LandProject; state: AnalysisState; onSave: Save }) {
-  const selected = site.siteOf(p).selectedVariant;
-  const table = siteView.compareTable(state.summaries, state.choice, siteView.criterionApproved(p, state.versions));
-  return (
-    <>
-      <div className="mhead">
-        <h2>Сравнение вариантов</h2>
-      </div>
-      <SetupHints state={state} p={p} />
-      <Progress state={state} />
-      {state.done && state.summaries.length > 0 && (
-        <>
-          <p className="small muted">NPV — чистая приведённая стоимость денежного потока акционера, IRR — его внутренняя норма доходности. Деньги — в млн руб.</p>
-          <div className={table.best ? "cmp-reason" : "check warn"}>
-            <div>{table.why}</div>
-            {table.needsReference && (
-              <Link className="btn sm" href="/reference/values?tab=analysis">
-                Открыть справочник
-              </Link>
-            )}
-          </div>
-          <div className="tw">
-            <table className="t">
-              <thead>
-                <tr>
-                  <th>Показатель</th>
-                  {state.summaries.map((s, i) => (
-                    <th key={s.variant.id} className={table.best === s.variant.id ? "best" : ""}>
-                      {table.headers[i]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((r) => (
-                  <tr key={r.label}>
-                    <td>{r.label}</td>
-                    {r.cells.map((c, i) => (
-                      <td key={i} className={table.best === state.summaries[i]?.variant.id ? "best" : ""}>
-                        {c}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                <tr>
-                  <td />
-                  {state.summaries.map((s) => (
-                    <td key={s.variant.id} className={table.best === s.variant.id ? "best" : ""}>
-                      {selected === s.variant.id ? (
-                        <Chip tone="acc">выбран</Chip>
-                      ) : (
-                        <button className="btn sm" onClick={() => void onSave(site.updateSite(p, { selectedVariant: s.variant.id }, nowIso()), `Выбран вариант «${site.variantTitle(s.variant)}»`)}>
-                          Выбрать вариант
-                        </button>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          {table.reasons.length > 0 && (
-            <>
-              <h3 className="h3">Не проходят условия отбора</h3>
-              {table.reasons.map((r) => (
-                <div key={r.title} className="vreason">
-                  <b>{r.title}:</b> {r.text}.
-                </div>
-              ))}
-            </>
-          )}
-        </>
-      )}
-      <RateBlock p={p} state={state} onSave={onSave} />
-    </>
-  );
-}
-
 /** Ставка дисконтирования для NPV: кривая доходности ОФЗ на дату оценки и премия за риск из справочника. */
 function RateBlock({ p, state, onSave }: { p: LandProject; state: AnalysisState; onSave: Save }) {
   const [busy, setBusy] = useState(false);
@@ -970,7 +989,7 @@ function RateBlock({ p, state, onSave }: { p: LandProject; state: AnalysisState;
 
 // ---------- раздел анализа в проекте ----------
 
-export type AnalysisSec = "summary" | "site" | "market" | "variants" | "compare";
+export type AnalysisSec = "summary" | "site" | "market" | "variants";
 
 /** Версия справочника у проекта: показывается внизу «Итога», переход на новую — кнопкой «Обновить». */
 export interface RefInfo {
@@ -1016,12 +1035,11 @@ export function AnalysisArea({
 
   if (sec === "summary") return <SummarySection p={p} state={state} before={before} onSave={onSave} href={href} onEditPlot={onEditPlot} refInfo={refInfo} />;
   if (sec === "site") {
-    const t = SITE_TABS.find((x) => x === tab) ?? "Градрегламент";
+    const t = SITE_TABS.find((x) => x === tab) ?? (tab === "Нормативы" || tab === "Градпотенциал" ? "Расчёт по нормативам" : "Ограничения");
     return <SiteSection p={p} tab={t} state={state} onSave={onSave} tabHref={(x) => href("site", x)} />;
   }
   if (sec === "market") return <MarketSection p={p} state={state} onSave={onSave} />;
-  if (sec === "variants") return <VariantsSection p={p} state={state} onSave={onSave} compareHref={href("compare")} />;
-  return <CompareSection p={p} state={state} onSave={onSave} />;
+  return <VariantsSection p={p} state={state} onSave={onSave} />;
 }
 
 // ---------- итог ----------
@@ -1048,6 +1066,7 @@ function SummarySection({
   const updates = summary.updatesSince(before?.at ?? null);
   const table = siteView.compareTable(state.summaries, state.choice, siteView.criterionApproved(p, state.versions));
   const bestIdx = state.summaries.findIndex((s) => s.variant.id === table.best);
+  const others = state.done ? siteView.leaders(state.summaries, state.choice).filter((m) => m.mark !== "лучший") : [];
   const errors = uniqueTexts(state.sa.result.messages);
   const edit = (i: summary.TodoItem) => {
     const [kind, key] = i.key.split(".") as [string, string];
@@ -1097,8 +1116,17 @@ function SummarySection({
               </tbody>
             </table>
           </div>
+          {others.length > 0 && (
+            <ul className="leads">
+              {others.map((m) => (
+                <li key={m.mark}>
+                  <b>{m.mark}</b> — «{m.title}», {m.text}
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="small">
-            <Link href={href("compare")}>Сравнить все варианты ({state.summaries.length})</Link>
+            <Link href={href("variants")}>Сравнить все варианты ({state.summaries.length})</Link>
           </p>
         </>
       )}

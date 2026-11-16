@@ -34,6 +34,11 @@ describe("что нужно ввести", () => {
       expect(["plot", "site", "market"]).toContain(i.sec);
     }
     expect(list.find((i) => i.key === "market.analogs")?.why).toMatch(/сейчас 0/);
+    // Цена участка — на шаге «Участок», вкладка «Сделка»; этажность — «Что можно построить», «Ограничения»
+    expect(list.find((i) => i.key === "site.landPrice")).toMatchObject({ sec: "plot", tab: "Сделка" });
+    expect(list.find((i) => i.key === "site.maxFloors")).toMatchObject({ sec: "site", tab: "Ограничения" });
+    expect(summary.todoCount(list, "market")).toBe(1);
+    expect(summary.todoCount(list, "plot")).toBe(plot.missingFields(p).length + 1);
   });
 
   it("введённое значение уходит из списка", () => {

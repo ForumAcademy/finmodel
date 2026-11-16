@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { getFormula, type FormulaId, type ParameterId } from "@fm/spec";
 import { ANALYSIS_FORMULAS, Engine, SPEC_ASSUMPTIONS, type CalcProject } from "../src";
 import { analyzeSite, chooseBest, computeVariant, salesMonths, variantProject } from "../src/analysis";
-import { compareTable, commonNotCounted, criterionMissing, marketRows, ncsLine, rateRows, rateText, riskFreeMissing, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
+import { compareTable, commonNotCounted, criterionMissing, leaders, marketHeadline, marketRows, potentialHeadline, ncsLine, rateRows, rateText, riskFreeMissing, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
 import { analogFromForm, analogToForm, customVariant, emptySite, parseSite, siteCalcProject, siteText, variantTitle, applySiteChange, siteChange } from "../src/site";
 import * as plot from "../src/plot";
 import { createProject, type LandProject } from "../src/plot";
@@ -193,6 +193,11 @@ describe("анализ участка: варианты освоения", () =>
     expect(sa.classes).toEqual(["комфорт", "бизнес"]);
     expect(sa.variants.length).toBeGreaterThanOrEqual(4);
     expect(sa.variants.length).toBeLessThanOrEqual(6);
+    // Ответ экрана «Что можно построить» одной фразой
+    const h = potentialHeadline(sa);
+    expect(h.ok).toBe(true);
+    expect(h.title.replace(/\s/g, " ")).toMatch(/^Максимум [\d ]+ м² наземной площади, до 24 этажей$/);
+    expect(h.note).toBe("Объём ограничивает предельная наземная площадь по ГПЗУ.");
   });
 
   it("вариант строит вводные проекта: пятно под этажность, вехи, план продаж, бюджет", () => {
@@ -251,6 +256,11 @@ describe("анализ участка: варианты освоения", () =>
     expect(compareTable(rated, best, true).why).not.toContain("не утвердил");
     // Прошедшие отбор, но уступившие лучшему — с разницей в млн руб
     for (const r of t.reasons.filter((x) => x.title !== "Комфорт, 24 этажа")) expect(r.text).toMatch(/меньше, чем у лучшего$/);
+    // Отметки в таблице «Варианты»: лучший первым, у лучшего других отметок нет
+    const marks = leaders(rated, best);
+    expect(marks[0]).toMatchObject({ mark: "лучший", id: "бизнес-24" });
+    for (const m of marks.slice(1)) expect(m.id).not.toBe("бизнес-24");
+    expect(leaders(rated, null).every((m) => m.mark !== "лучший")).toBe(true);
   });
 
   it("справочник версии 3 и кривая ОФЗ: безрисковая ставка в точке срока варианта, премия 9 п.п., лучший выбран", () => {
@@ -356,6 +366,12 @@ describe("участок проекта: ограничения и аналог�
     const sa = analyzeSite(siteCalcProject(withSite, "2026-09-29"));
     expect(marketRows(withSite, sa)).toMatchObject([{ product: "квартиры", housingClass: "комфорт", analogs: 2, enough: false }]);
     expect(potentialRows(withSite, sa)[0]?.value.replace(/\s/g, " ")).toBe("32 000 м²");
+    // Итог рынка: аналогов меньше нужного — цены нет и сказано, сколько не хватает
+    expect(marketHeadline(withSite, sa)).toMatchObject({ ok: false, title: "Цены и темпа продаж пока нет" });
+    expect(marketHeadline(withSite, sa).note).toContain("квартиры, комфорт — 2");
+    expect(marketHeadline(p, analyzeSite(siteCalcProject(p, "2026-09-29"))).title).toBe("Аналогов пока нет");
+    // Без этажности и ограничения объёма ответа нет
+    expect(potentialHeadline(sa).ok).toBe(false);
   });
 });
 

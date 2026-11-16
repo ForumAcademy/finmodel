@@ -56,6 +56,8 @@ export const ZOUIT_WHERE = "ГПЗУ, раздел об ограничениях
 
 export const REGULATION_FIELDS: readonly SiteFieldKey[] = ["zone", "maxGfa", "density", "maxFloors", "maxHeight", "builtShare", "apartAllowed"];
 export const DEAL_FIELDS: readonly SiteFieldKey[] = ["landPrice", "startDate"];
+/** Что значит пустое необязательное поле — пояснение под названием вместо «—» без объяснения. */
+export const EMPTY_NOTE: Partial<Record<SiteFieldKey, string>> = { startDate: "Пусто — расчёт начинается с конца текущего месяца." };
 /** Нормативы, которых нет в справочнике регионов: вводятся по проекту с документом. */
 export const NORM_FIELDS: readonly SiteFieldKey[] = ["parkingPerApt", "landTaxRate"];
 /** Ручной ввод безрисковой ставки: только когда кривая доходности не загружена. */
