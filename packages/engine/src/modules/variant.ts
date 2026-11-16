@@ -388,6 +388,110 @@ export function F_VAR_BEST(ctx: FormulaContext): BestChoice {
   return { best: best.variant, criterion, reasons, blocked: null };
 }
 
+// ---------- максимальная цена участка и «что, если» ----------
+
+/** Строка VAR.LAND_TRIALS: пробный расчёт варианта при цене участка price. */
+export interface LandTrial {
+  price: number;
+  npv: number | null;
+  irr: number | null;
+}
+
+/** Строка VAR.SENS_RESULTS: пробный расчёт при изменении цены продаж и ключевой ставки. */
+export interface SensTrial {
+  price_shift: number;
+  rate_shift: number;
+  npv: number | null;
+}
+
+/**
+ * Точка, где y(x) = target: линейная интерполяция между соседними (по x) пробами, у которых y − target меняет знак.
+ * Пробы без значения пропускаются; пересечения нет — null. Если пересечений несколько, берётся ближайшее к from.
+ */
+export function crossing(points: readonly { x: number; y: number | null }[], target: number, from: number): Decimal | null {
+  const xs = points
+    .filter((p): p is { x: number; y: number } => p.y !== null && Number.isFinite(p.y))
+    .map((p) => ({ x: new Decimal(p.x), y: new Decimal(p.y).sub(target) }))
+    .sort((a, b) => a.x.cmp(b.x));
+  let best: Decimal | null = null;
+  for (let i = 0; i < xs.length; i++) {
+    const a = xs[i] as { x: Decimal; y: Decimal };
+    if (a.y.isZero()) {
+      if (best === null || a.x.sub(from).abs().lt(best.sub(from).abs())) best = a.x;
+      continue;
+    }
+    const b = xs[i + 1];
+    if (!b || b.y.isZero() || a.y.isNeg() === b.y.isNeg()) continue;
+    const x = a.x.add(b.x.sub(a.x).mul(a.y.neg()).div(b.y.sub(a.y)));
+    if (best === null || x.sub(from).abs().lt(best.sub(from).abs())) best = x;
+  }
+  return best;
+}
+
+export interface LandMax {
+  /** Цена участка, при которой NPV акционера равен нулю; 0 — невыгоден при любой цене; null — не найдена. */
+  max_price: Decimal | null;
+  /** NPV акционера отрицателен уже при нулевой цене участка. */
+  unprofitable: boolean;
+  /** Цена, при которой IRR акционера равна целевой; null — целевая не задана или не найдена. */
+  max_price_irr: Decimal | null;
+  /** Цена продавца (LAND.PURCHASE_PRICE); null — не введена. */
+  asked: Decimal | null;
+  reserve: Decimal | null;
+  reserve_share: Decimal | null;
+}
+
+export function F_VAR_LAND_MAX(ctx: FormulaContext): LandMax {
+  const rows = ctx.require<LandTrial[]>("VAR.LAND_TRIALS");
+  if (!Array.isArray(rows) || rows.length === 0) throw new CalcError("Нет пробных расчётов при разной цене участка", "VAR.LAND_TRIALS");
+  const asked = ctx.num("LAND.PURCHASE_PRICE");
+  const hurdle = ctx.num("VAL.HURDLE_IRR");
+  const atZero = rows.find((r) => r.price === 0);
+  const unprofitable = atZero?.npv !== null && atZero?.npv !== undefined && atZero.npv < 0;
+  const start = asked?.toNumber() ?? 0;
+  const max = unprofitable ? ZERO : crossing(rows.map((r) => ({ x: r.price, y: r.npv })), 0, start);
+  const maxIrr = hurdle === null ? null : crossing(rows.map((r) => ({ x: r.price, y: r.irr })), hurdle.toNumber(), start);
+  const reserve = max !== null && asked !== null ? max.sub(asked) : null;
+  return {
+    max_price: max,
+    unprofitable,
+    max_price_irr: maxIrr === null ? null : Decimal.max(maxIrr, ZERO),
+    asked,
+    reserve,
+    reserve_share: reserve !== null && asked !== null && !asked.isZero() ? reserve.div(asked) : null,
+  };
+}
+
+export interface Sensitivity {
+  /** Изменения цены продаж по строкам и ключевой ставки по столбцам. */
+  price_steps: Decimal[];
+  rate_steps: Decimal[];
+  /** NPV акционера: grid[i][j] — цена price_steps[i], ставка rate_steps[j]; null — не посчитан. */
+  grid: (Decimal | null)[][];
+  /** Изменение цены продаж и ключевой ставки, при котором NPV акционера равен нулю; null — не найдено в пробах. */
+  price_breakeven: Decimal | null;
+  rate_breakeven: Decimal | null;
+}
+
+export function F_VAR_SENSITIVITY(ctx: FormulaContext): Sensitivity {
+  const rows = ctx.require<SensTrial[]>("VAR.SENS_RESULTS");
+  if (!Array.isArray(rows) || rows.length === 0) throw new CalcError("Нет пробных расчётов при другой цене продаж и ставке", "VAR.SENS_RESULTS");
+  const priceStep = ctx.requireNum("VAL.SENS_PRICE_STEP");
+  const rateStep = ctx.requireNum("VAL.SENS_RATE_STEP");
+  const n = ctx.requireNum("VAL.SENS_STEPS").toNumber();
+  const idx = Array.from({ length: n + n + 1 }, (_, i) => i - n);
+  const priceSteps = idx.map((i) => priceStep.mul(i));
+  const rateSteps = idx.map((j) => rateStep.mul(j));
+  const find = (dp: Decimal, dr: Decimal) => rows.find((r) => dp.eq(r.price_shift) && dr.eq(r.rate_shift))?.npv ?? null;
+  const grid = priceSteps.map((dp) => rateSteps.map((dr) => {
+    const v = find(dp, dr);
+    return v === null ? null : new Decimal(v);
+  }));
+  const priceLine = rows.filter((r) => r.rate_shift === 0).map((r) => ({ x: r.price_shift, y: r.npv }));
+  const rateLine = rows.filter((r) => r.price_shift === 0).map((r) => ({ x: r.rate_shift, y: r.npv }));
+  return { price_steps: priceSteps, rate_steps: rateSteps, grid, price_breakeven: crossing(priceLine, 0, 0), rate_breakeven: crossing(rateLine, 0, 0) };
+}
+
 export const VAR_FORMULAS = {
   "F.VAR.FLOORS": F_VAR_FLOORS,
   "F.VAR.CLASSES": F_VAR_CLASSES,
@@ -398,4 +502,6 @@ export const VAR_FORMULAS = {
   "F.VAR.PRODUCTS": F_VAR_PRODUCTS,
   "F.VAR.CAPEX": F_VAR_CAPEX,
   "F.VAR.BEST": F_VAR_BEST,
+  "F.VAR.LAND_MAX": F_VAR_LAND_MAX,
+  "F.VAR.SENSITIVITY": F_VAR_SENSITIVITY,
 } as const;
