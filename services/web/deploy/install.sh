@@ -57,7 +57,8 @@ if [ -z "$ok" ]; then
 fi
 
 # Храним три последние версии для отката.
-ls -1dt "$W/releases"/*/ | tail -n +4 | grep -vxF "$(readlink -f "$W/current")/" | xargs -r rm -rf
+# grep без совпадений завершается с кодом 1 — при pipefail это не ошибка.
+ls -1dt "$W/releases"/*/ | tail -n +4 | { grep -vxF "$(readlink -f "$W/current")/" || true; } | xargs -r rm -rf
 
 echo "Версия $REL работает на 127.0.0.1:3400"
 for p in / /reference/sources; do
