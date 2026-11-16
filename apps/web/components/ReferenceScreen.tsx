@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { book, dataGuide, reference, text } from "@fm/engine";
+import { book, dataGuide, reference, summary as serviceSummary, text } from "@fm/engine";
 import { getParameter, type ParameterId } from "@fm/spec";
 import { readJson, saveReferenceFile } from "@/lib/files";
 import { getReference, listProjects, nowIso, saveProject, saveReference } from "@/lib/store";
@@ -566,6 +566,32 @@ export function ReferenceScreen({ section, tab }: { section: SectionId; tab: str
           </tbody>
         </table>
       </div>
+    );
+  }
+
+  if (section === "updates") {
+    body = (
+      <>
+        <p className="small muted">Изменения сервиса, которые влияют на расчёт или экраны. Новые правила действуют сразу во всех проектах; итог проекта обновится при следующем открытии или по кнопке «Пересчитать».</p>
+        <div className="tw">
+          <table className="t">
+            <thead>
+              <tr>
+                <th className="l">Дата</th>
+                <th className="l">Что изменилось</th>
+              </tr>
+            </thead>
+            <tbody>
+              {serviceSummary.SERVICE_UPDATES.map((u) => (
+                <tr key={u.text}>
+                  <td className="l">{text.date(u.date)}</td>
+                  <td className="l">{u.text}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
     );
   }
 

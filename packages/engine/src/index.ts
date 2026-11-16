@@ -48,6 +48,7 @@ export * as reference from "./reference";
 export * as dataGuide from "./where";
 export * as book from "./book";
 export * as projectFile from "./projectfile";
+export * as summary from "./summary";
 export type * from "./types";
 
 /** Модули ядра в порядке расчёта (docs/passports/engine.md). */

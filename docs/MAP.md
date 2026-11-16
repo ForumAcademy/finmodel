@@ -7,7 +7,7 @@
 | Справочник | Источники, параметры, формулы, статьи бюджета, регионы, допущения компании | `data/*.yaml`, `packages/spec`, `scripts/` | [spec](passports/spec.md) |
 | Ядро расчёта | Формулы по модулям, расчёт проекта, режимы, пояснения | `packages/engine/src/{modules,project,context,explain,lib}` | [engine](passports/engine.md) |
 | Анализ участка | Ограничения, рынок, варианты, выбор лучшего | `engine/src/{analysis,site,zcyc}.ts`, `modules/{site,market,variant}.ts` | [site-analysis](passports/site-analysis.md) |
-| Проект и хранение | Участок, файл проекта, справочник в браузере | `engine/src/{plot,projectfile,book,reference}.ts`, `apps/web/lib/{store,files}.ts` | [project](passports/project.md) |
+| Проект и хранение | Участок, файл проекта, справочник в браузере | `engine/src/{plot,projectfile,book,reference,summary}.ts`, `apps/web/lib/{store,files}.ts` | [project](passports/project.md) |
 | Исходный Excel | Карта ячеек, загрузка из Excel, регрессия | `legacy/`, `packages/excel-import`, `engine/src/legacy*.ts`, `tests/cases/` | [legacy](passports/legacy.md) |
 | Выписка ЕГРН | XML, ZIP, PDF → поля участка | `packages/egrn-import`, `apps/web/lib/egrn.ts` | [egrn](passports/egrn.md) |
 | Интерфейс | Экраны Next.js, без расчётов | `apps/web` | [web](passports/web.md) |

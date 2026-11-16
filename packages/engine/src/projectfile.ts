@@ -12,7 +12,7 @@ import { sameVersion } from "./book";
 import { versionOf } from "./project";
 import { DOCUMENT_KINDS, PLOT_FIELDS, projectTitle, type LandProject, type PlotValue } from "./plot";
 import { SITE_FIELDS } from "./site";
-import { date } from "./lib/text";
+import { date, plural } from "./lib/text";
 
 export const PROJECT_FORMAT = "finmodel-project";
 export const PROJECT_FORMAT_VERSION = 1;
@@ -182,4 +182,87 @@ export function openProject(file: ProjectFile, mode: OpenMode, local: readonly A
 export function orphanFileIds(old: LandProject, others: readonly LandProject[]): string[] {
   const used = new Set(others.filter((p) => p.id !== old.id).flatMap((p) => p.documents.map((d) => d.id)));
   return old.documents.map((d) => d.id).filter((id) => !used.has(id));
+}
+
+// ---------- все проекты одним файлом ----------
+
+/**
+ * Файл со всеми проектами браузера и справочником: перенос на другой компьютер или новый адрес сайта
+ * (проекты хранятся в браузере и привязаны к адресу сайта). Внутри — те же файлы проектов и файл справочника.
+ */
+export const BUNDLE_FORMAT = "finmodel-projects";
+export const BUNDLE_FORMAT_VERSION = 1;
+
+export interface ProjectsBundle {
+  format: typeof BUNDLE_FORMAT;
+  formatVersion: typeof BUNDLE_FORMAT_VERSION;
+  savedAt: string;
+  /** Все версии справочника браузера по порядку (как в файле справочника). */
+  reference: AssumptionVersion[];
+  projects: ProjectFile[];
+}
+
+export function buildBundle(projects: readonly ProjectFile[], local: readonly AssumptionVersion[], at: string): ProjectsBundle {
+  return { format: BUNDLE_FORMAT, formatVersion: BUNDLE_FORMAT_VERSION, savedAt: at, reference: [...local], projects: [...projects] };
+}
+
+export function bundleFileName(count: number, at: string): string {
+  return `Все проекты (${count}) — ${date(at.slice(0, 10))}.json`;
+}
+
+export type AnyFile = { kind: "project"; file: ProjectFile } | { kind: "bundle"; bundle: ProjectsBundle } | { kind: "error"; error: string };
+
+/** Файл проекта или файл со всеми проектами. Повреждённые проекты внутри общего файла — ошибка всего файла. */
+export function readAnyProjectFile(json: unknown): AnyFile {
+  const f = json as { format?: unknown; formatVersion?: unknown; projects?: unknown; reference?: unknown } | null;
+  if (f && typeof f === "object" && f.format === BUNDLE_FORMAT) {
+    if (f.formatVersion !== BUNDLE_FORMAT_VERSION) return { kind: "error", error: "Файл сохранён более новой версией сервиса. Обновите страницу и откройте файл снова." };
+    if (!Array.isArray(f.projects) || !Array.isArray(f.reference)) return { kind: "error", error: "Файл с проектами повреждён: часть данных не читается. Сохраните проекты в файл заново." };
+    const projects: ProjectFile[] = [];
+    for (const raw of f.projects) {
+      const r = readProjectFile(raw);
+      if (!r.ok) return { kind: "error", error: "Файл с проектами повреждён: один из проектов не читается. Сохраните проекты в файл заново." };
+      projects.push(r.file);
+    }
+    const ref = f.reference.map((v) => assumptionVersionSchema.safeParse(v));
+    if (ref.some((r) => !r.success)) return { kind: "error", error: "Файл с проектами повреждён: справочник не читается. Сохраните проекты в файл заново." };
+    return { kind: "bundle", bundle: { format: BUNDLE_FORMAT, formatVersion: BUNDLE_FORMAT_VERSION, savedAt: String((json as { savedAt?: unknown }).savedAt ?? ""), reference: f.reference as AssumptionVersion[], projects } };
+  }
+  const r = readProjectFile(json);
+  if (r.ok) return { kind: "project", file: r.file };
+  const error = f && typeof f === "object" && f.format === PROJECT_FORMAT ? r.error : "Это не файл проекта. Выберите файл, сохранённый кнопкой «Сохранить проект в файл» или «Сохранить все проекты в файл».";
+  return { kind: "error", error };
+}
+
+/** Проекты из общего файла, у которых в браузере есть проект с тем же названием. */
+export function bundleConflicts(bundle: ProjectsBundle, projects: readonly LandProject[]): { file: ProjectFile; existing: LandProject }[] {
+  return bundle.projects.flatMap((file) => {
+    const existing = findConflict(file, projects);
+    return existing ? [{ file, existing }] : [];
+  });
+}
+
+/** Что делать с совпадающими проектами: заменить, создать копии или не открывать. */
+export type BundleMode = "replace" | "copy" | "skip";
+
+/** План открытия общего файла: для каждого проекта — режим открытия и проект браузера, с которым он совпал. */
+export interface BundleStep {
+  file: ProjectFile;
+  mode: OpenMode;
+  existing: LandProject | null;
+}
+
+export function bundlePlan(bundle: ProjectsBundle, projects: readonly LandProject[], mode: BundleMode): BundleStep[] {
+  return bundle.projects.flatMap((file): BundleStep[] => {
+    const existing = findConflict(file, projects);
+    if (!existing) return [{ file, mode: "new", existing: null }];
+    if (mode === "skip") return [];
+    return [{ file, mode, existing }];
+  });
+}
+
+/** Итог открытия общего файла для сообщения. */
+export function bundleResultText(opened: number, skipped: number): string {
+  const n = (k: number) => `${k} ${plural(k, ["проект", "проекта", "проектов"])}`;
+  return `Открыто ${n(opened)}${skipped ? `, не открыто ${skipped} (такие проекты уже есть в браузере)` : ""}.`;
 }

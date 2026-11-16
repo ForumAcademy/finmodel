@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { analysis, book, plot, site, siteView, text, zcyc } from "@fm/engine";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { analysis, book, plot, site, siteView, summary, text, zcyc } from "@fm/engine";
 import { newId, nowIso } from "@/lib/store";
 import { loadZcyc } from "@/lib/zcyc";
 import { Chip, ExpertFields, Modal, OriginTag, WhereToFind } from "./ui";
@@ -29,6 +29,12 @@ export interface AnalysisState {
   summaries: VariantSummary[];
   done: boolean;
   choice: analysis.BestChoice | null;
+  /** Когда закончился последний расчёт (местное время браузера). */
+  doneAt: Date | null;
+  /** «Пересчитать»: заново посчитать все варианты, не беря готовые итоги. */
+  recalc: () => void;
+  /** Номер расчёта: растёт с каждым «Пересчитать». */
+  run: number;
 }
 
 /** Анализ участка проекта: градпотенциал и рынок сразу, варианты — по одному, чтобы экран не замирал. */
@@ -44,15 +50,22 @@ export function useAnalysis(p: LandProject, local: book.AssumptionVersion[]): An
   const base = useMemo(() => JSON.stringify({ values: calc.input.values, version: versions.find((v) => v.version === calc.assumptionsVersion) ?? null }), [calc, versions]);
   const [summaries, setSummaries] = useState<VariantSummary[]>([]);
   const [done, setDone] = useState(false);
+  const [doneAt, setDoneAt] = useState<Date | null>(null);
+  const [run, setRun] = useState(0);
+  const finish = () => {
+    setDone(true);
+    setDoneAt(new Date());
+  };
 
   useEffect(() => {
     let stop = false;
     const out: VariantSummary[] = [];
     setSummaries([]);
-    setDone(variants.length === 0);
+    if (variants.length === 0) finish();
+    else setDone(false);
     const step = (i: number) => {
       if (stop) return;
-      if (i >= variants.length) return setDone(true);
+      if (i >= variants.length) return finish();
       const v = variants[i] as analysis.Variant;
       const key = `${base}|${v.id}`;
       let s = cache.get(key);
@@ -69,10 +82,14 @@ export function useAnalysis(p: LandProject, local: book.AssumptionVersion[]): An
       stop = true;
       clearTimeout(t);
     };
-  }, [base, variants, calc, versions]);
+  }, [base, variants, calc, versions, run]);
 
   const choice = useMemo(() => (done && summaries.length ? analysis.chooseBest(calc, summaries, versions).choice : null), [done, summaries, calc, versions]);
-  return { calc, versions, sa, variants, summaries, done, choice };
+  const recalc = () => {
+    for (const v of variants) cache.delete(`${base}|${v.id}`);
+    setRun((n) => n + 1);
+  };
+  return { calc, versions, sa, variants, summaries, done, choice, doneAt, recalc, run };
 }
 
 /** Сообщения ядра без повторов: что не так → что сделать. */
@@ -953,18 +970,51 @@ function RateBlock({ p, state, onSave }: { p: LandProject; state: AnalysisState;
 
 // ---------- раздел анализа в проекте ----------
 
-export type AnalysisSec = "site" | "market" | "variants" | "compare";
+export type AnalysisSec = "summary" | "site" | "market" | "variants" | "compare";
+
+/** Версия справочника у проекта: показывается внизу «Итога», переход на новую — кнопкой «Обновить». */
+export interface RefInfo {
+  text: string;
+  updateTo: number | null;
+  onUpdate: () => void;
+}
 
 /** Разделы анализа участка: один расчёт на все экраны; итоги лучшего варианта запоминаются для списка проектов. */
-export function AnalysisArea({ p, sec, tab, versions, onSave, href }: { p: LandProject; sec: AnalysisSec; tab: string | undefined; versions: book.AssumptionVersion[]; onSave: Save; href: (sec: AnalysisSec, tab?: string) => string }) {
+export function AnalysisArea({
+  p,
+  sec,
+  tab,
+  versions,
+  onSave,
+  href,
+  onEditPlot,
+  refInfo,
+}: {
+  p: LandProject;
+  sec: AnalysisSec;
+  tab: string | undefined;
+  versions: book.AssumptionVersion[];
+  onSave: Save;
+  href: (sec: AnalysisSec | "plot", tab?: string) => string;
+  onEditPlot: (k: plot.PlotFieldKey) => void;
+  refInfo: RefInfo | null;
+}) {
   const state = useAnalysis(p, versions);
-  const snapshot = state.done ? siteView.snapshotOf(state.summaries, state.choice, nowIso()) : null;
   const saved = site.siteOf(p).snapshot;
-  const changed = !!snapshot && (!saved || saved.best !== snapshot.best || saved.netProfit !== snapshot.netProfit || saved.variants !== snapshot.variants);
+  // Что было запомнено до этого открытия: по нему видно, что изменилось в сервисе после прошлого расчёта
+  const [before] = useState(saved);
+  const savedRun = useRef(-1);
   useEffect(() => {
-    if (changed && snapshot) void onSave(site.updateSite(p, { snapshot }, nowIso()), "");
-  }, [changed]);
+    if (!state.done) return;
+    const snapshot = siteView.snapshotOf(state.summaries, state.choice, nowIso());
+    const forced = state.run > 0 && savedRun.current !== state.run;
+    if (forced || summary.snapshotOutdated(saved, snapshot)) {
+      savedRun.current = state.run;
+      void onSave(site.updateSite(p, { snapshot }, nowIso()), "");
+    }
+  }, [state.done, state.run, state.summaries, state.choice]);
 
+  if (sec === "summary") return <SummarySection p={p} state={state} before={before} onSave={onSave} href={href} onEditPlot={onEditPlot} refInfo={refInfo} />;
   if (sec === "site") {
     const t = SITE_TABS.find((x) => x === tab) ?? "Градрегламент";
     return <SiteSection p={p} tab={t} state={state} onSave={onSave} tabHref={(x) => href("site", x)} />;
@@ -972,4 +1022,140 @@ export function AnalysisArea({ p, sec, tab, versions, onSave, href }: { p: LandP
   if (sec === "market") return <MarketSection p={p} state={state} onSave={onSave} />;
   if (sec === "variants") return <VariantsSection p={p} state={state} onSave={onSave} compareHref={href("compare")} />;
   return <CompareSection p={p} state={state} onSave={onSave} />;
+}
+
+// ---------- итог ----------
+
+function SummarySection({
+  p,
+  state,
+  before,
+  onSave,
+  href,
+  onEditPlot,
+  refInfo,
+}: {
+  p: LandProject;
+  state: AnalysisState;
+  before: site.AnalysisSnapshot | null;
+  onSave: Save;
+  href: (sec: AnalysisSec | "plot", tab?: string) => string;
+  onEditPlot: (k: plot.PlotFieldKey) => void;
+  refInfo: RefInfo | null;
+}) {
+  const [editing, setEditing] = useState<SiteFieldKey | null>(null);
+  const todo = summary.todoList(p);
+  const updates = summary.updatesSince(before?.at ?? null);
+  const table = siteView.compareTable(state.summaries, state.choice, siteView.criterionApproved(p, state.versions));
+  const bestIdx = state.summaries.findIndex((s) => s.variant.id === table.best);
+  const errors = uniqueTexts(state.sa.result.messages);
+  const edit = (i: summary.TodoItem) => {
+    const [kind, key] = i.key.split(".") as [string, string];
+    if (kind === "plot") onEditPlot(key as plot.PlotFieldKey);
+    else if (kind === "site") setEditing(key as SiteFieldKey);
+  };
+  return (
+    <>
+      <div className="mhead">
+        <h2>Итог</h2>
+        <span className="sp" />
+        <span className="small muted">{state.done && state.doneAt ? summary.calculatedText(state.doneAt) : "Считаем…"}</span>
+        <button className="btn pri" disabled={!state.done} onClick={state.recalc}>
+          Пересчитать
+        </button>
+      </div>
+      {updates.length > 0 && (
+        <div className="check ok">
+          <div>
+            <b>После прошлого расчёта ({text.date(before?.at.slice(0, 10) ?? null)}) сервис обновился.</b> Результат ниже уже посчитан с учётом изменений.
+            <ul className="upd">
+              {updates.map((u) => (
+                <li key={u.text}>
+                  {text.date(u.date)} — {u.text}
+                </li>
+              ))}
+            </ul>
+            <Link href="/reference/updates">Все изменения сервиса</Link>
+          </div>
+        </div>
+      )}
+      <Progress state={state} />
+      {state.done && bestIdx >= 0 && (
+        <>
+          <div className="cmp-reason">
+            <div>{table.why}</div>
+          </div>
+          <div className="tw">
+            <table className="t">
+              <tbody>
+                {table.rows.map((r) => (
+                  <tr key={r.label}>
+                    <td>{r.label}</td>
+                    <td className="best">{r.cells[bestIdx]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="small">
+            <Link href={href("compare")}>Сравнить все варианты ({state.summaries.length})</Link>
+          </p>
+        </>
+      )}
+      {state.done && bestIdx < 0 && (
+        <div className="check warn">
+          <div>
+            {state.summaries.length ? table.why : todo.length ? "Варианты пока не построены: не хватает значений из списка ниже." : "Варианты пока не построены."}
+            {!state.summaries.length && !todo.length && errors.map((t) => <div key={t}>{t}</div>)}
+          </div>
+        </div>
+      )}
+      <h3 className="h3">{todo.length ? `Что нужно ввести · ${todo.length}` : "Что нужно ввести"}</h3>
+      {todo.length === 0 ? (
+        <p className="small muted">Все обязательные значения введены.</p>
+      ) : (
+        <div className="todo">
+          {todo.map((i) => (
+            <div key={i.key} className="todo-it">
+              <div className="todo-l">
+                <b>{i.label}</b>
+                {i.why && <div className="small">{i.why}</div>}
+                <WhereToFind className="note" text={i.where} />
+              </div>
+              {i.sec === "market" ? (
+                <Link className="btn sm" href={href("market")}>
+                  Добавить
+                </Link>
+              ) : (
+                <button className="btn sm" onClick={() => edit(i)}>
+                  Ввести
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {refInfo && (
+        <p className="small muted" style={{ marginTop: 24 }}>
+          <Link href="/reference/history">{refInfo.text}</Link>
+          {refInfo.updateTo && (
+            <button className="btn sm" style={{ marginLeft: 8 }} onClick={refInfo.onUpdate}>
+              Обновить до версии {refInfo.updateTo}
+            </button>
+          )}
+        </p>
+      )}
+      {editing && (
+        <EditSiteField
+          p={p}
+          fieldKey={editing}
+          onClose={() => setEditing(null)}
+          onApply={(c) => {
+            setEditing(null);
+            if (c) void onSave(site.applySiteChange(p, c, nowIso()), "Значение сохранено");
+          }}
+        />
+      )}
+    </>
+  );
 }
