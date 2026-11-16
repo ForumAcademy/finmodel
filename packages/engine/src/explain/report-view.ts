@@ -4,6 +4,7 @@
  */
 import Decimal from "decimal.js";
 import type { CashChart, LandMax, SalesChart, Sensitivity } from "../report";
+import type { VariantSummary } from "../analysis";
 import { monthName, num, plural } from "../lib/text";
 import { periodKey } from "./periods";
 
@@ -29,15 +30,12 @@ export interface LandView {
   reserveOk: boolean;
   irr: { label: string; value: string } | null;
   how: string;
-  /** Положение цены продавца на шкале от 0 до максимальной цены, доля (для полосы); null — шкалы нет. */
-  askedShare: number | null;
 }
 
 export function landReportView(land: LandMax, rate: Decimal | null, hurdle: Decimal | null = null): LandView {
   const max = land.max_price;
   const how = `Цена участка, при которой NPV акционера равен нулю${rate ? ` при ставке дисконтирования ${pct(rate)}` : ""}: проект приносит ровно требуемую доходность. При каждой пробной цене вариант пересчитан целиком, с кредитом, процентами и налогом на прибыль.`;
   const reserve = land.reserve;
-  const top = max !== null && land.asked !== null ? Decimal.max(max, land.asked) : null;
   return {
     value: land.unprofitable ? "проект невыгоден при любой цене" : max === null ? "не найдена" : mln(max),
     unprofitable: land.unprofitable,
@@ -46,7 +44,6 @@ export function landReportView(land: LandMax, rate: Decimal | null, hurdle: Deci
     reserveOk: reserve !== null && !reserve.isNeg(),
     irr: land.max_price_irr === null ? null : { label: `при целевой IRR${hurdle ? ` ${pct(hurdle, 0)}` : ""}`, value: mln(land.max_price_irr) },
     how,
-    askedShare: top && land.asked && !top.isZero() ? land.asked.div(top).toNumber() : null,
   };
 }
 
@@ -150,4 +147,42 @@ export function cashView(c: CashChart | null): CashView | null {
     paybackMonths: c.paybackMonths === null ? null : `${c.paybackMonths} ${plural(c.paybackMonths, ["месяц", "месяца", "месяцев"])}`,
     years,
   };
+}
+
+export interface ClarifyLine {
+  label: string;
+  note: string;
+  /** Куда перейти: экран вариантов или справочник. */
+  link: "variants" | "reference";
+}
+
+/**
+ * «Уточнить перед решением»: что не учтено в расчёте варианта и какие значения взяты экспертно, а не по документу.
+ * Премия за риск — ставка дисконтирования варианта минус безрисковая ставка; hurdle — целевая IRR.
+ */
+export function clarifyLines(s: VariantSummary, hurdle: Decimal | null): ClarifyLine[] {
+  const premium = s.discountRate && s.riskFree ? s.discountRate.sub(s.riskFree.rf) : null;
+  const out: ClarifyLine[] = s.notCounted.length
+    ? [{ label: `Не учтено в расчёте: ${s.notCounted.length} ${plural(s.notCounted.length, ["статья", "статьи", "статей"])} затрат и продаж`, note: `Нет цены и темпа по аналогам или ставки в справочнике, прибыль и цена участка — без них: ${s.notCounted.join(", ")}`, link: "variants" }]
+    : [];
+  if (premium !== null) out.push({ label: `Премия за риск ${pp(premium, 1)} — Экспертное значение`, note: "От неё зависят NPV и максимальная цена участка", link: "reference" });
+  if (hurdle === null) out.push({ label: "Целевая IRR акционера не задана", note: "Без неё нет цены участка при целевой доходности, а варианты не проверяются по IRR", link: "reference" });
+  return out;
+}
+
+export interface Tile {
+  label: string;
+  value: string;
+  note: string;
+}
+
+/** Плитки отчёта: прибыль, IRR, NPV, окупаемость лучшего варианта. */
+export function reportTiles(s: VariantSummary, cash: CashChart | null): Tile[] {
+  const c = cashView(cash);
+  return [
+    { label: "Чистая прибыль", value: s.netProfit ? mln(s.netProfit) : "—", note: s.netMargin ? `рентабельность продаж ${pct(s.netMargin)}` : "" },
+    { label: "IRR акционера", value: s.irr ? pct(s.irr) : "—", note: s.discountRate ? `ставка дисконтирования ${pct(s.discountRate)}` : "нет ставки дисконтирования" },
+    { label: "NPV акционера", value: s.npv ? mln(s.npv) : "—", note: s.npv ? (s.npv.isNeg() ? "проект не окупает требуемую доходность" : "на дату оценки") : "нужна ставка дисконтирования" },
+    { label: "Окупаемость", value: c?.paybackMonths ?? "не окупается в расчёте", note: c?.payback ? `${c.payback}, после пика вложений ${c.peak ?? ""}` : "" },
+  ];
 }

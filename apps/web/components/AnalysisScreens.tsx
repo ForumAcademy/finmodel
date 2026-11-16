@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { analysis, book, plot, site, siteView, summary, text, zcyc } from "@fm/engine";
 import { newId, nowIso } from "@/lib/store";
 import { loadZcyc } from "@/lib/zcyc";
+import { ReportBlock } from "./Report";
 import { Chip, ExpertFields, FieldTable, Modal, OriginTag, WhereToFind, type FieldItem } from "./ui";
 
 type LandProject = plot.LandProject;
@@ -1104,18 +1105,22 @@ function SummarySection({
           <div className="cmp-reason">
             <div>{table.why}</div>
           </div>
-          <div className="tw">
-            <table className="t">
-              <tbody>
-                {table.rows.map((r) => (
-                  <tr key={r.label}>
-                    <td>{r.label}</td>
-                    <td className="best">{r.cells[bestIdx]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ReportBlock p={p} state={state} s={state.summaries[bestIdx] as VariantSummary} href={(sec, tab) => href(sec, tab)} />
+          <details className="rep-all">
+            <summary>Все показатели лучшего варианта</summary>
+            <div className="tw">
+              <table className="t">
+                <tbody>
+                  {table.rows.map((r) => (
+                    <tr key={r.label}>
+                      <td>{r.label}</td>
+                      <td className="best">{r.cells[bestIdx]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
           {others.length > 0 && (
             <ul className="leads">
               {others.map((m) => (
