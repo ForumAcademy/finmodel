@@ -685,6 +685,17 @@ sources:
     accessed: 2026-09-25
     verified: true
 
+  - id: S_OSM_NOMINATIM
+    level: 3
+    scope: global
+    title: "OpenStreetMap Nominatim — поиск места по адресу (координаты, регион, округ, район)"
+    issuer: "OpenStreetMap Foundation; данные — участники OpenStreetMap, лицензия ODbL"
+    url: "https://nominatim.openstreetmap.org/"
+    used_for: "точка участка на карте, регион, округ и район по адресу; запрос идёт с сервера сайта не чаще раза в секунду (правила https://operations.osmfoundation.org/policies/nominatim/)"
+    accessed: 2026-11-16
+    verified: true
+    note: "Не официальный адресный реестр: дом со строением или корпусом может не находиться, тогда сервис ищет по дому без строения и предупреждает. Регион, найденный так, финансист может заменить"
+
   - id: S_NSPD
     level: 2
     scope: global

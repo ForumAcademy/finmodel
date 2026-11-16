@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { book, plot, projectFile, site, summary, text } from "@fm/engine";
+import { book, geocode, plot, projectFile, site, summary, text } from "@fm/engine";
 import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
+import { findByAddress } from "@/lib/geocode";
 import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
 import { Chip, ExpertFields, FieldTable, Modal, OriginTag, Toast, WhereToFind, type FieldItem } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
@@ -189,6 +190,9 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
   const [versions, setVersions] = useState<book.AssumptionVersion[]>([]);
   const [updating, setUpdating] = useState(false);
   const [missingDocs, setMissingDocs] = useState<string[]>([]);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoChoices, setGeoChoices] = useState<{ query: string; candidates: geocode.GeoCandidate[] } | null>(null);
+  const geoAuto = useRef(false);
 
   useEffect(() => {
     getProject(id).then(setProject, () => setProject(null));
@@ -204,6 +208,45 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
     setToast(t);
     setTimeout(() => setToast(null), 2600);
   }, []);
+
+  const applyFound = useCallback(
+    async (proj: LandProject, query: string, c: geocode.GeoCandidate) => {
+      const r = geocode.applyGeocode(proj, c, query, nowIso());
+      await saveProject(r.project);
+      setProject(r.project);
+      setGeoChoices(null);
+      setProblems(r.problems);
+      flash(`Найдено по адресу: ${c.locality.join(", ") || c.label}`);
+    },
+    [flash],
+  );
+
+  const findPlace = useCallback(
+    async (proj: LandProject) => {
+      setGeoBusy(true);
+      try {
+        const r = await findByAddress(proj);
+        if ("error" in r) {
+          setProblems([r.error]);
+          return;
+        }
+        const houses = r.candidates.filter((c) => c.house);
+        // Несколько разных домов — пусть финансист выберет; иначе берём первый (дом, если есть).
+        if (houses.length > 1) setGeoChoices({ query: r.query, candidates: houses });
+        else await applyFound(proj, r.query, r.candidates[0] as geocode.GeoCandidate);
+      } finally {
+        setGeoBusy(false);
+      }
+    },
+    [applyFound],
+  );
+
+  // Первый поиск — сам, когда проект открыт впервые после создания с адресом.
+  useEffect(() => {
+    if (!project || project.geo || !project.plot.address.value || geoAuto.current) return;
+    geoAuto.current = true;
+    void findPlace(project);
+  }, [project, findPlace]);
 
   if (project === undefined) return null;
   if (project === null) {
@@ -401,6 +444,30 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       {t}
                     </div>
                   ))}
+                  <div className={`check ${p.geo ? "ok" : ""}`}>
+                    <div>
+                      <b>Где участок.</b> {p.geo ? geocode.geoText(p.geo) : geoBusy ? "Ищем по адресу…" : "Сервис ещё не искал участок по адресу."}
+                    </div>
+                    <button className="btn sm" onClick={() => void findPlace(p)} disabled={geoBusy || !view.plot.address.value}>
+                      {geoBusy ? "Ищем…" : "Найти данные по адресу"}
+                    </button>
+                  </div>
+                  {geoChoices && (
+                    <div className="check warn">
+                      <div>
+                        По адресу нашлось несколько домов. Выберите нужный:
+                        <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                          {geoChoices.candidates.map((c) => (
+                            <li key={c.label}>
+                              <button className="btn sm" style={{ margin: "3px 0" }} onClick={() => void applyFound(p, geoChoices.query, c)}>
+                                {c.label}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                   <FieldTable items={plot.PLOT_FIELDS.map((f) => plotItem(view, f, setEditing))} />
                   <p className="small muted">
                     Где взять данные участка и как их внести — <Link href="/reference/where">Справочник → Где взять данные</Link>
@@ -413,7 +480,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                     </div>
                   )}
                   <h3 className="h3">Название и точка на карте</h3>
-                  <ProjectTab p={p} onSave={save2} />
+                  <ProjectTab key={JSON.stringify(p.point)} p={p} onSave={save2} />
                 </>
               )}
               {tab === "Сделка" && <SiteFields p={p} keys={site.DEAL_FIELDS} required={{ landPrice: "Без неё затраты на покупку участка не учтены." }} onSave={save2} />}

@@ -70,6 +70,9 @@ const projectSchema = z.object({
   assumptionsSnapshot: assumptionVersionSchema.optional(),
   plot: z.object(Object.fromEntries(fieldKeys.map((k) => [k, plotValue]))),
   point: z.object({ lat: z.number(), lon: z.number() }).nullable(),
+  geo: z
+    .object({ query: z.string(), label: z.string(), point: z.object({ lat: z.number(), lon: z.number() }), regionCode: z.string().nullable(), locality: z.array(z.string()), house: z.boolean(), fetchedAt: z.string() })
+    .optional(),
   documents: z.array(z.object({ id: z.string().min(1), kind: z.enum(kinds), fileName: z.string(), size: z.number(), uploadedAt: z.string() })),
   history: z.array(z.object({ at: z.string(), field: z.enum([...fieldKeys, ...siteKeys, "assumptionsVersion"]), from: z.string(), to: z.string(), basis: z.string() })),
   site: siteSchema.optional(),
