@@ -67,6 +67,7 @@ export function checkSpec(spec: SpecData): SpecCheckResult {
     checkSources(owner, r.land_tax_source_ids);
     if (r.land_tax_rate_housing) checkSources(owner, r.land_tax_rate_housing.source_ids);
     checkSources(owner, r.land_rent_source_ids);
+    if (r.land_rent) checkSources(owner, r.land_rent.source_ids);
     checkSources(owner, r.vri_fee.source_ids);
     checkSources(owner, r.parking_norm.source_ids);
     checkSources(owner, r.parking_norm_apart.source_ids);

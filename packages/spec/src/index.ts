@@ -72,6 +72,7 @@ export type SpecRegion = Omit<
   | "land_tax_source_ids"
   | "land_tax_rate_housing"
   | "land_rent_source_ids"
+  | "land_rent"
   | "vri_fee"
   | "parking_norm"
   | "parking_norm_apart"
@@ -83,6 +84,13 @@ export type SpecRegion = Omit<
   land_tax_source_ids: SourceId[];
   land_tax_rate_housing?: Omit<NonNullable<Region["land_tax_rate_housing"]>, "source_ids"> & { source_ids: SourceId[] };
   land_rent_source_ids: SourceId[];
+  land_rent?: Omit<NonNullable<Region["land_rent"]>, "source_ids" | "first_year"> & {
+    source_ids: SourceId[];
+    first_year: NonNullable<Region["land_rent"]>["first_year"] & {
+      /** Из CSV quarters_file при сборке: кадастровый квартал → [Pi жильё, Pi временное проживание, k ренты]. */
+      quarters: Record<string, [number | null, number | null, number]>;
+    };
+  };
   vri_fee: Omit<Region["vri_fee"], "source_ids"> & { source_ids: SourceId[] };
   parking_norm: Omit<Region["parking_norm"], "source_ids"> & { source_ids: SourceId[] };
   parking_norm_apart: Omit<Region["parking_norm_apart"], "source_ids"> & { source_ids: SourceId[] };

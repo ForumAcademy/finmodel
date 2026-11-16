@@ -288,9 +288,33 @@ parameters:
     scope: project
     default: null
     source_ids: [S_MSK_RENT_273PP, S_SPB_RENT_608, S_PROJECT_DOCS]
-    basis: "По договору аренды или расчёт по региональной методике (кадастровая стоимость × ставка × коэффициенты)"
+    basis: "По договору аренды. Пусто — сервис считает аренду сам по акту региона, если ставки выписаны (Москва — 273-ПП, LAND.RENT_RULES); иначе — обязательный ввод"
+    how_to_fill: "Сумма в год из договора аренды; заполнять, только если договор отличается от ставок 273-ПП"
     status: project_input
     legacy: [{cell: "Бюджет!F21", value: 825124525.273, verdict: replace, note: "итоговая сумма за весь срок без расчёта; распределена равномерно на 7,25 года (CF1 строка 24)"}]
+
+  - id: LAND.RENT_RULES
+    name: "Арендная плата по акту региона: ставки по годам срока аренды"
+    unit: table
+    kind: table
+    scope: region
+    default: null
+    source_ids: [S_MSK_RENT_273PP, S_MSK_DGI_K1]
+    basis: "Москва (273-ПП, п. 3.2.1–3.2.9): 1-й год — 1,5% кадастровой стоимости плюс ставка приложения 8 по кадастровому кварталу; 2-й — 1,5%; 3-й — 3%; 4-й — 5%; 5-й — 7%; 6-й — 8%; после срока аренды до ввода — 10%; с ввода — 0,1%. Значения — regions.yaml → land_rent"
+    status: needs_verification
+    legacy: [{cell: null, verdict: new}]
+
+  - id: GEN.CADASTRAL_QUARTER
+    name: "Кадастровый квартал участка"
+    unit: текст
+    kind: text
+    scope: project
+    default: null
+    source_ids: [S_NSPD]
+    basis: "Первые три части кадастрового номера (77:01:0001028). Нужен для ставок, заданных по кварталам: в Москве — арендная плата первого года по приложению 8 к 273-ПП"
+    how_to_fill: "Карта НСПД или выписка ЕГРН; если есть кадастровый номер — берётся из него"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
 
   - id: LAND.RENT_PAYMENT_FREQ
     name: "Периодичность арендной платы"

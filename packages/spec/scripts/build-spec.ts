@@ -56,6 +56,44 @@ if (!sources || !parameters || !capex || !regions || !formulas || !assumptions) 
   process.exit(1);
 }
 
+/** Колонки CSV по кадастровым кварталам, которые попадают в справочник: [Pi жильё, Pi временное проживание, k ренты]. */
+const QUARTER_COLUMNS = ["p_residential", "p_hotel", "k_rent"] as const;
+
+/** Таблица по кадастровым кварталам из data/<file>: квартал → [p_residential, p_hotel, k_rent]; пусто — null. */
+function loadQuarters(file: string): Record<string, (number | null)[]> | null {
+  const path = resolve(DATA, file);
+  if (!existsSync(path)) {
+    errors.push(`regions.yaml: нет файла data/${file}`);
+    return null;
+  }
+  const text = readFileSync(path, "utf8");
+  hash.update(file).update("\0").update(text).update("\0");
+  const lines = text.split("\n").filter((l) => l.trim() !== "" && !l.startsWith("#"));
+  const header = (lines.shift() ?? "").split(",");
+  const idx = QUARTER_COLUMNS.map((c) => header.indexOf(c));
+  if (header[0] !== "quarter" || idx.some((i) => i < 0)) {
+    errors.push(`data/${file}: нужны колонки quarter, ${QUARTER_COLUMNS.join(", ")}`);
+    return null;
+  }
+  const rows: Record<string, (number | null)[]> = {};
+  for (const line of lines) {
+    const cells = line.split(",");
+    const quarter = cells[0] ?? "";
+    if (!/^\d{2}:\d{2}:\d{7}$/.test(quarter)) errors.push(`data/${file}: неверный кадастровый квартал «${quarter}»`);
+    if (quarter in rows) errors.push(`data/${file}: квартал ${quarter} повторяется`);
+    const values = idx.map((i) => (cells[i] ? Number(cells[i]) : null));
+    if (values.some((v) => v !== null && !(v > 0))) errors.push(`data/${file}: квартал ${quarter} — значение не положительное число`);
+    if (values.at(-1) === null) errors.push(`data/${file}: квартал ${quarter} — нет коэффициента ренты`);
+    rows[quarter] = values;
+  }
+  return rows;
+}
+
+for (const r of regions.regions) {
+  const fy = r.land_rent?.first_year;
+  if (fy) Object.assign(fy, { quarters: loadQuarters(fy.quarters_file) ?? {} });
+}
+
 const spec: SpecData = {
   sources: sources.sources,
   parameters: parameters.parameters,
