@@ -197,9 +197,38 @@ export const regionSchema = z
       .strict()
       .optional(),
     land_rent_source_ids: idList,
+    /**
+     * Аренда участка для строительства жилья по акту региона (Москва — 273-ПП): ставки — доли кадастровой стоимости за год
+     * срока аренды; первый год — плюс ставка по кадастровому кварталу (first_year). Нет поля — аренда по договору проекта.
+     */
+    land_rent: z
+      .object({
+        source_ids: idList,
+        lease_years: z.number().int().positive(),
+        year_rates: z
+          .array(z.object({ year: z.number().int().positive(), rate: z.number().nonnegative().max(1), plus_first_year: z.boolean().optional() }).strict())
+          .min(1),
+        after_term_rate: z.number().nonnegative().max(1),
+        after_commissioning_rate: z.number().nonnegative().max(1),
+        first_year: z
+          .object({
+            /** CSV в data/: quarter, p_<назначение>…, k_rent (Москва — таблицы 1 и 2 приложения 8 к 273-ПП). */
+            quarters_file: z.string().regex(/^[\w.-]+\.csv$/),
+            divisor: z.number().positive(),
+            k1: z.number().positive().nullable(),
+            k2: z.number().positive(),
+          })
+          .strict(),
+        status: z.enum(["needs_verification", "verified"]),
+        note: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     vri_fee: z
       .object({
         exists: z.boolean().nullable(),
+        /** Плата только за участок в собственности (Москва — 593-ПП); при аренде — нет. */
+        owned_only: z.boolean().optional(),
         source_ids: idList,
         formula: z.string().nullable(),
         /**

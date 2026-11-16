@@ -3,10 +3,12 @@
  * Правила, которых нет в спецификации, не додумываются: расчёт останавливается с понятной ошибкой.
  */
 import Decimal from "decimal.js";
+import type { SpecRegion } from "@fm/spec";
 import type { FormulaContext } from "../context";
 import { CalcError } from "../context";
 import { dayBefore, daysBetween, eomonth, isIsoDate, prevMonthEnd, maxDate, minDate, monthDiff, overlapDays, quarterMonthEnds, type IsoDate } from "../lib/dates";
 import { fmt } from "../lib/format";
+import type { GfaSplit } from "./tep";
 import { isMilestoneKey, milestone, milestones, vriChangeDate, type MilestoneRow } from "./time";
 
 const ONE = new Decimal(1);
@@ -73,35 +75,87 @@ function landTax(ctx: FormulaContext, rows: MilestoneRow[], date: IsoDate[]): De
   });
 }
 
+type RentRules = NonNullable<SpecRegion["land_rent"]>;
+
 function landRent(ctx: FormulaContext, rows: MilestoneRow[], date: IsoDate[]): Decimal[] {
-  const annual = ctx.requireNum("LAND.RENT_ANNUAL");
-  const indexation = ctx.requireNum("LAND.RENT_INDEXATION");
   const freq = ctx.require<string>("LAND.RENT_PAYMENT_FREQ");
   const endKey = ctx.require<string>("LAND.RENT_END_MILESTONE");
   if (!isMilestoneKey(endKey)) throw new CalcError(`Неизвестная веха окончания аренды «${endKey}»`, "LAND.RENT_END_MILESTONE");
   const acquired = minDate(rows.map((r) => milestone(r, "land_acquired")));
   const rentEnd = minDate(rows.map((r) => milestone(r, endKey)));
-  // rent_month: арендная плата за месяц с концом d — пропорционально дням месяца внутри [acquired; rent_end),
-  // индексация раз в год с даты приобретения.
-  const rentMonth = (d: IsoDate): Decimal => {
+  const firstMonth = eomonth(acquired, 0);
+  // Доля месяца с концом d внутри аренды [acquired; rent_end)
+  const share = (d: IsoDate): Decimal => {
     const prev = prevMonthEnd(d);
     const days = overlapDays(dayBefore(acquired), dayBefore(rentEnd), prev, d);
-    if (days === 0) return ZERO;
-    return annual.mul(ONE.add(indexation).pow(fullYears(acquired, d))).div(MONTHS_PER_YEAR).mul(days).div(daysBetween(prev, d));
+    return days === 0 ? ZERO : new Decimal(days).div(daysBetween(prev, d));
   };
+  const annual = ctx.num("LAND.RENT_ANNUAL");
+  const rules = ctx.param<RentRules>("LAND.RENT_RULES");
+  let rentMonth: (d: IsoDate) => Decimal;
+  let lump = ZERO;
+  if (annual !== null || rules === null) {
+    // По договору: годовая сумма с индексацией раз в год с даты приобретения
+    const amount = ctx.requireNum("LAND.RENT_ANNUAL");
+    const indexation = ctx.requireNum("LAND.RENT_INDEXATION");
+    rentMonth = (d) => amount.mul(ONE.add(indexation).pow(fullYears(acquired, d))).div(MONTHS_PER_YEAR).mul(share(d));
+  } else {
+    // По акту региона (Москва — 273-ПП): ставка по году срока аренды от кадастровой стоимости
+    const vri = vriDate(ctx, rows);
+    const cad = ctx.requireNum("LAND.CADASTRAL_VALUE");
+    const cadAfter = vri === null ? null : ctx.requireNum("LAND.CADASTRAL_VALUE_AFTER_VRI");
+    const cadAt = (d: IsoDate) => (cadAfter !== null && vri !== null && d >= vri ? cadAfter : cad);
+    const rnvFirst = minDate(rows.map((r) => milestone(r, "rnv_date")));
+    const yearRow = (year: number) => rules.year_rates.find((r) => r.year === year);
+    const rateAt = (d: IsoDate): { rate: number; firstYear: boolean } => {
+      if (d > rnvFirst) return { rate: rules.after_commissioning_rate, firstYear: false };
+      const year = fullYears(acquired, d) + 1;
+      if (year > rules.lease_years) return { rate: rules.after_term_rate, firstYear: false };
+      const row = yearRow(year);
+      if (!row) throw new CalcError(`Нет ставки аренды за ${year}-й год срока аренды в справочнике региона`, "LAND.RENT_RULES");
+      return { rate: row.rate, firstYear: row.plus_first_year === true };
+    };
+    rentMonth = (d) => {
+      const part = share(d);
+      if (part.isZero()) return ZERO;
+      const { rate, firstYear } = rateAt(d);
+      return firstYear ? ZERO : cadAt(d).mul(rate).div(MONTHS_PER_YEAR).mul(part);
+    };
+    const first = rateAt(firstMonth);
+    if (first.firstYear) lump = cadAt(firstMonth).mul(first.rate).add(ctx.formula<Decimal>("F.LAND.RENT_FIRST_YEAR"));
+  }
   const quarterSum = (d: IsoDate) => quarterMonthEnds(d).reduce((s, m) => s.add(rentMonth(m)), ZERO);
   const isQuarterStart = (d: IsoDate) => quarterMonthEnds(d)[0] === d;
-  // Месяц начала аренды: если аренда начинается внутри квартала, платёж за неполный первый квартал — в этот месяц
-  const firstMonth = eomonth(acquired, 0);
-  if (freq === "ежемесячно") return date.map(rentMonth);
-  if (freq === "поквартально авансом") return date.map((d) => (d === firstMonth ? sumFrom(d) : d > firstMonth && isQuarterStart(d) ? quarterSum(d) : ZERO));
-  if (freq === "поквартально по окончании квартала") return date.map((d) => (isQuarterStart(eomonth(d, 1)) ? quarterSum(d) : ZERO));
-  throw new CalcError(`Неизвестная периодичность арендной платы «${freq}»`, "LAND.RENT_PAYMENT_FREQ");
-
   /** Аренда с месяца d до конца его квартала. */
-  function sumFrom(d: IsoDate): Decimal {
-    return quarterMonthEnds(d).filter((m) => m >= d).reduce((s, m) => s.add(rentMonth(m)), ZERO);
-  }
+  const sumFrom = (d: IsoDate) => quarterMonthEnds(d).filter((m) => m >= d).reduce((s, m) => s.add(rentMonth(m)), ZERO);
+  let pay: Decimal[];
+  // Месяц начала аренды: если аренда начинается внутри квартала, платёж за неполный первый квартал — в этот месяц
+  if (freq === "ежемесячно") pay = date.map(rentMonth);
+  else if (freq === "поквартально авансом") pay = date.map((d) => (d === firstMonth ? sumFrom(d) : d > firstMonth && isQuarterStart(d) ? quarterSum(d) : ZERO));
+  else if (freq === "поквартально по окончании квартала") pay = date.map((d) => (isQuarterStart(eomonth(d, 1)) ? quarterSum(d) : ZERO));
+  else throw new CalcError(`Неизвестная периодичность арендной платы «${freq}»`, "LAND.RENT_PAYMENT_FREQ");
+  // Первый год по акту региона — разом в месяц начала аренды (273-ПП, п. 3.2.2)
+  return lump.isZero() ? pay : pay.map((v, t) => (date[t] === firstMonth ? v.add(lump) : v));
+}
+
+export function F_LAND_RENT_FIRST_YEAR(ctx: FormulaContext): Decimal {
+  if (ctx.param<string>("LAND.TENURE") !== "аренда" || ctx.num("LAND.RENT_ANNUAL") !== null) return ZERO;
+  const rules = ctx.param<RentRules>("LAND.RENT_RULES");
+  if (rules === null) return ZERO;
+  const quarter = ctx.param<string>("GEN.CADASTRAL_QUARTER");
+  if (quarter === null) throw new CalcError("Для арендной платы первого года нужен кадастровый квартал участка — введите кадастровый номер или квартал", "GEN.CADASTRAL_QUARTER");
+  const row = rules.first_year.quarters[quarter];
+  if (!row) throw new CalcError(`Квартала ${quarter} нет в таблице 273-ПП (приложение 8) — введите арендную плату по договору`, "LAND.RENT_ANNUAL");
+  const [pRes, pHotel, k] = row;
+  const { k1, k2, divisor } = rules.first_year;
+  if (k1 === null) throw new CalcError("Нет коэффициента изменения цен ДГИ (k1) в справочнике региона — введите арендную плату по договору", "LAND.RENT_ANNUAL");
+  const split = ctx.formula<GfaSplit>("F.TEP.GFA_SPLIT");
+  const price = (p: number | null, area: Decimal, what: string): Decimal => {
+    if (area.isZero()) return ZERO;
+    if (p === null) throw new CalcError(`В квартале ${quarter} нет стоимостного показателя для «${what}» (273-ПП, приложение 8) — введите арендную плату по договору`, "LAND.RENT_ANNUAL");
+    return area.mul(p);
+  };
+  return price(pRes, split.res, "жильё").add(price(pHotel, split.apart, "временное проживание")).mul(k).mul(k1).mul(k2).div(divisor);
 }
 
 export function F_LAND_TAX_OR_RENT(ctx: FormulaContext): Decimal[] {
@@ -124,6 +178,8 @@ export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
   if (ctx.param<boolean>("LAND.VRI_CHANGE") === false) return ZERO;
   const region = ctx.region();
   if (region.vri_fee.exists === false) return ZERO;
+  // Плата только за участок в собственности (Москва — 593-ПП); при аренде — арендная плата первого года
+  if (region.vri_fee.owned_only === true && ctx.param<string>("LAND.TENURE") === "аренда") return ZERO;
   // Сумма из расчёта ДГИ заменяет расчёт
   const manual = ctx.num("LAND.VRI_FEE");
   if (manual !== null) return manual;
@@ -156,6 +212,7 @@ export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
 export const LAND_FORMULAS = {
   "F.LAND.TAX_COEF": F_LAND_TAX_COEF,
   "F.LAND.TAX_OR_RENT": F_LAND_TAX_OR_RENT,
+  "F.LAND.RENT_FIRST_YEAR": F_LAND_RENT_FIRST_YEAR,
   "F.LAND.VRI_FEE": F_LAND_VRI_FEE,
 } as const;
 

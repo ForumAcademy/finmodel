@@ -11,6 +11,7 @@
 | `data/formulas.yaml` | Формулы: `expr`, `depends_on`, `lag_depends_on`, `rationale`, `rejected`, `source_ids`, `example` |
 | `data/capex_items.yaml` | Статьи бюджета: ставка, база, правило графика |
 | `data/regions.yaml` | 89 субъектов РФ, региональные нормативы и ставки (`null` — не заполнено) |
+| `data/msk_rent_273pp_quarters.csv` | Москва, 273-ПП, приложение 8: по кадастровому кварталу — стоимостные показатели Pi по назначениям и коэффициент ренты k. Подключается из `regions.yaml` (`land_rent.first_year.quarters_file`); в справочник при сборке попадают Pi «жильё», «временное проживание» и k |
 | `data/company_assumptions.yaml` | Справочник допущений компании по версиям |
 | `packages/spec/src/schemas.ts` | zod-схемы, строгие: неизвестное поле в YAML — ошибка |
 | `packages/spec/src/checks.ts` | Перекрёстные проверки (повторяют `validate_spec.py`, чтобы сборка не зависела от Python) |
