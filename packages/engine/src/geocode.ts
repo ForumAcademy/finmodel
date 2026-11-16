@@ -153,5 +153,5 @@ const samePoint = (a: GeoPoint, b: GeoPoint) => a.lat === b.lat && a.lon === b.l
 /** Строка «Где участок» для экрана: округ, район и дата поиска. */
 export function geoText(g: GeoLookup): string {
   const where = g.locality.length ? g.locality.join(", ") : regionName(g.regionCode);
-  return `${where}. Найдено по адресу ${fmtDate(g.fetchedAt.slice(0, 10))}`;
+  return `${where}. Найдено по адресу в OpenStreetMap ${fmtDate(g.fetchedAt.slice(0, 10))}`;
 }

@@ -73,7 +73,7 @@ describe("поиск участка по адресу", () => {
     expect(r.project.point).toEqual({ lat: 55.7601, lon: 37.6543 });
     expect(r.project.geo?.locality).toEqual(["Центральный административный округ", "Басманный район"]);
     expect(r.project.history.map((h) => h.field)).toEqual(["regionCode"]);
-    expect(geocode.geoText(r.project.geo as geocode.GeoLookup)).toBe("Центральный административный округ, Басманный район. Найдено по адресу 16.11.2026");
+    expect(geocode.geoText(r.project.geo as geocode.GeoLookup)).toBe("Центральный административный округ, Басманный район. Найдено по адресу в OpenStreetMap 16.11.2026");
   });
 
   it("точку, поставленную вручную, не трогает; повторный поиск двигает свою точку", () => {
