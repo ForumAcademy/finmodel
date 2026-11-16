@@ -25,9 +25,9 @@ export interface TodoItem {
 }
 
 /** Ограничения, без которых не строятся варианты, и данные сделки, без которых нет итогов (обязательные поля экранов анализа). */
-const REQUIRED_SITE: readonly { key: SiteFieldKey; tab: string; why: string }[] = [
-  { key: "maxFloors", tab: "Градрегламент", why: "Без неё не строятся варианты." },
-  { key: "landPrice", tab: "Сделка", why: "Без неё затраты на покупку участка не учтены." },
+const REQUIRED_SITE: readonly { key: SiteFieldKey; sec: TodoSection; tab: string; why: string }[] = [
+  { key: "landPrice", sec: "plot", tab: "Сделка", why: "Без неё затраты на покупку участка не учтены." },
+  { key: "maxFloors", sec: "site", tab: "Ограничения", why: "Без неё не строятся варианты." },
 ];
 
 /** Все значения, которых не хватает, со всех экранов проекта — одним списком. */
@@ -38,11 +38,11 @@ export function todoList(p: LandProject): TodoItem[] {
   });
   const siteItems = REQUIRED_SITE.filter((r) => siteValue(p, r.key).value === null).map((r): TodoItem => {
     const f = siteField(r.key);
-    return { key: `site.${r.key}`, label: f.label, why: r.why, where: f.hint, sec: "site", tab: r.tab };
+    return { key: `site.${r.key}`, label: f.label, why: r.why, where: f.hint, sec: r.sec, tab: r.tab };
   });
   // Объём ограничивает одно из трёх: предельная наземная площадь, плотность или процент застройки (с этажностью)
   const volume: TodoItem[] = (["maxGfa", "density", "builtShare"] as const).every((k) => siteValue(p, k).value === null)
-    ? [{ key: "site.density", label: "Ограничение объёма: плотность застройки, предельная наземная площадь или процент застройки", why: "Нужно хотя бы одно, без него не строятся варианты.", where: siteField("density").hint, sec: "site", tab: "Градрегламент" }]
+    ? [{ key: "site.density", label: "Ограничение объёма: плотность застройки, предельная наземная площадь или процент застройки", why: "Нужно хотя бы одно, без него не строятся варианты.", where: siteField("density").hint, sec: "site", tab: "Ограничения" }]
     : [];
   const need = minAnalogs();
   const have = siteOf(p).analogs.length;
@@ -62,6 +62,9 @@ export function todoList(p: LandProject): TodoItem[] {
   return [...plotItems, ...siteItems, ...volume, ...market];
 }
 
+/** Сколько значений не хватает на шаге меню проекта. */
+export const todoCount = (list: readonly TodoItem[], sec: TodoSection): number => list.filter((i) => i.sec === sec).length;
+
 // ---------- обновления сервиса ----------
 
 export interface ServiceUpdate {
@@ -72,6 +75,7 @@ export interface ServiceUpdate {
 
 /** Что менялось в сервисе — для финансиста, новые сверху. Дополняется в каждом PR, который меняет расчёт или экраны. */
 export const SERVICE_UPDATES: readonly ServiceUpdate[] = [
+  { date: "2026-11-16", text: "Новое меню проекта: Итог и четыре шага — 1 Участок (со сделкой, документами и историей), 2 Что можно построить, 3 Рынок, 4 Варианты. На каждом шаге сверху ответ одной фразой, пустые поля собраны отдельно, введённые — компактной таблицей. Варианты и сравнение — одна таблица с отметками лучшего, наибольшей прибыли и наименьшего долга." },
   { date: "2026-11-16", text: "Проект открывается на экране «Итог»: кнопка «Пересчитать», лучший вариант и общий список того, что нужно ввести. Все проекты можно сохранить в один файл и открыть его на другом компьютере или новом адресе сайта." },
   { date: "2026-11-16", text: "Плата за изменение вида разрешённого использования участка в Москве считается сама по постановлению Правительства Москвы № 593-ПП: ставка по плотности застройки умножается на разницу кадастровых стоимостей." },
   { date: "2026-11-13", text: "У полей, которые вводятся вручную, есть подсказка «Где взять данные», в справочнике — раздел с тем же названием." },

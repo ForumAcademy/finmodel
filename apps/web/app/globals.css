@@ -328,3 +328,38 @@ tr.chgd td{background:var(--yel-bg)}
 .pcard .chip{white-space:normal;line-height:1.35}
 .prow{flex-wrap:wrap}
 @media (max-width:640px){.prow h1{flex:1 0 100%}.prow .sp{display:none}.prow .btn{flex:1 1 auto}.ptoolbar{flex-wrap:wrap}.ptoolbar .search{flex:1 1 100%}.ptoolbar .seg button{white-space:nowrap}}
+
+/* новое меню проекта: шаги, ответ одной фразой, компактные поля */
+.side .it .num{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--bg);color:var(--ink2);font-size:11.5px;font-weight:700;flex:none}
+.side .it.on .num{background:var(--acc);color:#fff}
+.side .it.later{color:var(--muted);font-weight:500}
+.side.col .it .num{margin:0 auto}
+.answer{border:1px solid var(--line);border-left:3px solid var(--acc);background:#fff;border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
+.answer.ok{border-left-color:var(--grn)}
+.answer.warn{border-left-color:#e2a400;background:var(--yel-bg)}
+.answer b{font-size:15px;display:block}
+.answer .small{margin-top:4px;color:var(--ink2)}
+.ftab td.v{white-space:nowrap;font-weight:600}
+.ftab td.act{text-align:right;width:1%}
+.ftab .org{border:0;background:none;padding:0;color:var(--ink2);font-weight:500}
+.ftab .org.basis{color:var(--muted)}
+.ftab .org.miss{color:var(--muted)}
+.org.exp{color:var(--ink2);border-color:var(--line)}
+details.wt summary{cursor:pointer;color:var(--acc);font-size:12.5px;list-style:none;display:inline}
+details.wt summary::-webkit-details-marker{display:none}
+details.wt[open] summary{margin-bottom:4px;display:block}
+.vmarks td{padding-top:4px;padding-bottom:4px}
+.vmarks .chip{margin:2px 2px 2px 0}
+.leads{margin:0 0 10px;padding:0;list-style:none;font-size:13px}
+.leads li{padding:3px 0;color:var(--ink2)}
+.leads li b{color:var(--ink)}
+@media (max-width:760px){.ftab td.v{white-space:normal}}
+@media (max-width:760px){
+  table.t.ftab,table.t.ftab tbody{display:block;width:100%}
+  table.t.ftab thead{display:none}
+  table.t.ftab tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 12px;border-bottom:1px solid var(--line2);background:#fff}
+  table.t.ftab td{border:0;padding:0;background:none;position:static;min-width:0;box-shadow:none;white-space:normal}
+  table.t.ftab td.v{text-align:right}
+  table.t.ftab td.l{grid-column:1;text-align:left}
+  table.t.ftab td.act{grid-column:2;grid-row:2;align-self:center}
+}

@@ -7,25 +7,27 @@ import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
 import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
-import { Chip, ExpertFields, Modal, OriginTag, Toast, WhereToFind } from "./ui";
+import { Chip, ExpertFields, FieldTable, Modal, OriginTag, Toast, WhereToFind, type FieldItem } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
-import { AnalysisArea, type AnalysisSec } from "./AnalysisScreens";
+import { AnalysisArea, SiteFields, type AnalysisSec } from "./AnalysisScreens";
 
 type LandProject = plot.LandProject;
 type PlotFieldKey = plot.PlotFieldKey;
 
-export type ProjectSection = "plot" | "docs" | AnalysisSec;
-const PLOT_TABS = ["Участок", "Проект", "История"] as const;
+export type ProjectSection = "plot" | "model" | AnalysisSec;
+const PLOT_TABS = ["Участок", "Сделка", "Документы", "История"] as const;
 type PlotTab = (typeof PLOT_TABS)[number];
 
 const href = (id: string, sec: ProjectSection, tab?: string) => `/projects/${id}?sec=${sec}${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`;
 
-/** Пункты меню «Анализ участка». */
-const ANALYSIS_MENU: readonly { sec: AnalysisSec; title: string; short: string }[] = [
-  { sec: "site", title: "Участок и ограничения", short: "Ограничения" },
-  { sec: "market", title: "Рынок", short: "Рынок" },
-  { sec: "variants", title: "Варианты", short: "Варианты" },
-  { sec: "compare", title: "Сравнение", short: "Сравнение" },
+/** Меню проекта: Итог и шаги по порядку; «Финмодель» появится на этапе 6. */
+const STEPS: readonly { sec: ProjectSection; num: string; title: string; short: string; later?: boolean }[] = [
+  { sec: "summary", num: "★", title: "Итог", short: "Итог" },
+  { sec: "plot", num: "1", title: "Участок", short: "Участок" },
+  { sec: "site", num: "2", title: "Что можно построить", short: "Строить" },
+  { sec: "market", num: "3", title: "Рынок", short: "Рынок" },
+  { sec: "variants", num: "4", title: "Варианты", short: "Варианты" },
+  { sec: "model", num: "5", title: "Финмодель", short: "Финмодель", later: true },
 ];
 const today = () => nowIso().slice(0, 10);
 
@@ -36,7 +38,7 @@ function BasisLink({ p, basis }: { p: LandProject; basis: plot.ValueBasis | null
   const label = plot.basisText(basis);
   if (basis.documentId && p.documents.some((d) => d.id === basis.documentId)) {
     return (
-      <Link className="org basis" href={href(p.id, "docs")}>
+      <Link className="org basis" href={href(p.id, "plot", "Документы")}>
         {label}
       </Link>
     );
@@ -51,29 +53,28 @@ function BasisLink({ p, basis }: { p: LandProject; basis: plot.ValueBasis | null
   return <span className="org basis">{label}</span>;
 }
 
-function FieldRow({ p, field, onEdit }: { p: LandProject; field: plot.PlotField; onEdit: (k: PlotFieldKey) => void }) {
+/** Поле участка строкой шага: пустое обязательное — в «Не хватает», введённое — в таблицу. */
+function plotItem(p: LandProject, field: plot.PlotField, onEdit: (k: PlotFieldKey) => void): FieldItem {
   const v = p.plot[field.key];
-  const miss = field.required && v.value === null;
   const shown = plot.plotText(field.key, v.value);
-  const placeholder = field.key === "cadastralValue" ? "не учтено" : field.required ? "нет значения" : "—";
-  return (
-    <div className={`fld ${miss ? "miss" : ""}`}>
-      <div className="lb">
-        <span>{field.label}</span>
-        <div className="meta">
-          <OriginTag origin={v.origin} />
-          <BasisLink p={p} basis={v.basis} />
-        </div>
-      </div>
-      <div className="val">
-        <button className={`shown ${field.kind === "text" && field.key !== "cadastralNumber" && field.key !== "quarter" ? "text" : ""}`} onClick={() => onEdit(field.key)} title="Изменить">
-          {shown || placeholder}
-        </button>
-        {field.unit && <span className="u">{field.unit}</span>}
-      </div>
-      {plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`) ? <div className="note">{plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${field.unit ? ` ${field.unit}` : ""}`)}</div> : v.value === null && <WhereToFind className="note" text={field.where} />}
-    </div>
-  );
+  const unit = field.unit ? ` ${field.unit}` : "";
+  return {
+    key: field.key,
+    label: field.label,
+    value: shown ? `${shown}${unit}` : field.key === "cadastralValue" ? "не учтено" : "",
+    missing: field.required && v.value === null,
+    origin:
+      v.value === null ? (
+        <span className="small muted">необязательно</span>
+      ) : (
+        <>
+          <OriginTag origin={v.origin} /> <BasisLink p={p} basis={v.basis} />
+        </>
+      ),
+    note: plot.basisNote(v.basis, (x) => `${plot.plotText(field.key, x)}${unit}`),
+    where: field.where,
+    onEdit: () => onEdit(field.key),
+  };
 }
 
 // ---------- изменение поля ----------
@@ -284,8 +285,22 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
     }
   };
 
-  const todo = summary.todoList(view).length;
+  const todoList = summary.todoList(view);
+  const todo = todoList.length;
   const docCount = plot.DOCUMENT_KINDS.filter((k) => p.documents.some((d) => d.kind === k.kind)).length;
+  const counted = !!site.siteOf(p).snapshot?.best;
+  /** Отметка шага в меню: сколько ввести, ✓ или «этап 6». */
+  const badge = (m: (typeof STEPS)[number]) => {
+    if (m.later) return <span className="chip gry st">этап 6</span>;
+    if (m.sec === "summary") return todo > 0 ? <span className="chip yel st">{todo}</span> : null;
+    if (m.sec === "variants") return counted ? <span className="stok st">✓</span> : null;
+    const n = summary.todoCount(todoList, m.sec as summary.TodoSection);
+    return n > 0 ? <span className="chip yel st">{n}</span> : <span className="stok st">✓</span>;
+  };
+  const save2 = async (next: LandProject, msg: string) => {
+    await persist(next);
+    if (msg) flash(msg);
+  };
 
   return (
     <>
@@ -296,13 +311,6 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
         <div className="ttl">
           <h1>{plot.projectTitle(view)}</h1>
           {status.noCadastralNumber && <Chip tone="yel">Участок без кадастрового номера</Chip>}
-          {todo > 0 && (
-            <Link href={href(p.id, "summary")}>
-              <Chip tone="yel">
-                Нужно ввести: {todo}
-              </Chip>
-            </Link>
-          )}
           <button className="btn sm hbtn" onClick={() => void toFile()}>
             Сохранить проект в файл
           </button>
@@ -315,56 +323,25 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
             {collapsed ? "»" : "« Свернуть меню"}
           </button>
           <div className="grp">
-            <Link className={`it top1 ${sec === "summary" ? "on" : ""}`} href={href(p.id, "summary")}>
-              <span>Итог</span>
-              {!collapsed && todo > 0 && <span className="chip yel st">ввести {todo}</span>}
-            </Link>
-          </div>
-          <div className="grp">
-            {!collapsed && (
-              <div className="gh open">
-                <span>Вводные</span>
-              </div>
-            )}
-            <Link className={`it ${collapsed ? "top1" : ""} ${sec === "plot" ? "on" : ""}`} href={href(p.id, "plot")}>
-              <span>{collapsed ? "Участок" : "Проект и участок"}</span>
-              {!collapsed && (status.missing ? <span className="chip yel st">не хватает {status.missing}</span> : <span className="stok st">✓</span>)}
-            </Link>
-          </div>
-          <div className="grp">
-            {!collapsed && (
-              <div className="gh open">
-                <span>Анализ участка</span>
-              </div>
-            )}
-            {ANALYSIS_MENU.map((m) => (
-              <Link key={m.sec} className={`it ${collapsed ? "top1" : ""} ${sec === m.sec ? "on" : ""}`} href={href(p.id, m.sec)}>
+            {STEPS.map((m) => (
+              <Link key={m.sec} className={`it top1 ${m.later ? "later" : ""} ${sec === m.sec ? "on" : ""}`} href={href(p.id, m.sec)}>
+                <span className="num">{m.num}</span>
                 <span>{collapsed ? m.short : m.title}</span>
-                {!collapsed && m.sec === "market" && <span className="chip gry st">{site.siteOf(p).analogs.length}</span>}
+                {!collapsed && badge(m)}
               </Link>
             ))}
-          </div>
-          <div className="grp">
-            <Link className={`it top1 ${sec === "docs" ? "on" : ""}`} href={href(p.id, "docs")}>
-              <span>{collapsed ? "Документы" : "Документы проекта"}</span>
-              {!collapsed && (
-                <span className="chip gry st">
-                  {docCount} из {plot.DOCUMENT_KINDS.length}
-                </span>
-              )}
-            </Link>
           </div>
         </aside>
         <main className="main">
-          {/* Узкий экран: меню слева скрыто, разделы — строкой над содержимым */}
+          {/* Узкий экран: меню слева скрыто, шаги — строкой над содержимым */}
           <nav className="mnav">
-            {[{ sec: "summary" as ProjectSection, short: "Итог" }, { sec: "plot" as ProjectSection, short: "Участок" }, ...ANALYSIS_MENU, { sec: "docs" as ProjectSection, short: "Документы" }].map((m) => (
+            {STEPS.map((m) => (
               <Link key={m.sec} className={sec === m.sec ? "on" : ""} href={href(p.id, m.sec)}>
-                {m.short}
+                {m.num === "★" ? m.title : `${m.num}. ${m.short}`}
               </Link>
             ))}
           </nav>
-          {sec === "summary" || sec === "site" || sec === "market" || sec === "variants" || sec === "compare" ? (
+          {sec === "summary" || sec === "site" || sec === "market" || sec === "variants" ? (
             <AnalysisArea
               p={p}
               sec={sec}
@@ -373,31 +350,38 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
               href={(s, t) => href(p.id, s, t)}
               onEditPlot={setEditing}
               refInfo={ref ? { text: ref.text, updateTo: ref.updateTo, onUpdate: () => setUpdating(true) } : null}
-              onSave={async (next, msg) => {
-                await persist(next);
-                if (msg) flash(msg);
-              }}
+              onSave={save2}
             />
-          ) : sec === "plot" ? (
+          ) : sec === "model" ? (
             <>
               <div className="mhead">
-                <h2>Проект и участок</h2>
+                <h2>5. Финмодель выбранного варианта</h2>
+              </div>
+              <div className="card empty">
+                Появится на этапе 6: вводные выбранного варианта (ТЭП, график, продажи, затраты, финансирование, налоги) и расчёт — план продаж, бюджет, эскроу, денежный поток по годам, кварталам или месяцам, с пояснением к каждой строке.
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mhead">
+                <h2>1. Участок</h2>
               </div>
               <div className="tabs">
-                {PLOT_TABS.map((t) => (
-                  <Link key={t} className={t === tab ? "on" : ""} href={href(p.id, "plot", t)}>
-                    {t}
-                    {t === "Участок" && status.missing > 0 && <span className="tdot" />}
-                  </Link>
-                ))}
+                {PLOT_TABS.map((t) => {
+                  const n = t === "Участок" ? status.missing : t === "Сделка" ? todoList.filter((i) => i.sec === "plot" && i.tab === "Сделка").length : 0;
+                  return (
+                    <Link key={t} className={t === tab ? "on" : ""} href={href(p.id, "plot", t)}>
+                      {t === "Документы" ? `Документы · ${docCount} из ${plot.DOCUMENT_KINDS.length}` : t}
+                      {n > 0 && <span className="tdot" />}
+                    </Link>
+                  );
+                })}
               </div>
               {tab === "Участок" && (
                 <>
                   {status.noCadastralNumber ? (
                     <div className="check warn">
-                      <div>
-                        Участок без кадастрового номера. Кадастровая стоимость не учтена, форму права и ВРИ нужно ввести вручную. Когда номер появится, введите его и загрузите выписку ЕГРН: её данные заменят введённые значения.
-                      </div>
+                      <div>Участок без кадастрового номера: кадастровая стоимость не учтена. Когда номер появится, введите его или загрузите выписку ЕГРН — её данные заменят введённые.</div>
                       <button className="btn sm" onClick={() => setEditing("cadastralNumber")}>
                         Ввести номер
                       </button>
@@ -417,14 +401,10 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       {t}
                     </div>
                   ))}
+                  <FieldTable items={plot.PLOT_FIELDS.map((f) => plotItem(view, f, setEditing))} />
                   <p className="small muted">
                     Где взять данные участка и как их внести — <Link href="/reference/where">Справочник → Где взять данные</Link>
                   </p>
-                  <div className="fgrid">
-                    {plot.PLOT_FIELDS.map((f) => (
-                      <FieldRow key={f.key} p={view} field={f} onEdit={setEditing} />
-                    ))}
-                  </div>
                   {hasEgrn && (
                     <div style={{ marginTop: 14 }}>
                       <button className="btn" onClick={() => egrnInput.current?.click()} disabled={reading}>
@@ -432,82 +412,76 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       </button>
                     </div>
                   )}
+                  <h3 className="h3">Название и точка на карте</h3>
+                  <ProjectTab p={p} onSave={save2} />
                 </>
               )}
-              {tab === "Проект" && <ProjectTab p={p} onSave={async (next, msg) => { await persist(next); flash(msg); }} />}
+              {tab === "Сделка" && <SiteFields p={p} keys={site.DEAL_FIELDS} required={{ landPrice: "Без неё затраты на покупку участка не учтены." }} onSave={save2} />}
               {tab === "История" && <HistoryTab p={p} />}
-            </>
-          ) : (
-            <>
-              <div className="mhead">
-                <h2>Документы проекта</h2>
-                <span className="chip gry">
-                  Загружено {docCount} из {plot.DOCUMENT_KINDS.length}
-                </span>
-                <span className="sp" />
-                <button
-                  className="btn"
-                  onClick={() => {
-                    setDocKind("other");
-                    docInput.current?.click();
-                  }}
-                >
-                  + Другой документ
-                </button>
-              </div>
-              {problems.map((t) => (
-                <div key={t} className="check warn">
-                  {t}
-                </div>
-              ))}
-              <div className="tw">
-                <table className="t">
-                  <thead>
-                    <tr>
-                      <th>Документ</th>
-                      <th className="l">Что подтверждает</th>
-                      <th className="l">Файл</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...plot.DOCUMENT_KINDS, ...(p.documents.some((d) => d.kind === "other") ? [{ kind: "other" as const, title: plot.OTHER_DOCUMENT_TITLE, confirms: "—" }] : [])].map((k) => {
-                      const docs = p.documents.filter((d) => d.kind === k.kind);
-                      const upload = () => {
-                        if (k.kind === "egrn") egrnInput.current?.click();
-                        else {
-                          setDocKind(k.kind);
-                          docInput.current?.click();
-                        }
-                      };
-                      return (
-                        <tr key={k.kind}>
-                          <td>{k.title}</td>
-                          <td className="l">{k.kind === "egrn" ? <Link href={href(p.id, "plot", "Участок")}>{k.confirms}</Link> : k.confirms}</td>
-                          <td className="l">
-                            {docs.map((d) => (
-                              <div key={d.id}>
-                                <a
-                                  onClick={async () => {
-                                    const f = await getFile(d.id);
-                                    if (f) void download(f.name, f.blob);
-                                    else flash("Файл не найден в этом браузере");
-                                  }}
-                                >
-                                  ⭳ {d.fileName}
-                                </a>{" "}
-                                <span className="small muted">{text.date(d.uploadedAt.slice(0, 10))}</span>
-                              </div>
-                            ))}
-                            <button className="btn sm" onClick={upload} disabled={reading && k.kind === "egrn"} style={docs.length ? { marginTop: 4 } : undefined}>
-                              {docs.length ? "Загрузить ещё" : "Загрузить"}
-                            </button>
-                          </td>
+              {tab === "Документы" && (
+                <>
+                  <p className="small muted">Загруженный документ становится источником для полей, которые он подтверждает.</p>
+                  <div className="tw">
+                    <table className="t">
+                      <thead>
+                        <tr>
+                          <th>Документ</th>
+                          <th className="l">Что подтверждает</th>
+                          <th className="l">Файл</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody>
+                        {[...plot.DOCUMENT_KINDS, ...(p.documents.some((d) => d.kind === "other") ? [{ kind: "other" as const, title: plot.OTHER_DOCUMENT_TITLE, confirms: "—" }] : [])].map((k) => {
+                          const docs = p.documents.filter((d) => d.kind === k.kind);
+                          const upload = () => {
+                            if (k.kind === "egrn") egrnInput.current?.click();
+                            else {
+                              setDocKind(k.kind);
+                              docInput.current?.click();
+                            }
+                          };
+                          return (
+                            <tr key={k.kind}>
+                              <td>{k.title}</td>
+                              <td className="l">{k.kind === "egrn" ? <Link href={href(p.id, "plot", "Участок")}>{k.confirms}</Link> : k.confirms}</td>
+                              <td className="l">
+                                {docs.map((d) => (
+                                  <div key={d.id}>
+                                    <a
+                                      onClick={async () => {
+                                        const f = await getFile(d.id);
+                                        if (f) void download(f.name, f.blob);
+                                        else flash("Файл не найден в этом браузере");
+                                      }}
+                                    >
+                                      ⭳ {d.fileName}
+                                    </a>{" "}
+                                    <span className="small muted">{text.date(d.uploadedAt.slice(0, 10))}</span>
+                                  </div>
+                                ))}
+                                <button className="btn sm" onClick={upload} disabled={reading && k.kind === "egrn"} style={docs.length ? { marginTop: 4 } : undefined}>
+                                  {docs.length ? "Загрузить ещё" : "Загрузить"}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        setDocKind("other");
+                        docInput.current?.click();
+                      }}
+                    >
+                      + Другой документ
+                    </button>
+                  </div>
+                </>
+              )}
             </>
           )}
         </main>

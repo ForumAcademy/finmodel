@@ -105,3 +105,93 @@ export function WhereToFind({ text, className = "where" }: { text: string; class
     </div>
   );
 }
+
+/** «Где взять?» — раскрывается по нажатию, чтобы список того, чего не хватает, оставался коротким. */
+export function WhereToggle({ text }: { text: string }) {
+  return (
+    <details className="wt">
+      <summary>Где взять?</summary>
+      <WhereToFind className="note" text={text} />
+    </details>
+  );
+}
+
+/** Поле шага: пустое обязательное — в список «Не хватает», остальное — строкой таблицы «Показатель · Значение · Откуда». */
+export interface FieldItem {
+  key: string;
+  label: string;
+  /** Значение с единицей; пусто — «—». */
+  value: string;
+  /** Обязательное значение не введено. */
+  missing: boolean;
+  /** Метка происхождения и основание; у пустого необязательного — «необязательно». */
+  origin: ReactNode;
+  /** Пояснение под названием: что подставлено вместо пустого, что не учтено. */
+  note?: string | null;
+  /** Почему значение нужно — в списке «Не хватает». */
+  why?: string | null;
+  where: string;
+  onEdit: () => void;
+}
+
+export function FieldTable({ items, missTitle }: { items: readonly FieldItem[]; missTitle?: string }) {
+  const miss = items.filter((i) => i.missing);
+  const rest = items.filter((i) => !i.missing);
+  return (
+    <>
+      {miss.length > 0 && (
+        <>
+          <h3 className="h3">{missTitle ?? `Не хватает · ${miss.length}`}</h3>
+          <div className="todo">
+            {miss.map((i) => (
+              <div key={i.key} className="todo-it">
+                <div className="todo-l">
+                  <b>{i.label}</b>
+                  {i.why && <div className="small">{i.why}</div>}
+                  <WhereToggle text={i.where} />
+                </div>
+                <button className="btn sm" onClick={i.onEdit}>
+                  Ввести
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {rest.length > 0 && (
+        <>
+          {miss.length > 0 && <h3 className="h3">Введено</h3>}
+          <div className="tw">
+            <table className="t ftab">
+              <thead>
+                <tr>
+                  <th>Показатель</th>
+                  <th>Значение</th>
+                  <th className="l">Откуда</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {rest.map((i) => (
+                  <tr key={i.key}>
+                    <td>
+                      {i.label}
+                      {i.note && <div className="small muted">{i.note}</div>}
+                    </td>
+                    <td className="v">{i.value || "—"}</td>
+                    <td className="l">{i.origin}</td>
+                    <td className="act">
+                      <button className="btn sm" onClick={i.onEdit}>
+                        {i.value ? "Изменить" : "Ввести"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </>
+  );
+}

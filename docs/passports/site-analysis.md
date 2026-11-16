@@ -13,7 +13,7 @@
 | `packages/engine/src/modules/variant.ts` | VAR: этажность, классы, список вариантов, очереди, вехи, продажи и бюджет варианта, проверка по НЦС, лучший вариант |
 | `packages/engine/src/zcyc.ts` | Кривая ОФЗ Мосбиржи: адрес, разбор ответа (безрисковая ставка — `F.KPI.RISK_FREE`) |
 | `packages/engine/src/explain/site-view.ts` | Строки экранов: нормативы, градпотенциал, рынок, итоги вариантов, сравнение |
-| `apps/web/components/AnalysisScreens.tsx` | Экраны «Ограничения», «Рынок», «Варианты», «Сравнение» |
+| `apps/web/components/AnalysisScreens.tsx` | Шаги «Что можно построить» (вкладки «Ограничения», «Расчёт по нормативам»), «Рынок», «Варианты» (варианты и сравнение одной таблицей) и «Итог»; ответ шага одной фразой — `siteView.potentialHeadline`, `marketHeadline`, отметки лидеров — `siteView.leaders` |
 | `apps/web/lib/zcyc.ts`, `app/api/zcyc/route.ts` | Загрузка кривой ОФЗ: с биржи напрямую, при запрете браузера — через сервис |
 
 ## Как устроено
