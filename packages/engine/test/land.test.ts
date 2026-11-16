@@ -113,4 +113,49 @@ describe("LAND", () => {
     const r = calculate({ values: { ...vriInput, "LAND.CADASTRAL_VALUE_AFTER_VRI": 1e9 } }, {}, ["F.LAND.VRI_FEE"]);
     expect(r.messages).toContainEqual(expect.objectContaining({ severity: "error", parameterId: "LAND.CADASTRAL_VALUE_AFTER_VRI" }));
   });
+
+  const msk = {
+    ...base,
+    "LAND.TENURE": "аренда",
+    "LAND.RENT_PAYMENT_FREQ": "ежемесячно",
+    "GEN.CADASTRAL_QUARTER": "77:01:0001001",
+    "GEN.PROJECT_STAGE": "концепция",
+    "TEP.RES_GFA": 10000,
+    "TEP.APART_GFA": 0,
+    "TEP.NONRES_GFA": 0,
+    "TIME.MILESTONES": [{ phase: 1, land_acquired: "2026-01-01", rnv_date: "2033-06-30", handover_start: "2033-12-31", handover_end: "2034-06-30" }],
+  };
+
+  it("пример F.LAND.RENT_FIRST_YEAR: 484 578,52 × 10 000 × 0,2173 × 1,9775 ÷ 1,001 = 2 080 205 786,84 руб", () => {
+    const r = calculate({ values: msk }, {}, ["F.LAND.RENT_FIRST_YEAR"]);
+    expect((r.formulas["F.LAND.RENT_FIRST_YEAR"]?.value as Decimal).toDecimalPlaces(2).toNumber()).toBe(2080205786.84);
+  });
+
+  it("аренда в Москве без договора: ставки 273-ПП по годам срока аренды, первый год — разом", () => {
+    const r = calculate({ values: msk }, { horizonMonths: 100 }, ["F.LAND.TAX_OR_RENT"]);
+    const pay = (r.formulas["F.LAND.TAX_OR_RENT"]?.value as Decimal[]).map((x) => x.toNumber());
+    const cad = 5834907660;
+    expect(pay[1]).toBeCloseTo(cad * 0.015 + 484578.52 * 10000 * 0.2173 * 1.9775 / 1.001, 0); // январь 2026: первый год
+    expect(pay.slice(2, 13).every((x) => x === 0)).toBe(true); // остальные месяцы первого года — без платежей
+    expect(pay[13]).toBeCloseTo((cad * 0.015) / 12, 4); // 2-й год — 1,5%
+    expect(pay[25]).toBeCloseTo((cad * 0.03) / 12, 4); // 3-й — 3%
+    expect(pay[37]).toBeCloseTo((cad * 0.05) / 12, 4);
+    expect(pay[49]).toBeCloseTo((cad * 0.07) / 12, 4);
+    expect(pay[61]).toBeCloseTo((cad * 0.08) / 12, 4); // 6-й — 8%
+    expect(pay[73]).toBeCloseTo((cad * 0.1) / 12, 4); // после срока аренды — 10%
+    expect(pay[91]).toBeCloseTo((cad * 0.001) / 12, 4); // после ввода — 0,1%
+    expect(pay[97]).toBe(0); // после передачи первого помещения — аренды нет
+  });
+
+  it("аренда в Москве: сумма по договору заменяет ставки 273-ПП; нет квартала — ошибка", () => {
+    const contract = calculate({ values: { ...msk, "LAND.RENT_ANNUAL": 1200, "LAND.RENT_INDEXATION": 0 } }, { horizonMonths: 24 }, ["F.LAND.TAX_OR_RENT"]);
+    expect((contract.formulas["F.LAND.TAX_OR_RENT"]?.value as Decimal[])[13]?.toNumber()).toBe(100);
+    const noQuarter = calculate({ values: { ...msk, "GEN.CADASTRAL_QUARTER": null } }, { horizonMonths: 24 }, ["F.LAND.TAX_OR_RENT"]);
+    expect(noQuarter.messages).toContainEqual(expect.objectContaining({ severity: "error", parameterId: "GEN.CADASTRAL_QUARTER" }));
+  });
+
+  it("плата за ВРИ в Москве при аренде не взимается (593-ПП — только участки в собственности)", () => {
+    const r = calculate({ values: { ...vriInput, "LAND.TENURE": "аренда" } }, {}, ["F.LAND.VRI_FEE"]);
+    expect((r.formulas["F.LAND.VRI_FEE"]?.value as Decimal).toNumber()).toBe(0);
+  });
 });

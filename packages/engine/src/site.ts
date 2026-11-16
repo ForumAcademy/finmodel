@@ -7,7 +7,7 @@ import { getParameter, type ParameterId, type SpecAssumptionVersion as Assumptio
 import type { CalcProject } from "./project";
 import { eomonth, isIsoDate, type IsoDate } from "./lib/dates";
 import { date as fmtDate, num, plural } from "./lib/text";
-import { basisText, parseNumberRu, PLOT_FIELDS, vriCodes, type HistoryEntry, type LandProject, type Origin, type PlotValue, type ValueBasis } from "./plot";
+import { basisText, cadastralQuarter, parseNumberRu, PLOT_FIELDS, vriCodes, type HistoryEntry, type LandProject, type Origin, type PlotValue, type ValueBasis } from "./plot";
 import type { Variant } from "./modules/variant";
 import { variantId } from "./modules/variant";
 import type { ZcycCurve } from "./zcyc";
@@ -355,6 +355,11 @@ export function siteCalcProject(p: LandProject, today: IsoDate): CalcProject {
     if (!f.param || v === null) continue;
     if (f.key === "vri") values[f.param] = vriCodes(v);
     else values[f.param] = f.kind === "area" || f.kind === "money" ? Number(v) : v;
+  }
+  // Кадастровый квартал не введён — первые три части кадастрового номера
+  if (values["GEN.CADASTRAL_QUARTER"] === undefined && typeof values["GEN.CADASTRAL_NUMBER"] === "string") {
+    const quarter = cadastralQuarter(values["GEN.CADASTRAL_NUMBER"]);
+    if (quarter) values["GEN.CADASTRAL_QUARTER"] = quarter;
   }
   const site = siteOf(p);
   for (const f of SITE_FIELDS) {
