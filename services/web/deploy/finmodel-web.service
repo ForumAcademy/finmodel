@@ -1,0 +1,23 @@
+# Сайт сервиса (Next.js) — служба пользователя finmodel (systemd --user), без root.
+# Пределы, чтобы сайт не мешал другим сайтам на сервере.
+[Unit]
+Description=finmodel: сайт сервиса оценки участка
+
+[Service]
+WorkingDirectory=%h/web/current/apps/web
+Environment=NODE_ENV=production
+Environment=PORT=3400
+Environment=HOSTNAME=127.0.0.1
+Environment=NODE_OPTIONS=--max-old-space-size=384
+EnvironmentFile=-%h/web/.env
+ExecStart=%h/web/node/bin/node %h/web/current/apps/web/server.js
+Restart=on-failure
+RestartSec=5
+MemoryMax=512M
+MemoryHigh=450M
+CPUQuota=50%
+TasksMax=64
+Nice=10
+
+[Install]
+WantedBy=default.target
