@@ -112,15 +112,33 @@ export function F_LAND_TAX_OR_RENT(ctx: FormulaContext): Decimal[] {
   throw new CalcError(`Неизвестная форма права «${tenure}»`, "LAND.TENURE");
 }
 
+interface VriFeeRate {
+  min_density: number;
+  rate: number;
+}
+
 export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
   // Смена ВРИ не нужна — платы нет
   if (ctx.param<boolean>("LAND.VRI_CHANGE") === false) return ZERO;
   const region = ctx.region();
   if (region.vri_fee.exists === false) return ZERO;
-  // Формула региона (например, Москва — 593-ПП) в спецификацию не выписана: обязательный ручной ввод с документом (CLAUDE.md, правило 7).
-  const fee = ctx.requireNum("LAND.VRI_FEE");
-  ctx.message("info", `Плата за изменение ВРИ введена вручную по документу: формула региона «${region.name}» ещё не выписана в справочник`, "LAND.VRI_FEE");
-  return fee;
+  // Сумма из расчёта ДГИ заменяет расчёт
+  const manual = ctx.num("LAND.VRI_FEE");
+  if (manual !== null) return manual;
+  const rates = ctx.param<VriFeeRate[]>("LAND.VRI_FEE_RATES");
+  const after = ctx.num("LAND.CADASTRAL_VALUE_AFTER_VRI");
+  const maxGfa = ctx.num("GPZU.MAX_GFA_ABOVE");
+  if (rates === null || after === null || maxGfa === null) {
+    // Не хватает данных для формулы региона — обязательный ручной ввод с документом (CLAUDE.md, правило 7)
+    const fee = ctx.requireNum("LAND.VRI_FEE");
+    return fee;
+  }
+  const density = maxGfa.div(ctx.requireNum("LAND.AREA"));
+  const row = rates.filter((r) => density.gte(r.min_density)).reduce<VriFeeRate | null>((best, r) => (best === null || r.min_density > best.min_density ? r : best), null);
+  if (row === null) throw new CalcError(`Нет ставки платы за изменение ВРИ для плотности застройки ${density.toString()} в справочнике региона «${region.name}»`, "LAND.VRI_FEE_RATES");
+  const growth = after.sub(ctx.requireNum("LAND.CADASTRAL_VALUE"));
+  if (growth.isNegative()) throw new CalcError("Кадастровая стоимость после смены ВРИ меньше текущей — проверьте значение", "LAND.CADASTRAL_VALUE_AFTER_VRI");
+  return growth.mul(row.rate);
 }
 
 export const LAND_FORMULAS = {

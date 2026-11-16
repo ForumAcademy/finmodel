@@ -287,7 +287,16 @@ function regionRows(r: SpecRegion): RefRow[] {
   );
   rows.push({
     name: "Плата за изменение вида разрешённого использования",
-    value: r.vri_fee.exists === null ? NOT_ENTERED : { text: r.vri_fee.exists ? `есть${r.vri_fee.formula ? `, по формуле «${formulaNames.get(r.vri_fee.formula) ?? ""}»` : ""}` : "нет" },
+    value:
+      r.vri_fee.exists === null
+        ? NOT_ENTERED
+        : {
+            text: r.vri_fee.exists
+              ? `есть${r.vri_fee.formula ? `, по формуле «${formulaNames.get(r.vri_fee.formula) ?? ""}»` : ""}${
+                  r.vri_fee.rates ? `; ставка по плотности застройки: ${r.vri_fee.rates.map((x) => `от ${num(x.min_density, 1)} — ${pct(x.rate)}`).join(", ")}` : ""
+                }`
+              : "нет",
+          },
     status:
       r.vri_fee.exists === null
         ? IN_PROJECT

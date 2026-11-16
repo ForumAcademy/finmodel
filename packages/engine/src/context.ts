@@ -79,6 +79,7 @@ const REGION_VALUES: Partial<Record<ParameterId, (r: SpecRegion) => unknown>> = 
   "TEP.PARKING_NORM": (r) => (r.parking_norm.values ? r.parking_norm : null),
   "TEP.PARKING_NORM_APART": (r) => (r.parking_norm_apart.values ? r.parking_norm_apart : null),
   "TAX.LAND_RATE": (r) => r.land_tax_rate_housing?.value ?? null,
+  "LAND.VRI_FEE_RATES": (r) => r.vri_fee.rates ?? null,
 };
 
 /** Что видит формула: только чтение параметров и других формул с записью в след. */
