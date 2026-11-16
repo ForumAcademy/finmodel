@@ -36,9 +36,8 @@ function download(json: unknown, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Сохранить проект в файл. Возвращает названия документов, файлов которых нет в этом браузере. */
-export async function saveProjectFile(p: plot.LandProject): Promise<string[]> {
-  const at = new Date().toISOString();
+/** Файл проекта с документами из браузера; missing — документы, файлов которых в браузере нет. */
+async function projectFileOf(p: plot.LandProject, versions: book.AssumptionVersion[], at: string): Promise<{ file: projectFile.ProjectFile; missing: string[] }> {
   const entries: projectFile.FileEntry[] = [];
   const present = new Set<string>();
   for (const d of p.documents) {
@@ -48,8 +47,30 @@ export async function saveProjectFile(p: plot.LandProject): Promise<string[]> {
     entries.push({ id: d.id, name: f.name, type: f.type, size: buf.byteLength, sha256: await sha256(buf), data: toBase64(buf) });
     present.add(d.id);
   }
-  download(projectFile.buildProjectFile(p, await getReference(), entries, at), projectFile.projectFileName(p, at));
-  return projectFile.missingFiles(p, present);
+  return { file: projectFile.buildProjectFile(p, versions, entries, at), missing: projectFile.missingFiles(p, present) };
+}
+
+/** Сохранить проект в файл. Возвращает названия документов, файлов которых нет в этом браузере. */
+export async function saveProjectFile(p: plot.LandProject): Promise<string[]> {
+  const at = new Date().toISOString();
+  const { file, missing } = await projectFileOf(p, await getReference(), at);
+  download(file, projectFile.projectFileName(p, at));
+  return missing;
+}
+
+/** Сохранить все проекты браузера (и справочник) в один файл. Возвращает названия документов, файлов которых нет. */
+export async function saveAllProjectsFile(projects: readonly plot.LandProject[]): Promise<string[]> {
+  const at = new Date().toISOString();
+  const versions = await getReference();
+  const files: projectFile.ProjectFile[] = [];
+  const missing: string[] = [];
+  for (const p of projects) {
+    const r = await projectFileOf(p, versions, at);
+    files.push(r.file);
+    missing.push(...r.missing);
+  }
+  download(projectFile.buildBundle(files, versions, at), projectFile.bundleFileName(files.length, at));
+  return missing;
 }
 
 export async function readJson(file: File): Promise<unknown> {

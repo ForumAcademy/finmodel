@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { book, plot, projectFile, site, text } from "@fm/engine";
+import { book, plot, projectFile, site, summary, text } from "@fm/engine";
 import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
@@ -284,6 +284,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
     }
   };
 
+  const todo = summary.todoList(view).length;
   const docCount = plot.DOCUMENT_KINDS.filter((k) => p.documents.some((d) => d.kind === k.kind)).length;
 
   return (
@@ -295,10 +296,10 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
         <div className="ttl">
           <h1>{plot.projectTitle(view)}</h1>
           {status.noCadastralNumber && <Chip tone="yel">Участок без кадастрового номера</Chip>}
-          {status.missing > 0 && (
-            <Link href={href(p.id, "plot", "Участок")}>
+          {todo > 0 && (
+            <Link href={href(p.id, "summary")}>
               <Chip tone="yel">
-                Не хватает {status.missing} {text.plural(status.missing, ["значения", "значений", "значений"])}
+                Нужно ввести: {todo}
               </Chip>
             </Link>
           )}
@@ -306,26 +307,19 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
             Сохранить проект в файл
           </button>
         </div>
-        <div className="sub2">
-          {plot.projectSubtitle(view)}
-          {ref && (
-            <>
-              {" · "}
-              <Link href="/reference/history">{ref.text}</Link>
-              {ref.updateTo && (
-                <button className="btn sm" style={{ marginLeft: 8 }} onClick={() => setUpdating(true)}>
-                  Обновить до версии {ref.updateTo}
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        <div className="sub2">{plot.projectSubtitle(view)}</div>
       </div>
       <div className="shell">
         <aside className={`side ${collapsed ? "col" : ""}`}>
           <button className="collapse" onClick={toggleMenu}>
             {collapsed ? "»" : "« Свернуть меню"}
           </button>
+          <div className="grp">
+            <Link className={`it top1 ${sec === "summary" ? "on" : ""}`} href={href(p.id, "summary")}>
+              <span>Итог</span>
+              {!collapsed && todo > 0 && <span className="chip yel st">ввести {todo}</span>}
+            </Link>
+          </div>
           <div className="grp">
             {!collapsed && (
               <div className="gh open">
@@ -364,19 +358,21 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
         <main className="main">
           {/* Узкий экран: меню слева скрыто, разделы — строкой над содержимым */}
           <nav className="mnav">
-            {[{ sec: "plot" as ProjectSection, short: "Участок" }, ...ANALYSIS_MENU, { sec: "docs" as ProjectSection, short: "Документы" }].map((m) => (
+            {[{ sec: "summary" as ProjectSection, short: "Итог" }, { sec: "plot" as ProjectSection, short: "Участок" }, ...ANALYSIS_MENU, { sec: "docs" as ProjectSection, short: "Документы" }].map((m) => (
               <Link key={m.sec} className={sec === m.sec ? "on" : ""} href={href(p.id, m.sec)}>
                 {m.short}
               </Link>
             ))}
           </nav>
-          {sec === "site" || sec === "market" || sec === "variants" || sec === "compare" ? (
+          {sec === "summary" || sec === "site" || sec === "market" || sec === "variants" || sec === "compare" ? (
             <AnalysisArea
               p={p}
               sec={sec}
               tab={rawTab}
               versions={versions}
               href={(s, t) => href(p.id, s, t)}
+              onEditPlot={setEditing}
+              refInfo={ref ? { text: ref.text, updateTo: ref.updateTo, onUpdate: () => setUpdating(true) } : null}
               onSave={async (next, msg) => {
                 await persist(next);
                 if (msg) flash(msg);

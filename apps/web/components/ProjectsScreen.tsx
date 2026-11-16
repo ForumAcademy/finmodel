@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { plot, projectFile, site, siteView, text } from "@fm/engine";
-import { readJson, saveProjectFile, storedFiles } from "@/lib/files";
-import { deleteFile, getReference, listProjects, newId, nowIso, saveProject, saveStoredFile } from "@/lib/store";
+import { book, plot, projectFile, summary, text } from "@fm/engine";
+import { readJson, saveAllProjectsFile, saveProjectFile, storedFiles } from "@/lib/files";
+import { deleteFile, getReference, listProjects, newId, nowIso, saveProject, saveReference, saveStoredFile } from "@/lib/store";
 import { NewProjectModal } from "./NewProjectModal";
 import { Chip, Modal, Toast } from "./ui";
 
@@ -12,7 +12,7 @@ type LandProject = plot.LandProject;
 
 function Card({ p, onMenu }: { p: LandProject; onMenu: (p: LandProject, el: HTMLElement) => void }) {
   const router = useRouter();
-  const s = plot.projectStatus(p);
+  const s = summary.cardStatus(p);
   return (
     <div className="card pcard" onClick={() => router.push(`/projects/${p.id}`)}>
       <div className="t">{plot.projectTitle(p)}</div>
@@ -28,18 +28,15 @@ function Card({ p, onMenu }: { p: LandProject; onMenu: (p: LandProject, el: HTML
         ⋮
       </button>
       <div className="hr" />
-      <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-        {s.noCadastralNumber && <Chip tone="yel">Участок без кадастрового номера</Chip>}
-        {s.missing > 0 && <Chip tone="yel">Не хватает {s.missing} {text.plural(s.missing, ["значения", "значений", "значений"])}</Chip>}
-        {!s.noCadastralNumber && s.missing === 0 && <Chip tone="grn">Данные участка заполнены</Chip>}
-      </div>
-      {siteView.snapshotText(site.siteOf(p).snapshot) && (
-        <div className="small" style={{ marginTop: 8 }}>
-          {siteView.snapshotText(site.siteOf(p).snapshot)}
+      {s.result && <div className="res">{s.result}</div>}
+      {s.reason && (
+        <div className="row" style={{ flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+          <Chip tone={s.result ? "gry" : "yel"}>{s.reason}</Chip>
         </div>
       )}
       <div className="small muted" style={{ marginTop: 8 }}>
-        Обновлено {text.date(p.updatedAt.slice(0, 10))}
+        {s.changed}
+        {s.calculated ? ` · ${s.calculated}` : ""}
       </div>
     </div>
   );
@@ -54,6 +51,7 @@ export function ProjectsScreen() {
   const [menu, setMenu] = useState<{ p: LandProject; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [conflict, setConflict] = useState<{ file: projectFile.ProjectFile; existing: LandProject } | null>(null);
+  const [bundle, setBundle] = useState<{ bundle: projectFile.ProjectsBundle; conflicts: string[] } | null>(null);
   const [notice, setNotice] = useState<{ title: string; lines: string[]; open?: string } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -86,12 +84,24 @@ export function ProjectsScreen() {
     else flash("Файл проекта скачан");
   }
 
+  async function allToFile() {
+    const missing = await saveAllProjectsFile(all ?? []);
+    if (missing.length) setNotice({ title: "Проекты сохранены без части документов", lines: [`В этом браузере нет файлов: ${missing.join(", ")}. Остальное сохранено.`] });
+    else flash("Файл со всеми проектами скачан");
+  }
+
   async function fromFile(f: File | undefined) {
     if (fileInput.current) fileInput.current.value = "";
     if (!f) return;
-    const r = projectFile.readProjectFile(await readJson(f));
-    if (!r.ok) {
+    const r = projectFile.readAnyProjectFile(await readJson(f));
+    if (r.kind === "error") {
       setNotice({ title: "Файл не открыт", lines: [r.error] });
+      return;
+    }
+    if (r.kind === "bundle") {
+      const conflicts = projectFile.bundleConflicts(r.bundle, all ?? []).map((c) => plot.projectTitle(c.existing));
+      if (conflicts.length) setBundle({ bundle: r.bundle, conflicts });
+      else await openBundle(r.bundle, "copy");
       return;
     }
     const existing = projectFile.findConflict(r.file, all ?? []);
@@ -99,13 +109,19 @@ export function ProjectsScreen() {
     else await open(r.file, "new", null);
   }
 
-  async function open(file: projectFile.ProjectFile, mode: projectFile.OpenMode, existing: LandProject | null) {
-    setConflict(null);
+  /** Открыть один проект из файла: документы, проект; возвращает пояснения для сообщения. */
+  async function openOne(file: projectFile.ProjectFile, mode: projectFile.OpenMode, existing: LandProject | null, others: readonly LandProject[]) {
     const res = projectFile.openProject(file, mode, await getReference(), existing, newId, nowIso());
     const { files, broken } = await storedFiles(res.files);
     for (const f of files) await saveStoredFile(f);
-    if (mode === "replace" && existing) for (const id of projectFile.orphanFileIds(existing, all ?? [])) await deleteFile(id);
+    if (mode === "replace" && existing) for (const id of projectFile.orphanFileIds(existing, others)) await deleteFile(id);
     await saveProject(res.project);
+    return { res, broken };
+  }
+
+  async function open(file: projectFile.ProjectFile, mode: projectFile.OpenMode, existing: LandProject | null) {
+    setConflict(null);
+    const { res, broken } = await openOne(file, mode, existing, all ?? []);
     await reload();
     const lines = [
       ...(res.referenceNote ? [res.referenceNote] : []),
@@ -113,6 +129,29 @@ export function ProjectsScreen() {
     ];
     if (lines.length) setNotice({ title: "Проект открыт", lines, open: res.project.id });
     else flash(mode === "replace" ? "Проект заменён проектом из файла" : "Проект открыт из файла");
+  }
+
+  async function openBundle(b: projectFile.ProjectsBundle, mode: projectFile.BundleMode) {
+    setBundle(null);
+    const here = all ?? [];
+    // Справочник из файла добавляется, только если он продолжает справочник этого браузера; иначе проекты сохраняют свою версию
+    const local = await getReference();
+    if (book.referencePlan(local, b.reference).kind === "newer") await saveReference(book.applyReference(local, b.reference, here, nowIso()).versions);
+    const steps = projectFile.bundlePlan(b, here, mode);
+    const broken: string[] = [];
+    let ownReference = 0;
+    for (const s of steps) {
+      const r = await openOne(s.file, s.mode, s.existing, here);
+      broken.push(...r.broken);
+      if (r.res.referenceNote) ownReference++;
+    }
+    await reload();
+    const lines = [
+      projectFile.bundleResultText(steps.length, b.projects.length - steps.length),
+      ...(ownReference ? [`Проекты со своей версией справочника: ${ownReference}. Они посчитаны на справочнике из файла; перейти на справочник этого браузера можно кнопкой «Обновить» на экране «Итог» проекта.`] : []),
+      ...(broken.length ? [`Документы повреждены и не открыты: ${broken.join(", ")}.`] : []),
+    ];
+    setNotice({ title: "Проекты открыты", lines });
   }
 
   async function act(kind: "copy" | "archive", p: LandProject) {
@@ -126,11 +165,14 @@ export function ProjectsScreen() {
 
   return (
     <div className="page">
-      <div className="row">
+      <div className="row prow">
         <h1>Проекты</h1>
-        <div style={{ flex: 1 }} />
+        <div className="sp" style={{ flex: 1 }} />
+        <button className="btn" disabled={!all?.length} onClick={() => void allToFile()}>
+          Сохранить все проекты в файл
+        </button>
         <button className="btn" onClick={() => fileInput.current?.click()}>
-          Открыть проект из файла
+          Открыть из файла
         </button>
         <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={(e) => void fromFile(e.target.files?.[0])} />
         <button className="btn pri" onClick={() => setCreating(true)}>
@@ -138,7 +180,7 @@ export function ProjectsScreen() {
         </button>
       </div>
       <div className="small muted" style={{ marginTop: 6 }}>
-        Проекты хранятся в этом браузере. Сохраните проект в файл, чтобы не потерять его и передать коллегам.
+        Проекты хранятся в этом браузере и на этом адресе сайта. Чтобы не потерять их, передать коллегам или перенести на другой компьютер, сохраните проекты в файл.
       </div>
       <div className="ptoolbar">
         <div className="seg">
@@ -206,6 +248,33 @@ export function ProjectsScreen() {
             {text.date(conflict.file.project.updatedAt.slice(0, 10))}.
           </p>
           <p className="small muted">«Заменить» — данные и документы проекта в браузере заменятся данными из файла. «Создать копию» — появится второй проект с пометкой «(копия)».</p>
+        </Modal>
+      )}
+      {bundle && (
+        <Modal
+          title="Часть проектов уже есть"
+          onClose={() => setBundle(null)}
+          footer={
+            <>
+              <button className="btn" onClick={() => setBundle(null)} style={{ marginRight: "auto" }}>
+                Отмена
+              </button>
+              <button className="btn" onClick={() => void openBundle(bundle.bundle, "skip")}>
+                Не открывать их
+              </button>
+              <button className="btn" onClick={() => void openBundle(bundle.bundle, "copy")}>
+                Создать копии
+              </button>
+              <button className="btn pri" onClick={() => void openBundle(bundle.bundle, "replace")}>
+                Заменить
+              </button>
+            </>
+          }
+        >
+          <p>
+            В файле {bundle.bundle.projects.length} {text.plural(bundle.bundle.projects.length, ["проект", "проекта", "проектов"])}. В этом браузере уже есть проекты с такими же названиями: {bundle.conflicts.map((c) => `«${c}»`).join(", ")}.
+          </p>
+          <p className="small muted">«Заменить» — эти проекты заменятся проектами из файла. «Создать копии» — появятся вторые проекты с пометкой «(копия)». «Не открывать их» — откроются только остальные. Остальные проекты из файла откроются в любом случае.</p>
         </Modal>
       )}
       {notice && (

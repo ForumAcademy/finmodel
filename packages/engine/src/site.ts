@@ -329,10 +329,13 @@ export function applySiteChange(p: LandProject, c: SiteChange, at: string): Land
   return { ...p, site: { ...site, values: { ...site.values, [c.field]: c.to }, snapshot: null }, history: [...p.history, entry], updatedAt: at };
 }
 
-/** Заменить список (зоны, аналоги, свои варианты) или выбранный вариант; итоги расчёта сбрасываются. */
+/** Заменить список (зоны, аналоги, свои варианты) или выбранный вариант; итоги расчёта сбрасываются. Запомнить итог — без смены даты изменения. */
 export function updateSite(p: LandProject, patch: Partial<Omit<SiteData, "values">>, at: string): LandProject {
-  const keepSnapshot = Object.keys(patch).every((k) => k === "selectedVariant" || k === "snapshot");
-  return { ...p, site: { ...siteOf(p), ...(keepSnapshot ? {} : { snapshot: null }), ...patch }, updatedAt: at };
+  const keys = Object.keys(patch);
+  const keepSnapshot = keys.every((k) => k === "selectedVariant" || k === "snapshot");
+  // Запомненный итог расчёта — не правка данных: дата «Данные изменены» не меняется
+  const onlySnapshot = keys.every((k) => k === "snapshot");
+  return { ...p, site: { ...siteOf(p), ...(keepSnapshot ? {} : { snapshot: null }), ...patch }, updatedAt: onlySnapshot ? p.updatedAt : at };
 }
 
 // ---------- вводные для расчёта ----------
