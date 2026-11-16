@@ -1,0 +1,88 @@
+name: Сайт на сервер
+
+# Сборка сайта (Next.js, standalone) и установка на сервер в России от пользователя
+# finmodel без root. Меняет только ~/web и службу пользователя finmodel-web;
+# nginx, сертификаты и другие сайты не трогает. Паспорт — docs/passports/web.md.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - apps/web/**
+      - packages/**
+      - data/**
+      - services/web/**
+      - pnpm-lock.yaml
+      - .github/workflows/web-deploy.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Сборка и установка
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Тесты
+        run: pnpm test
+      - name: Сборка сайта
+        run: pnpm build
+      - name: Пакет сайта
+        run: |
+          R=release
+          mkdir -p "$R/apps/web/.next"
+          cp -a apps/web/.next/standalone/. "$R/"
+          cp -a apps/web/.next/static "$R/apps/web/.next/static"
+          [ -d apps/web/public ] && cp -a apps/web/public "$R/apps/web/public" || true
+          cp -a services/web/deploy "$R/deploy"
+          tar -czf site.tgz -C "$R" .
+          du -h site.tgz
+      - name: Ключ SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          install -m 600 /dev/null key
+          python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
+      - name: Установка через SSH
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+          DATA_MOS_API_KEY: ${{ secrets.DATA_MOS_API_KEY }}
+        run: |
+          set -o pipefail
+          SSH="ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 $USER_NAME@$HOST"
+          SCP="scp -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          REL="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          $SSH "mkdir -p ~/web/incoming ~/web/releases/$REL"
+          # Node.js той же версии, что в сборке; загружается, только если на сервере другой.
+          WANT="$(node -v)"
+          HAVE="$($SSH 'cat ~/web/node/VERSION 2>/dev/null' || true)"
+          if [ "$WANT" != "$HAVE" ]; then
+            curl -fsSLo node.tar.xz "https://nodejs.org/dist/$WANT/node-$WANT-linux-x64.tar.xz"
+            curl -fsSL "https://nodejs.org/dist/$WANT/SHASUMS256.txt" | grep " node-$WANT-linux-x64.tar.xz\$" | sed "s/node-$WANT-linux-x64.tar.xz/node.tar.xz/" | sha256sum -c -
+            echo "$WANT" > node.version
+            $SCP node.tar.xz node.version "$USER_NAME@$HOST:web/incoming/"
+          fi
+          # Ключ портала открытых данных Москвы — из секрета GitHub, в журнал не выводится.
+          if [ -n "$DATA_MOS_API_KEY" ]; then
+            printf '%s' "$DATA_MOS_API_KEY" | $SSH 'umask 077; cat > ~/web/incoming/data_mos_api_key'
+          fi
+          $SCP site.tgz "$USER_NAME@$HOST:web/incoming/site.tgz"
+          $SSH "tar -xzf ~/web/incoming/site.tgz -C ~/web/releases/$REL && rm ~/web/incoming/site.tgz && bash ~/web/releases/$REL/deploy/install.sh $REL" 2>&1 | tee out.txt
+      - name: Итог
+        if: always()
+        run: |
+          rm -f key
+          { echo "### Установка сайта"; echo '```'; cat out.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

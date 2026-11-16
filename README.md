@@ -34,6 +34,8 @@ pnpm typecheck && pnpm lint && pnpm test
 pnpm dev                          # http://localhost:3000
 ```
 
-## Vercel
+## Где работает сайт
 
-Отдельный проект Vercel, подключённый к этому репозиторию. Корневая папка проекта — `apps/web`, фреймворк — Next.js (`apps/web/vercel.json`).
+Сервер в России (VPS Хостленд), адрес `https://ocenka.orientirgpz.com`. После слияния в `main` workflow «Сайт на сервер» (`.github/workflows/web-deploy.yml`) прогоняет тесты, собирает сайт и ставит его на сервер; если новая версия не отвечает, возвращается предыдущая. Подробности — `docs/passports/web.md`.
+
+Vercel (корень `apps/web`, `apps/web/vercel.json`) работает запасным до 30.11.2026 (решение пользователя 16.11.2026), затем отключается.
