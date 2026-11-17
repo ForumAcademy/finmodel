@@ -245,6 +245,50 @@ export const regionSchema = z
       })
       .strict()
       .optional(),
+    /** Снос существующих зданий: стоимость 1 м³ сносимого здания по показателю региона (Москва — Москомэкспертиза). */
+    demolition: z
+      .object({
+        source_ids: idList,
+        rate_per_m3: z.number().positive(),
+        price_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        vat_included: z.boolean(),
+        status: z.enum(["needs_verification", "verified"]),
+        note: z.string().optional(),
+      })
+      .strict()
+      .optional(),
+    /**
+     * Обязательства перед городом по соцобъектам (Москва — 3135-ПП): расчётное население, места по нормативам на
+     * norm_base жителей по зонам районов, стоимость места и участок под объект.
+     */
+    social_obligations: z
+      .object({
+        source_ids: idList,
+        m2_per_resident: z.number().positive(),
+        norm_base: z.number().positive(),
+        price_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        zones: z.array(z.object({ zone: z.number().int().positive(), districts: z.array(z.string().min(1)).min(1) }).strict()).min(1),
+        fallback_zone: z.number().int().positive(),
+        land_group: z.string().min(1),
+        objects: z
+          .array(
+            z
+              .object({
+                key: z.string().min(1),
+                title: z.string().min(1),
+                unit: z.string().min(1),
+                per_zone: z.record(z.string().regex(/^\d+$/), z.number().nonnegative()),
+                unit_cost: z.number().positive(),
+                land_m2_per_unit: z.number().positive().nullable(),
+              })
+              .strict(),
+          )
+          .min(1),
+        status: z.enum(["needs_verification", "verified"]),
+        note: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     vri_fee: z
       .object({
         exists: z.boolean().nullable(),

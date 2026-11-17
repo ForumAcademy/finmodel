@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
 import { getFormula, type FormulaId, type ParameterId } from "@fm/spec";
-import { ANALYSIS_FORMULAS, Engine, SPEC_ASSUMPTIONS, type CalcProject } from "../src";
+import { ANALYSIS_FORMULAS, Engine, SPEC_ASSUMPTIONS, computeProject, type CalcProject } from "../src";
 import { analyzeSite, chooseBest, computeVariant, salesMonths, variantProject } from "../src/analysis";
 import { compareTable, commonNotCounted, criterionMissing, leaders, marketHeadline, marketRows, potentialHeadline, ncsLine, rateRows, rateText, riskFreeMissing, normRows, potentialRows, snapshotText, snapshotOf } from "../src/explain/site-view";
 import { analogFromForm, analogToForm, customVariant, emptySite, parseSite, siteCalcProject, siteText, variantTitle, applySiteChange, siteChange } from "../src/site";
@@ -215,6 +215,17 @@ describe("анализ участка: варианты освоения", () =>
     expect(capex.find((r) => r.item_id === "SMR_ABOVE")?.base).toBe("F.TEP.GFA_ABOVE");
     // Подготовка площадки: от РНС до начала СМР, а на вехах варианта это одна дата — платёж в РНС
     expect(capex.find((r) => r.item_id === "SITE_PREP")?.schedule_rule).toBe("at_milestone");
+    // Москва: снос по показателю Москомэкспертизы (3 710 руб/м³, цены 01.02.2025) и компенсация городу за соцобъекты
+    const demolition = capex.find((r) => r.item_id === "DEMOLITION") as { base: string; rate?: number; price_date?: string } | undefined;
+    expect(demolition).toMatchObject({ base: "F.CAPEX.DEMOLITION_VOLUME", rate: 3710, price_date: "2025-02-01" });
+    expect(capex.find((r) => r.item_id === "SOCIAL_COMPENSATION")).toMatchObject({ price_date: "2025-02-01" });
+    // Полный расчёт варианта: компенсация считается и попадает в платежи с ростом цен от 01.02.2025; здания под снос не заданы — снос 0
+    const full = computeProject(vp.project as CalcProject).result.formulas;
+    const totals = full["F.CAPEX.ITEM_TOTAL"]?.value as Record<string, Decimal>;
+    expect(totals.SOCIAL_COMPENSATION?.gt(0)).toBe(true);
+    expect(totals.DEMOLITION?.isZero()).toBe(true);
+    const paid = (full["F.CAPEX.ITEM_CASH"]?.value as Record<string, Decimal[]>).SOCIAL_COMPENSATION?.reduce((a, b) => a.add(b), new Decimal(0));
+    expect(paid?.gt(totals.SOCIAL_COMPENSATION as Decimal)).toBe(true);
     // Ставка СМР задана только для бизнес-класса
     const comfort = variantProject(MSK, { ...v, housing_class: "комфорт", id: "комфорт-9" });
     expect((comfort.project?.input.values["CAPEX.ITEMS"] as { item_id: string }[]).some((r) => r.item_id === "SMR_ABOVE")).toBe(false);

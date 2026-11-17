@@ -79,6 +79,17 @@ export function checkSpec(spec: SpecData): SpecCheckResult {
         if (v.length !== keys.length) errors.push(`${owner}: cadastral_value_estimate.districts ${d} — ${v.length} значений вместо ${keys.length}`);
       }
     }
+    if (r.demolition) checkSources(owner, r.demolition.source_ids);
+    const soc = r.social_obligations;
+    if (soc) {
+      checkSources(owner, soc.source_ids);
+      const zones = soc.zones.map((z) => String(z.zone));
+      if (!zones.includes(String(soc.fallback_zone))) errors.push(`${owner}: social_obligations.fallback_zone ${soc.fallback_zone} нет в zones`);
+      for (const o of soc.objects) {
+        for (const z of zones) if (o.per_zone[z] === undefined) errors.push(`${owner}: social_obligations, ${o.key} — нет норматива для зоны ${z}`);
+      }
+      if (est && !est.groups.some((g) => g.key === soc.land_group)) errors.push(`${owner}: social_obligations.land_group ${soc.land_group} нет в cadastral_value_estimate.groups`);
+    }
     checkSources(owner, r.vri_fee.source_ids);
     checkSources(owner, r.parking_norm.source_ids);
     checkSources(owner, r.parking_norm_apart.source_ids);
