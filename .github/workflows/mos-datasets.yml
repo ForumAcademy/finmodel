@@ -30,6 +30,12 @@ jobs:
           python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
           ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
             "$USER_NAME@$HOST" 'python3 -' < scripts/probe_mos_data.py | tee out.txt
+          ssh -i key "$USER_NAME@$HOST" 'curl -sS -m 120 -A "Mozilla/5.0" "https://service.garant.ru/objects/2024/12/3d44a4e319c3cb7ed3be1c512f2bb574/410953384_1.pdf"' > upks.pdf || true
           rm -f key
+          ls -la upks.pdf; file upks.pdf
+          (command -v pdftotext || sudo apt-get install -y -qq poppler-utils >/dev/null) && pdftotext -layout upks.pdf upks.txt && wc -l upks.txt
+          echo "== Начало"; head -80 upks.txt
+          echo "== Квартал 77:01:0001028"; grep -n -B3 -A3 "77:01:0001028" upks.txt | head -60
+          echo "== Строки с 77:01:00010"; grep -c "77:01:00010" upks.txt || true
       - name: Итог
         run: cat out.txt >> "$GITHUB_STEP_SUMMARY"
