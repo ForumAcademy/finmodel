@@ -281,6 +281,9 @@ export function SiteSection({ p, tab, state, onSave, tabHref }: { p: LandProject
             required={{ maxFloors: "Без неё не строятся варианты.", ...(needVolume ? { density: "Нужно хотя бы одно ограничение объёма: плотность, предельная наземная площадь по ГПЗУ или процент застройки." } : {}) }}
             onSave={onSave}
           />
+          <h3 className="h3">Здания на участке</h3>
+          <p className="small muted">Что нужно снести перед стройкой. Снос считается по стоимости сноса 1 м³ по показателю города; объём — из техпаспорта или площадь × высота этажа 3,3 м.</p>
+          <SiteFields p={p} keys={site.DEMOLITION_FIELDS} required={{ demolitionGfa: "Без неё снос не учтён. Если сносить нечего — введите 0." }} onSave={onSave} />
           <h3 className="h3">Зоны с ограничениями</h3>
           <p className="small muted">Охранные зоны сетей, санитарно-защитные, водоохранные. Площадь зон, где строить нельзя, вычитается из площади под застройку.</p>
           {site.siteOf(p).zouit.length ? (
