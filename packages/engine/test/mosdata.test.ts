@@ -54,6 +54,11 @@ describe("данные портала открытых данных Москвы
     expect(list[0]?.address).toMatch(/^Российская Федерация/);
     expect(mosdata.cityPlotText(list[1] as mosdata.CityPlot)).toBe("77:01:0001028:2, 793 м², деловое управление (4.1), сдан в аренду");
     expect(mosdata.cityPlotsAt({ error: 1 }, P)).toEqual([]);
+    const m = mosdata.mosLookup(P, { plots: PLOTS }, AT);
+    expect(mosdata.mosText(m)).toBe("Городских участков в этой точке: 2. Портал открытых данных Москвы, 17.11.2026.");
+    const chosen = mosdata.chosenCityPlot(m, "77:01:0001028:2999");
+    expect(mosdata.mosText(m, chosen)).toBe("Участок 77:01:0001028:2999, 3110 м², деловое управление (4.1), в аренду не сдан. Портал открытых данных Москвы, 17.11.2026.");
+    expect(mosdata.chosenCityPlot(m, null)).toBeNull();
   });
 
   it("зоны охраны: точка в дыре границы — не в зоне", () => {

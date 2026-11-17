@@ -237,11 +237,14 @@ export function mosBasis(key: MosDatasetKey, at: string, note: string): ValueBas
 }
 
 /** Строка «Данные Москвы» для экрана. */
-export function mosText(m: MosLookup): string {
-  const plots = m.plots.length ? `Городских участков в этой точке: ${m.plots.length}` : "Городских участков в этой точке нет";
+export function mosText(m: MosLookup, chosen: CityPlot | null = null): string {
+  const plots = chosen ? `Участок ${cityPlotText(chosen)}` : m.plots.length ? `Городских участков в этой точке: ${m.plots.length}` : "Городских участков в этой точке нет";
   const heritage = m.zones.length || m.territories.length ? `, участок в зоне охраны памятников` : "";
-  return `${plots}${heritage}. Портал открытых данных Москвы, ${fmtDate(m.fetchedAt.slice(0, 10))}`;
+  return `${plots}${heritage}. Портал открытых данных Москвы, ${fmtDate(m.fetchedAt.slice(0, 10))}.`;
 }
+
+/** Выбранный в проекте городской участок: тот, чей кадастровый номер стоит в проекте; иначе null. */
+export const chosenCityPlot = (m: MosLookup, cadastralNumber: string | null): CityPlot | null => m.plots.find((c) => c.cadastralNumber === cadastralNumber) ?? null;
 
 /** Городская земля: собственность города или неразграниченная. */
 export const isCityLand = (c: CityPlot): boolean => /город|неразграничен/i.test(c.ownerType ?? "");
