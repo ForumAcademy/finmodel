@@ -291,7 +291,7 @@ export function heritageZouit(m: MosLookup): ZouitEntry[] {
     restriction:
       key === "zones"
         ? "Зона охраны объектов культурного наследия: высота, габариты и облик новых зданий — по режиму зоны; для жилья может понадобиться изменение режима"
-        : "Территория объекта культурного наследия: новое строительство на ней, как правило, запрещено",
+        : "Территория объекта культурного наследия: новое строительство ограничено режимом территории памятника",
     origin: "source",
     basis: mosBasis(key, m.fetchedAt, "Точка участка внутри границы"),
   });
@@ -330,7 +330,7 @@ export function cadastralValueEstimate(p: LandProject, at: string): PlotChange[]
   const to: PlotValue = {
     value,
     origin: "estimate",
-    basis: { title: "Оценка по среднему УПКС, распоряжение ДГИ № 214856", url: s.url ?? null, date: at.slice(0, 10), note: `${num(area, 0)} м² × ${num(String(u.value), 2)} руб/м² — группа «${title}», ${u.where}. Замените стоимостью из выписки ЕГРН, когда она будет` },
+    basis: { title: "Оценка по средней кадастровой стоимости 1 м² в квартале, распоряжение ДГИ Москвы № 214856", url: s.url ?? null, date: at.slice(0, 10), note: `${num(area, 0)} м² × ${num(String(u.value), 2)} руб/м² — группа «${title}», ${u.where}. Замените стоимостью из выписки ЕГРН, когда она будет` },
   };
   if (cur.value === to.value && cur.origin === "estimate") return [];
   return [{ field: "cadastralValue", from: cur, to }];

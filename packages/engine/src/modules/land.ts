@@ -69,7 +69,7 @@ function cadastralEstimate(ctx: FormulaContext, group: (t: UpksTable) => string 
   const u = upksFor(t, quarter, g);
   if (u === null) return null;
   const title = t.groups.find((x) => x.key === g)?.title ?? g;
-  return { value: area.mul(u.value), text: `${fmt(area)} м² × ${fmt(new Decimal(u.value))} руб/м² — средний УПКС группы «${title}», ${u.where}, распоряжение ДГИ № 214856 на ${t.valuation_date}` };
+  return { value: area.mul(u.value), text: `${fmt(area)} м² × ${fmt(new Decimal(u.value))} руб/м² — средняя кадастровая стоимость 1 м² земли группы «${title}», ${u.where}, распоряжение ДГИ Москвы № 214856 на ${t.valuation_date.split("-").reverse().join(".")}` };
 }
 
 /** Кадастровая стоимость из проекта или оценка; null — нет ни того, ни другого (её потребует платёж, которому она нужна). */
