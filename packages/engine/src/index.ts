@@ -44,6 +44,7 @@ export * as plot from "./plot";
 export * as site from "./site";
 export * as analysis from "./analysis";
 export * as zcyc from "./zcyc";
+export * as geocode from "./geocode";
 export * as reference from "./reference";
 export * as dataGuide from "./where";
 export * as book from "./book";
