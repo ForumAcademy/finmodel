@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { book, geocode, plot, projectFile, site, summary, text } from "@fm/engine";
+import { book, geocode, mosdata, plot, projectFile, site, summary, text } from "@fm/engine";
 import { EGRN_ACCEPT } from "@fm/egrn-import";
 import { download, readEgrn } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
-import { findByAddress } from "@/lib/geocode";
+import { findByAddress, findMosData } from "@/lib/geocode";
 import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
 import { Chip, ExpertFields, FieldTable, Modal, OriginTag, Toast, WhereToFind, type FieldItem } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
@@ -175,6 +175,9 @@ function EditField({ p, field, onApply, onClose }: { p: LandProject; field: plot
 
 // ---------- экран проекта ----------
 
+/** Код региона Москвы: портал открытых данных Москвы — только для участков в Москве. */
+const MOSCOW = "77";
+
 export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: ProjectSection; tab: string | undefined }) {
   const tab: PlotTab = PLOT_TABS.find((t) => t === rawTab) ?? "Участок";
   const [project, setProject] = useState<LandProject | null | undefined>(undefined);
@@ -194,6 +197,9 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
   const [geoFailed, setGeoFailed] = useState(false);
   const [geoChoices, setGeoChoices] = useState<{ query: string; candidates: geocode.GeoCandidate[] } | null>(null);
   const geoAuto = useRef(false);
+  const [mosBusy, setMosBusy] = useState(false);
+  const [mosError, setMosError] = useState<string | null>(null);
+  const mosAuto = useRef(false);
 
   useEffect(() => {
     getProject(id).then(setProject, () => setProject(null));
@@ -210,6 +216,35 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
     setTimeout(() => setToast(null), 2600);
   }, []);
 
+  /** Данные портала открытых данных Москвы по точке: только для участков в Москве. */
+  const findMos = useCallback(async (proj: LandProject): Promise<LandProject> => {
+    if (!proj.point || proj.plot.regionCode.value !== MOSCOW) return proj;
+    setMosBusy(true);
+    try {
+      const r = await findMosData(proj.point, nowIso());
+      setMosError("error" in r ? r.error : null);
+      if ("error" in r) return proj;
+      const a = mosdata.applyMosLookup(proj, r.lookup, nowIso());
+      await saveProject(a.project);
+      setProject(a.project);
+      if (a.problems.length) setProblems((x) => [...x, ...a.problems]);
+      return a.project;
+    } finally {
+      setMosBusy(false);
+    }
+  }, []);
+
+  const takeCityPlot = useCallback(
+    async (proj: LandProject, c: mosdata.CityPlot) => {
+      const r = mosdata.applyCityPlot(proj, c, nowIso());
+      await saveProject(r.project);
+      setProject(r.project);
+      setProblems(r.problems);
+      flash(`Взяты данные участка ${c.cadastralNumber}`);
+    },
+    [flash],
+  );
+
   const applyFound = useCallback(
     async (proj: LandProject, query: string, c: geocode.GeoCandidate) => {
       const r = geocode.applyGeocode(proj, c, query, nowIso());
@@ -218,8 +253,9 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
       setGeoChoices(null);
       setProblems(r.problems);
       flash(`Найдено по адресу: ${c.locality.join(", ") || c.label}`);
+      await findMos(r.project);
     },
-    [flash],
+    [flash, findMos],
   );
 
   const findPlace = useCallback(
@@ -249,6 +285,13 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
     geoAuto.current = true;
     void findPlace(project);
   }, [project, findPlace]);
+
+  // Участок найден раньше, а данных Москвы ещё нет — запросить один раз.
+  useEffect(() => {
+    if (!project || !project.geo || project.mos || geoBusy || mosAuto.current || project.plot.regionCode.value !== MOSCOW) return;
+    mosAuto.current = true;
+    void findMos(project);
+  }, [project, geoBusy, findMos]);
 
   if (project === undefined) return null;
   if (project === null) {
@@ -454,6 +497,37 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       {geoBusy ? "Ищем…" : "Найти данные по адресу"}
                     </button>
                   </div>
+                  {view.plot.regionCode.value === MOSCOW && p.point && (
+                    <div className={`check ${p.mos ? "ok" : ""}`}>
+                      <div>
+                        <b>Данные Москвы.</b> {mosBusy ? "Ищем на портале открытых данных Москвы…" : p.mos ? mosdata.mosText(p.mos) : mosError ?? "Сервис ещё не смотрел портал открытых данных Москвы."}
+                        {p.mos && p.mos.plots.length > 1 && (
+                          <>
+                            {" "}В этой точке несколько городских участков. Выберите тот, что под проект:
+                            <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                              {p.mos.plots.map((c) => (
+                                <li key={c.cadastralNumber}>
+                                  <button className="btn sm" style={{ margin: "3px 0" }} onClick={() => void takeCityPlot(p, c)} disabled={view.plot.cadastralNumber.value === c.cadastralNumber}>
+                                    {mosdata.cityPlotText(c)}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                        {p.mos && (p.mos.zones.length > 0 || p.mos.territories.length > 0) && (
+                          <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                            {[...p.mos.zones, ...p.mos.territories].map((n) => (
+                              <li key={n}>{n}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <button className="btn sm" onClick={() => void findMos(p)} disabled={mosBusy}>
+                        {mosBusy ? "Ищем…" : "Обновить"}
+                      </button>
+                    </div>
+                  )}
                   {geoChoices && (
                     <div className="check warn">
                       <div>

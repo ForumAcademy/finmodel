@@ -68,6 +68,17 @@ export function checkSpec(spec: SpecData): SpecCheckResult {
     if (r.land_tax_rate_housing) checkSources(owner, r.land_tax_rate_housing.source_ids);
     checkSources(owner, r.land_rent_source_ids);
     if (r.land_rent) checkSources(owner, r.land_rent.source_ids);
+    const est = r.cadastral_value_estimate;
+    if (est) {
+      checkSources(owner, est.source_ids);
+      const keys = est.groups.map((g) => g.key);
+      for (const g of [est.residential_group, ...Object.values(est.vri_groups)]) {
+        if (!keys.includes(g)) errors.push(`${owner}: cadastral_value_estimate — группы ${g} нет в groups`);
+      }
+      for (const [d, v] of Object.entries(est.districts)) {
+        if (v.length !== keys.length) errors.push(`${owner}: cadastral_value_estimate.districts ${d} — ${v.length} значений вместо ${keys.length}`);
+      }
+    }
     checkSources(owner, r.vri_fee.source_ids);
     checkSources(owner, r.parking_norm.source_ids);
     checkSources(owner, r.parking_norm_apart.source_ids);

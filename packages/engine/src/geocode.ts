@@ -75,8 +75,8 @@ interface NominatimRow {
   address?: Record<string, unknown>;
 }
 
-/** Части адреса OpenStreetMap от крупной к мелкой: округ Москвы или городской округ области, район, населённый пункт. */
-const LOCALITY_KEYS = ["city_district", "county", "municipality", "suburb", "city", "town", "village", "hamlet"] as const;
+/** Части адреса, которые не относятся к округу и району: дом, улица, город, регион, индекс, страна. */
+const NOT_LOCALITY = ["house_number", "road", "city", "state", "region", "postcode", "country", "ISO3166-2-lvl4", "country_code"] as const;
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
@@ -91,11 +91,11 @@ export function parseGeocode(json: unknown): GeoCandidate[] {
     const a = row.address ?? {};
     const state = str(a.state);
     const region = state ? regionByAddress(state) : null;
-    const locality: string[] = [];
-    for (const k of LOCALITY_KEYS) {
-      const v = str(a[k]);
-      if (v && v !== state && !locality.includes(v)) locality.push(v);
-    }
+    // Округ и район берутся из полного адреса геокодера («…, Бауманка, Басманный район, Москва, …»): в частях адреса
+    // OpenStreetMap район Москвы часто не выделен. Порядок — от крупного к мелкому.
+    const skip = new Set(NOT_LOCALITY.map((k) => str(a[k])).filter((v): v is string => v !== null));
+    const parts = (str(row.display_name) ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+    const locality = parts.filter((x, i) => !skip.has(x) && !/^\d+$/.test(x) && parts.indexOf(x) === i && !/федеральный округ$/i.test(x)).reverse();
     out.push({
       point: { lat, lon },
       label: str(row.display_name) ?? "",

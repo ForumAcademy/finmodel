@@ -67,6 +67,9 @@ describe("поиск участка по адресу", () => {
     const all = geocode.parseGeocode(LYALIN);
     expect(all).toHaveLength(3);
     expect(all[0]).toMatchObject({ regionCode: "77", house: true, locality: ["Центральный административный округ", "Басманный район"] });
+    // Ответ с сервера 17.11.2026: района нет в частях адреса, он есть только в полном адресе.
+    const real = geocode.parseGeocode([{ lat: "55.75756", lon: "37.65373", display_name: "21 с2, Лялин переулок, Бауманка, Басманный район, Москва, Центральный федеральный округ, 105062, Россия", address: { house_number: "21 с2", road: "Лялин переулок", suburb: "Бауманка", city: "Москва", state: "Москва", region: "Центральный федеральный округ", postcode: "105062", country: "Россия" } }]);
+    expect(real[0]?.locality).toEqual(["Басманный район", "Бауманка"]);
     expect(all[1]?.house).toBe(false);
     const ok = geocode.usableCandidates(all);
     expect(ok.map((c) => c.house)).toEqual([true, false]);
