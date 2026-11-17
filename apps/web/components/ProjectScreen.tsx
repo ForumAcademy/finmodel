@@ -191,6 +191,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
   const [updating, setUpdating] = useState(false);
   const [missingDocs, setMissingDocs] = useState<string[]>([]);
   const [geoBusy, setGeoBusy] = useState(false);
+  const [geoFailed, setGeoFailed] = useState(false);
   const [geoChoices, setGeoChoices] = useState<{ query: string; candidates: geocode.GeoCandidate[] } | null>(null);
   const geoAuto = useRef(false);
 
@@ -226,6 +227,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
       setGeoBusy(true);
       try {
         const r = await findByAddress(proj);
+        setGeoFailed("error" in r);
         if ("error" in r) {
           setProblems([r.error]);
           return;
@@ -446,7 +448,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                   ))}
                   <div className={`check ${p.geo ? "ok" : ""}`}>
                     <div>
-                      <b>Где участок.</b> {p.geo ? geocode.geoText(p.geo) : geoBusy ? "Ищем по адресу…" : "Сервис ещё не искал участок по адресу."}
+                      <b>Где участок.</b> {p.geo ? geocode.geoText(p.geo) : geoBusy ? "Ищем по адресу, это может занять до минуты…" : geoFailed ? "По адресу участок не найден, причина выше." : "Сервис ещё не искал участок по адресу."}
                     </div>
                     <button className="btn sm" onClick={() => void findPlace(p)} disabled={geoBusy || !view.plot.address.value}>
                       {geoBusy ? "Ищем…" : "Найти данные по адресу"}
