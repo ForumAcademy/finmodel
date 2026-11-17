@@ -237,11 +237,14 @@ export function mosBasis(key: MosDatasetKey, at: string, note: string): ValueBas
 }
 
 /** Строка «Данные Москвы» для экрана. */
-export function mosText(m: MosLookup): string {
-  const plots = m.plots.length ? `Городских участков в этой точке: ${m.plots.length}` : "Городских участков в этой точке нет";
+export function mosText(m: MosLookup, chosen: CityPlot | null = null): string {
+  const plots = chosen ? `Участок ${cityPlotText(chosen)}` : m.plots.length ? `Городских участков в этой точке: ${m.plots.length}` : "Городских участков в этой точке нет";
   const heritage = m.zones.length || m.territories.length ? `, участок в зоне охраны памятников` : "";
-  return `${plots}${heritage}. Портал открытых данных Москвы, ${fmtDate(m.fetchedAt.slice(0, 10))}`;
+  return `${plots}${heritage}. Портал открытых данных Москвы, ${fmtDate(m.fetchedAt.slice(0, 10))}.`;
 }
+
+/** Выбранный в проекте городской участок: тот, чей кадастровый номер стоит в проекте; иначе null. */
+export const chosenCityPlot = (m: MosLookup, cadastralNumber: string | null): CityPlot | null => m.plots.find((c) => c.cadastralNumber === cadastralNumber) ?? null;
 
 /** Городская земля: собственность города или неразграниченная. */
 export const isCityLand = (c: CityPlot): boolean => /город|неразграничен/i.test(c.ownerType ?? "");
@@ -258,16 +261,17 @@ export function applyCityPlot(p: LandProject, c: CityPlot, at: string): ChangeSe
   const changes: PlotChange[] = [];
   const problems: string[] = [];
   const note = `Участок ${c.cadastralNumber}${c.address ? `, ${c.address}` : ""}`;
-  const put = (field: PlotFieldKey, value: string | null, origin: "source" | "estimate", extra?: string) => {
+  const put = (field: PlotFieldKey, value: string | null, origin: "source" | "estimate", extra?: string, own?: string) => {
     if (value === null) return;
     const cur = p.plot[field];
     if (cur.origin === "source" && cur.basis?.documentId) return;
-    const to: PlotValue = { value, origin, basis: mosBasis("plots", at, extra ? `${note}. ${extra}` : note) };
-    if (cur.value === to.value && cur.origin === to.origin && cur.basis?.url === to.basis?.url) return;
+    const to: PlotValue = { value, origin, basis: mosBasis("plots", at, own ?? (extra ? `${note}. ${extra}` : note)) };
+    if (cur.value === to.value && cur.origin === to.origin && cur.basis?.url === to.basis?.url && cur.basis?.note === to.basis?.note) return;
     changes.push({ field, from: cur, to });
   };
   put("cadastralNumber", c.cadastralNumber, "source");
-  put("quarter", cadastralQuarter(c.cadastralNumber), "source");
+  // Квартал — первая часть номера того же участка; адрес не повторяется, чтобы не читалось как второй участок
+  put("quarter", cadastralQuarter(c.cadastralNumber), "source", undefined, `Первая часть кадастрового номера участка ${c.cadastralNumber}`);
   put("vri", c.vri, "source");
   if (isCityLand(c)) {
     put("tenure", CITY_LAND_TENURE, "estimate", `Земля города (${c.ownerType}${c.rented === true ? ", сейчас сдана в аренду" : ""}): участок под строительство предоставляется в аренду на торгах, ст. 39.6 ЗК РФ`);
@@ -352,6 +356,9 @@ export function applyMosLookup(p: LandProject, m: MosLookup, at: string): Change
   let next: LandProject = { ...p, mos: m, updatedAt: at };
   if (!sameZones) next = updateSite(next, { zouit: [...own, ...heritage] }, at);
   if (m.plots.length === 1) return applyCityPlot(next, m.plots[0] as CityPlot, at);
+  // Участок уже выбран из нескольких — его данные обновляются
+  const chosen = chosenCityPlot(m, next.plot.cadastralNumber.value);
+  if (chosen) return applyCityPlot(next, chosen, at);
   const changes: PlotChange[] = [];
   const t = next.plot.tenure;
   if (m.plots.length === 0 && t.value === null) {

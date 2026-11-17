@@ -54,6 +54,11 @@ describe("данные портала открытых данных Москвы
     expect(list[0]?.address).toMatch(/^Российская Федерация/);
     expect(mosdata.cityPlotText(list[1] as mosdata.CityPlot)).toBe("77:01:0001028:2, 793 м², деловое управление (4.1), сдан в аренду");
     expect(mosdata.cityPlotsAt({ error: 1 }, P)).toEqual([]);
+    const m = mosdata.mosLookup(P, { plots: PLOTS }, AT);
+    expect(mosdata.mosText(m)).toBe("Городских участков в этой точке: 2. Портал открытых данных Москвы, 17.11.2026.");
+    const chosen = mosdata.chosenCityPlot(m, "77:01:0001028:2999");
+    expect(mosdata.mosText(m, chosen)).toBe("Участок 77:01:0001028:2999, 3110 м², деловое управление (4.1), в аренду не сдан. Портал открытых данных Москвы, 17.11.2026.");
+    expect(mosdata.chosenCityPlot(m, null)).toBeNull();
   });
 
   it("зоны охраны: точка в дыре границы — не в зоне", () => {
@@ -73,6 +78,7 @@ describe("данные портала открытых данных Москвы
     expect(pl.quarter).toMatchObject({ value: "77:01:0001028", origin: "source" });
     expect(pl.vri).toMatchObject({ value: "деловое управление (4.1)", origin: "source" });
     expect(pl.tenure).toMatchObject({ value: "аренда", origin: "estimate" });
+    expect(pl.quarter.basis?.note).toBe("Первая часть кадастрового номера участка 77:01:0001028:2999");
     expect(pl.cadastralNumber.basis?.url).toBe("https://data.mos.ru/opendata/1497");
     expect(pl.area.value).toBe("3410");
     // Кадастровая стоимость — оценка: 3 410 м² × 107 210,79 (квартал 77:01:0001028, офисы — ВРИ 4.1)
@@ -101,5 +107,10 @@ describe("сохранение найденного на портале", () => 
     const none = mosdata.applyMosLookup(base, mosdata.mosLookup(P, { plots: { features: [] } }, AT), AT);
     expect(none.project.plot.tenure).toMatchObject({ value: "собственность", origin: "estimate" });
     expect(two.project.plot.cadastralNumber.value).toBeNull();
+    // Выбранный из нескольких участок при обновлении остаётся и получает свежие данные
+    const picked = mosdata.applyCityPlot(base, mosdata.cityPlotsAt(PLOTS, P)[0] as mosdata.CityPlot, AT).project;
+    const refreshed = mosdata.applyMosLookup(picked, mosdata.mosLookup(P, { plots: PLOTS }, AT), AT);
+    expect(refreshed.project.plot.cadastralNumber.value).toBe("77:01:0001028:2999");
+    expect(refreshed.changes).toEqual([]);
   });
 });
