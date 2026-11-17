@@ -13,6 +13,8 @@
     "@fm/egrn-import": "workspace:*",
     "@fm/engine": "workspace:*",
     "@fm/spec": "workspace:*",
+    "html-to-image": "1.11.11",
+    "jspdf": "2.5.2",
     "leaflet": "^1.9.4",
     "next": "16.3.6",
     "pdfjs-dist": "^5.7.284",

@@ -1,4 +1,5 @@
 import { logic, plot } from "@fm/engine";
+import { LogicDownload } from "./LogicDownload";
 
 type Item = logic.LogicItem;
 
@@ -42,8 +43,11 @@ export function LogicScreen() {
   const lanes = logic.LOGIC_LANES;
   const last = logic.LOGIC_STEPS.length + 2;
   return (
-    <div className="page lg-page">
-      <h1 className="lg-h1">Логика сервиса</h1>
+    <div className="page lg-page" id="logic-map">
+      <div className="lg-top">
+        <h1 className="lg-h1">Логика сервиса</h1>
+        <LogicDownload targetId="logic-map" fileName="logika_servisa.pdf" />
+      </div>
       <p className="lg-sub">
         Пять шагов от адреса участка до ответа «покупать или нет». По каждому шагу: что вносите вы, что сервис находит сам и где, что берётся из законов и нормативов и что пока принято экспертно. Названия
         документов — ссылки на сами документы.
