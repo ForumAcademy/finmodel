@@ -53,6 +53,7 @@ export * as projectFile from "./projectfile";
 export * as summary from "./summary";
 export * as report from "./report";
 export * as reportView from "./explain/report-view";
+export * as logic from "./logic";
 export type * from "./types";
 
 /** Модули ядра в порядке расчёта (docs/passports/engine.md). */
