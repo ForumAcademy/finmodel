@@ -1,4 +1,4 @@
-import { geocode, type plot } from "@fm/engine";
+import { geocode, mosdata, type plot } from "@fm/engine";
 
 export type GeocodeLoad = { query: string; candidates: geocode.GeoCandidate[] } | { error: string };
 
@@ -26,4 +26,18 @@ export async function findByAddress(p: plot.LandProject): Promise<GeocodeLoad> {
       ? `По адресу «${address}» место в Москве или Московской области не нашлось. Проверьте адрес или поставьте точку на карте вручную.`
       : "Поиск по адресу сейчас недоступен. Повторите позже или поставьте точку на карте вручную.",
   };
+}
+
+export type MosLoad = { lookup: mosdata.MosLookup } | { error: string };
+
+/** Данные портала открытых данных Москвы по точке участка (только Москва). */
+export async function findMosData(point: plot.GeoPoint, at: string): Promise<MosLoad> {
+  try {
+    const r = await fetch(`/api/mosdata?lat=${point.lat}&lon=${point.lon}`, { cache: "no-store" });
+    const json: unknown = await r.json();
+    if (!r.ok) return { error: (json as { error?: string } | null)?.error ?? "Портал открытых данных Москвы недоступен" };
+    return { lookup: mosdata.mosLookup(point, json as Partial<Record<mosdata.MosDatasetKey, unknown>>, at) };
+  } catch {
+    return { error: "Портал открытых данных Москвы недоступен. Повторите позже." };
+  }
 }

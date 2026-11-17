@@ -8,6 +8,7 @@ import { SPEC_ASSUMPTIONS } from "./project";
 import { date as fmtDate, num } from "./lib/text";
 import { siteField, type SiteData, type SiteFieldKey } from "./site";
 import type { GeoLookup } from "./geocode";
+import type { MosLookup } from "./mosdata";
 
 // ---------- происхождение значения (задание, раздел 5) ----------
 
@@ -228,6 +229,8 @@ export interface LandProject {
   point: GeoPoint | null;
   /** Что нашлось по адресу (геокодер): округ, район, точка; нет — ещё не искали. */
   geo?: GeoLookup;
+  /** Что нашлось на портале открытых данных Москвы по точке: городские участки, зоны охраны памятников. */
+  mos?: MosLookup;
   documents: ProjectDocument[];
   history: HistoryEntry[];
   /** Анализ участка: ограничения, аналоги, свои варианты; нет — ещё не заполнялся. */
