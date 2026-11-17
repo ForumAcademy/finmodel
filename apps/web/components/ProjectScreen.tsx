@@ -308,6 +308,9 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
   const p = project;
   const view = pending.length ? plot.applyChanges(p, pending, p.updatedAt) : p;
   const mosChosen = p.mos ? mosdata.chosenCityPlot(p.mos, view.plot.cadastralNumber.value) : null;
+  // Всё найдено и выбрано — блоки поиска сворачиваются в одну серую строку
+  const isMoscow = view.plot.regionCode.value === MOSCOW;
+  const foundDone = Boolean(p.geo) && !geoBusy && !mosBusy && !geoChoices && (!isMoscow || (Boolean(p.mos) && !mosPick && (p.mos?.plots.length ?? 0) <= 1) || (Boolean(mosChosen) && !mosPick));
   const status = plot.projectStatus(view);
   const hasEgrn = p.documents.some((d) => d.kind === "egrn");
   const ref = versions.length ? book.projectReference(p, versions) : null;
@@ -492,6 +495,22 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       {t}
                     </div>
                   ))}
+                  {foundDone && p.geo ? (
+                    <div className="found">
+                      Где участок: {geocode.geoText(p.geo)}.
+                      {p.mos && <> {mosdata.mosText(p.mos, mosChosen)}</>}
+                      {p.mos && (p.mos.zones.length > 0 || p.mos.territories.length > 0) && <> Зоны: {[...p.mos.zones, ...p.mos.territories].join("; ")}.</>}
+                      <button className="lnk" onClick={() => void findPlace(p)} disabled={!view.plot.address.value}>
+                        Искать заново
+                      </button>
+                      {p.mos && p.mos.plots.length > 1 && (
+                        <button className="lnk" onClick={() => setMosPick(true)}>
+                          Выбрать другой участок
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
                   <div className={`check ${p.geo ? "ok" : ""}`}>
                     <div>
                       <b>Где участок.</b> {p.geo ? geocode.geoText(p.geo) : geoBusy ? "Ищем по адресу, это может занять до минуты…" : geoFailed ? "По адресу участок не найден, причина выше." : "Сервис ещё не искал участок по адресу."}
@@ -538,6 +557,8 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                         {mosBusy ? "Ищем…" : "Обновить"}
                       </button>
                     </div>
+                  )}
+                    </>
                   )}
                   {geoChoices && (
                     <div className="check warn">
