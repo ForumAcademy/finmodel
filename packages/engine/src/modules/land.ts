@@ -44,6 +44,55 @@ function fullYears(a: IsoDate, b: IsoDate): number {
   return Math.floor(monthDiff(a, b) / MONTHS_PER_YEAR);
 }
 
+export type UpksTable = NonNullable<SpecRegion["cadastral_value_estimate"]>;
+
+/** Средний УПКС квартала по группе, иначе — кадастрового района; null — нет значения. */
+export function upksFor(t: UpksTable, quarter: string, group: string): { value: number; where: string } | null {
+  const i = t.groups.findIndex((g) => g.key === group);
+  if (i < 0) return null;
+  const q = t.quarters[quarter];
+  const qv = q?.values[i] ?? null;
+  if (q && qv !== null) return { value: qv, where: `квартал ${quarter}, стр. ${q.page} приложения` };
+  const district = quarter.slice(0, quarter.lastIndexOf(":"));
+  const dv = t.districts[district]?.[i] ?? null;
+  return dv === null ? null : { value: dv, where: `кадастровый район ${district} (квартала нет в таблице или в нём нет значения)` };
+}
+
+/** Оценка кадастровой стоимости: площадь × средний УПКС группы; нет данных — null. */
+function cadastralEstimate(ctx: FormulaContext, group: (t: UpksTable) => string | null): { value: Decimal; text: string } | null {
+  const t = ctx.param<UpksTable>("LAND.UPKS_TABLE");
+  const quarter = ctx.param<string>("GEN.CADASTRAL_QUARTER");
+  const area = ctx.num("LAND.AREA");
+  if (t === null || quarter === null || area === null) return null;
+  const g = group(t);
+  if (g === null) return null;
+  const u = upksFor(t, quarter, g);
+  if (u === null) return null;
+  const title = t.groups.find((x) => x.key === g)?.title ?? g;
+  return { value: area.mul(u.value), text: `${fmt(area)} м² × ${fmt(new Decimal(u.value))} руб/м² — средний УПКС группы «${title}», ${u.where}, распоряжение ДГИ № 214856 на ${t.valuation_date}` };
+}
+
+/** Кадастровая стоимость из проекта или оценка; null — нет ни того, ни другого (её потребует платёж, которому она нужна). */
+export function F_LAND_CADASTRAL_VALUE_EST(ctx: FormulaContext): Decimal | null {
+  const own = ctx.num("LAND.CADASTRAL_VALUE");
+  if (own !== null) return own;
+  const codes = ctx.param<string[]>("LAND.VRI_CODES") ?? [];
+  const est = cadastralEstimate(ctx, (t) => codes.map((c) => t.vri_groups[c]).find((g): g is string => g !== undefined) ?? null);
+  if (est === null) return null;
+  ctx.message("warning", `Кадастровая стоимость участка — оценка ${fmt(est.value)} руб: ${est.text}. Введите стоимость из выписки ЕГРН, когда она будет`, "LAND.CADASTRAL_VALUE", "LAND.CADASTRAL_VALUE_EST");
+  return est.value;
+}
+
+/** Кадастровая стоимость после смены ВРИ из проекта или оценка; null — нет ни того, ни другого. */
+export function F_LAND_CADASTRAL_VALUE_AFTER_VRI_EST(ctx: FormulaContext): Decimal | null {
+  const own = ctx.num("LAND.CADASTRAL_VALUE_AFTER_VRI");
+  if (own !== null) return own;
+  const est = cadastralEstimate(ctx, (t) => t.residential_group);
+  if (est === null) return null;
+  ctx.message("warning", `Кадастровая стоимость после смены ВРИ — оценка ${fmt(est.value)} руб: ${est.text}`, "LAND.CADASTRAL_VALUE_AFTER_VRI", "LAND.CADASTRAL_VALUE_AFTER_VRI_EST");
+  return est.value;
+}
+
 export function F_LAND_TAX_COEF(ctx: FormulaContext): Decimal[] {
   const date = ctx.formula<IsoDate[]>("F.TIME.DATE");
   if (ctx.param<boolean>("TAX.LAND_COEF_APPLY") === false) return date.map(() => ONE);
@@ -63,8 +112,8 @@ export function F_LAND_TAX_COEF(ctx: FormulaContext): Decimal[] {
 
 function landTax(ctx: FormulaContext, rows: MilestoneRow[], date: IsoDate[]): Decimal[] {
   const vri = vriDate(ctx, rows);
-  const cad = ctx.requireNum("LAND.CADASTRAL_VALUE");
-  const cadAfter = vri === null ? null : ctx.requireNum("LAND.CADASTRAL_VALUE_AFTER_VRI");
+  const cad = ctx.formula<Decimal | null>("F.LAND.CADASTRAL_VALUE_EST") ?? ctx.requireNum("LAND.CADASTRAL_VALUE");
+  const cadAfter = vri === null ? null : (ctx.formula<Decimal | null>("F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST") ?? ctx.requireNum("LAND.CADASTRAL_VALUE_AFTER_VRI"));
   const rate = ctx.requireNum("TAX.LAND_RATE");
   const coef = ctx.formula<Decimal[]>("F.LAND.TAX_COEF");
   const { from, to } = landPeriod(ctx, rows, true);
@@ -102,8 +151,8 @@ function landRent(ctx: FormulaContext, rows: MilestoneRow[], date: IsoDate[]): D
   } else {
     // По акту региона (Москва — 273-ПП): ставка по году срока аренды от кадастровой стоимости
     const vri = vriDate(ctx, rows);
-    const cad = ctx.requireNum("LAND.CADASTRAL_VALUE");
-    const cadAfter = vri === null ? null : ctx.requireNum("LAND.CADASTRAL_VALUE_AFTER_VRI");
+    const cad = ctx.formula<Decimal | null>("F.LAND.CADASTRAL_VALUE_EST") ?? ctx.requireNum("LAND.CADASTRAL_VALUE");
+    const cadAfter = vri === null ? null : (ctx.formula<Decimal | null>("F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST") ?? ctx.requireNum("LAND.CADASTRAL_VALUE_AFTER_VRI"));
     const cadAt = (d: IsoDate) => (cadAfter !== null && vri !== null && d >= vri ? cadAfter : cad);
     const rnvFirst = minDate(rows.map((r) => milestone(r, "rnv_date")));
     const yearRow = (year: number) => rules.year_rates.find((r) => r.year === year);
@@ -210,6 +259,8 @@ export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
 }
 
 export const LAND_FORMULAS = {
+  "F.LAND.CADASTRAL_VALUE_EST": F_LAND_CADASTRAL_VALUE_EST,
+  "F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST": F_LAND_CADASTRAL_VALUE_AFTER_VRI_EST,
   "F.LAND.TAX_COEF": F_LAND_TAX_COEF,
   "F.LAND.TAX_OR_RENT": F_LAND_TAX_OR_RENT,
   "F.LAND.RENT_FIRST_YEAR": F_LAND_RENT_FIRST_YEAR,
