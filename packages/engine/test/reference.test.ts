@@ -35,7 +35,7 @@ describe("справочник для экрана", () => {
 
   it("шапка: пустые значения и источники на перепроверку", () => {
     const s = reference.referenceSummary();
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(5);
     // всё, без чего расчёт не идёт, в справочнике заполнено; пустые — необязательные или вводятся в проекте
     expect(s.needValue).toBe(0);
     expect(s.recheckSources).toBeGreaterThan(0);

@@ -662,6 +662,36 @@ parameters:
     status: project_input
     legacy: [{cell: null, verdict: new}]
 
+  - id: VAR.LAND_TRIALS
+    name: "Пробные расчёты варианта при разной цене участка"
+    unit: table
+    kind: table
+    columns:
+      - {key: price, unit: руб, note: "цена участка в пробном расчёте (LAND.PURCHASE_PRICE)"}
+      - {key: npv, unit: руб, note: "NPV акционера при этой цене (F.KPI.NPV → npv_equity)"}
+      - {key: irr, unit: "%годовых", note: "IRR акционера при этой цене (F.KPI.IRR → irr_equity)"}
+    scope: project
+    default: null
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Промежуточные итоги для максимальной цены участка (F.VAR.LAND_MAX): вариант считается полной цепочкой расчёта при нескольких ценах участка. Не вводится вручную"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAR.SENS_RESULTS
+    name: "Пробные расчёты варианта при другой цене продаж и ключевой ставке"
+    unit: table
+    kind: table
+    columns:
+      - {key: price_shift, unit: доля, note: "изменение цены продаж: все цены плана продаж × (1 + price_shift)"}
+      - {key: rate_shift, unit: "%годовых", note: "изменение ключевой ставки на весь срок (FIN.KEY_RATE_PATH + rate_shift)"}
+      - {key: npv, unit: руб, note: "NPV акционера (F.KPI.NPV → npv_equity)"}
+    scope: project
+    default: null
+    source_ids: [S_PROJECT_DOCS]
+    basis: "Промежуточные итоги для проверки «что, если» (F.VAR.SENSITIVITY): вариант считается полной цепочкой расчёта при каждом сочетании изменений. Не вводится вручную"
+    status: project_input
+    legacy: [{cell: null, verdict: new}]
+
   - id: VAL.SELECT_CRITERION
     name: "Критерий выбора лучшего варианта"
     unit: enum
@@ -693,6 +723,42 @@ parameters:
     default: null
     source_ids: [S_EXPERT]
     basis: "Ограничение выбора лучшего варианта (задание, раздел 4.G). Экспертное значение: пока не задано, условие не проверяется"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.SENS_PRICE_STEP
+    name: "Шаг изменения цены продаж в проверке «что, если»"
+    unit: доля
+    kind: scalar
+    scope: template
+    default: 0.05
+    range: [0.01, 0.5]
+    source_ids: [S_EXPERT]
+    basis: "Решение пользователя 16.11.2026: в итоговом отчёте цена продаж проверяется с шагом 5 % — −10 %, −5 %, 0, +5 %, +10 % (два шага в каждую сторону, VAL.SENS_STEPS). Экспертное значение, меняется в справочнике"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.SENS_RATE_STEP
+    name: "Шаг изменения ключевой ставки в проверке «что, если»"
+    unit: "%годовых"
+    kind: scalar
+    scope: template
+    default: 0.01
+    range: [0.0025, 0.05]
+    source_ids: [S_EXPERT]
+    basis: "Решение пользователя 16.11.2026: ключевая ставка ЦБ проверяется с шагом 1 п.п. — −2, −1, 0, +1, +2 п.п. на весь срок проекта (траектория FIN.KEY_RATE_PATH сдвигается целиком). От ключевой ставки зависит ставка проектного кредита (F.FIN.RATE); ставка дисконтирования от неё не зависит. Экспертное значение, меняется в справочнике"
+    status: expert_allowed
+    legacy: [{cell: null, verdict: new}]
+
+  - id: VAL.SENS_STEPS
+    name: "Сколько шагов в каждую сторону в проверке «что, если»"
+    unit: шт
+    kind: scalar
+    scope: template
+    default: 2
+    range: [1, 4]
+    source_ids: [S_EXPERT]
+    basis: "Решение пользователя 16.11.2026: по два шага вниз и вверх от расчёта (таблица 5 × 5). Экспертное значение, меняется в справочнике"
     status: expert_allowed
     legacy: [{cell: null, verdict: new}]
 

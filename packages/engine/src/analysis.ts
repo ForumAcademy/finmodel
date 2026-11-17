@@ -6,7 +6,7 @@
 import Decimal from "decimal.js";
 import { getCapexItem, spec, type CapexItemId, type FormulaId, type ParameterId, type SpecAssumptionVersion as AssumptionVersion } from "@fm/spec";
 import { Engine } from "./context";
-import { computeProject, projectInput, SPEC_ASSUMPTIONS, type CalcProject, type ProjectModel } from "./project";
+import { computeProject, projectInput, projectValue, SPEC_ASSUMPTIONS, type CalcProject, type ProjectModel } from "./project";
 import { ANALYSIS_FORMULAS } from "./registry";
 import type { MarketPrice } from "./modules/market";
 import type { MaxGfa } from "./modules/site";
@@ -264,4 +264,10 @@ export function chooseBest(project: CalcProject, summaries: readonly VariantSumm
   const input = engineInput(project, versions, { "VAR.RESULTS": summaries.map(variantResult) } as Partial<Record<ParameterId, unknown>>);
   const result = new Engine(input, ANALYSIS_FORMULAS).run(["F.VAR.BEST"]);
   return { choice: value(result, "F.VAR.BEST"), result };
+}
+
+/** Целевая IRR акционера проекта (своё значение или справочник); null — не задана. */
+export function hurdleIrr(project: CalcProject, versions: AssumptionVersion[] = SPEC_ASSUMPTIONS): Decimal | null {
+  const v = projectValue(project, "VAL.HURDLE_IRR", versions);
+  return typeof v === "number" ? new Decimal(v) : null;
 }
