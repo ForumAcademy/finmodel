@@ -200,6 +200,17 @@ parameters:
     status: project_input
     legacy: [{cell: null, verdict: new}]
 
+  - id: LAND.UPKS_TABLE
+    name: "Средние удельные показатели кадастровой стоимости по кварталам и районам"
+    unit: table
+    kind: table
+    scope: region
+    default: null
+    source_ids: [S_MSK_DGI_UPKS_2024]
+    basis: "Москва — распоряжение ДГИ от 03.12.2024 № 214856: средний УПКС, руб/м², по кадастровому кварталу (таблица 1) и кадастровому району (таблица 2) для 11 групп видов использования. Нужен для оценки кадастровой стоимости, если её нет в проекте (F.LAND.CADASTRAL_VALUE_EST). Значения — regions.yaml → cadastral_value_estimate"
+    status: needs_verification
+    legacy: [{cell: null, verdict: new}]
+
   - id: LAND.TENURE
     name: "Форма права на участок"
     unit: enum

@@ -158,4 +158,41 @@ describe("LAND", () => {
     const r = calculate({ values: { ...vriInput, "LAND.TENURE": "аренда" } }, {}, ["F.LAND.VRI_FEE"]);
     expect((r.formulas["F.LAND.VRI_FEE"]?.value as Decimal).toNumber()).toBe(0);
   });
+
+  describe("оценка кадастровой стоимости по среднему УПКС (распоряжение ДГИ № 214856)", () => {
+    const est = { "GEN.REGION_CODE": "77", "GEN.CADASTRAL_QUARTER": "77:01:0001028", "LAND.VRI_CODES": ["4.1"], "LAND.AREA": 3410 };
+    const value = (values: Record<string, unknown>, id: "F.LAND.CADASTRAL_VALUE_EST" | "F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST") =>
+      calculate({ values }, {}, [id]).formulas[id]?.value as Decimal | null;
+
+    it("пример F.LAND.CADASTRAL_VALUE_EST: 3 410 м² × 107 210,79 = 365 588 793,90 руб", () => {
+      expect(value(est, "F.LAND.CADASTRAL_VALUE_EST")?.toDecimalPlaces(2).toNumber()).toBe(365588793.9);
+      const r = calculate({ values: est }, {}, ["F.LAND.CADASTRAL_VALUE_EST"]);
+      expect(r.messages).toContainEqual(expect.objectContaining({ severity: "warning", key: "LAND.CADASTRAL_VALUE_EST", text: expect.stringContaining("77:01:0001028") }));
+    });
+
+    it("пример F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST: 3 410 м² × 153 931,30 = 524 905 733 руб", () => {
+      expect(value(est, "F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST")?.toDecimalPlaces(2).toNumber()).toBe(524905733);
+    });
+
+    it("значение из проекта заменяет оценку; нет группы ВРИ или квартала — пусто", () => {
+      expect(value({ ...est, "LAND.CADASTRAL_VALUE": 1e9 }, "F.LAND.CADASTRAL_VALUE_EST")?.toNumber()).toBe(1e9);
+      expect(value({ ...est, "LAND.VRI_CODES": ["12.0"] }, "F.LAND.CADASTRAL_VALUE_EST")).toBeNull();
+      expect(value({ ...est, "GEN.CADASTRAL_QUARTER": null }, "F.LAND.CADASTRAL_VALUE_EST")).toBeNull();
+      expect(value({ ...est, "GEN.REGION_CODE": "50" }, "F.LAND.CADASTRAL_VALUE_EST")).toBeNull();
+    });
+
+    it("квартала нет в таблице — средняя по кадастровому району", () => {
+      // 77:01:0001001: в группе «многоэтажная жилая застройка» значения нет («-» в акте) — берётся район 77:01 (150 789,53)
+      expect(value({ ...est, "GEN.CADASTRAL_QUARTER": "77:01:0001001" }, "F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST")?.toDecimalPlaces(2).toNumber()).toBe(514192297.3);
+    });
+
+    it("земельный налог считается без кадастровой стоимости в проекте — от оценки", () => {
+      const noCad: Record<string, unknown> = { ...base };
+      delete noCad["LAND.CADASTRAL_VALUE"];
+      const r = calculate({ values: { ...noCad, ...est } }, { horizonMonths: 24 }, ["F.LAND.TAX_OR_RENT"]);
+      expect(r.messages.filter((m) => m.severity === "error")).toEqual([]);
+      const pay = r.formulas["F.LAND.TAX_OR_RENT"]?.value as Decimal[];
+      expect(pay[1]?.toDecimalPlaces(2).toNumber()).toBe(new Decimal(365588793.9).mul(0.015).mul(2).div(12).toDecimalPlaces(2).toNumber());
+    });
+  });
 });

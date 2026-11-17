@@ -89,9 +89,39 @@ function loadQuarters(file: string): Record<string, (number | null)[]> | null {
   return rows;
 }
 
+/** Средние УПКС по кадастровым кварталам из data/<file>: квартал → { страница акта, значения групп }; пусто — null. */
+function loadUpks(file: string, groups: string[]): Record<string, { page: number; values: (number | null)[] }> | null {
+  const path = resolve(DATA, file);
+  if (!existsSync(path)) {
+    errors.push(`regions.yaml: нет файла data/${file}`);
+    return null;
+  }
+  const text = readFileSync(path, "utf8");
+  hash.update(file).update("\0").update(text).update("\0");
+  const lines = text.split("\n").filter((l) => l.trim() !== "" && !l.startsWith("#"));
+  const header = (lines.shift() ?? "").split(",");
+  if (header[0] !== "quarter" || header[1] !== "page" || header.slice(2).join(",") !== groups.join(",")) {
+    errors.push(`data/${file}: колонки должны быть quarter, page, ${groups.join(", ")}`);
+    return null;
+  }
+  const rows: Record<string, { page: number; values: (number | null)[] }> = {};
+  for (const line of lines) {
+    const cells = line.split(",");
+    const quarter = cells[0] ?? "";
+    if (!/^\d{2}:\d{2}:\d{7}$/.test(quarter)) errors.push(`data/${file}: неверный кадастровый квартал «${quarter}»`);
+    if (quarter in rows) errors.push(`data/${file}: квартал ${quarter} повторяется`);
+    const values = groups.map((_, i) => (cells[i + 2] ? Number(cells[i + 2]) : null));
+    if (values.some((v) => v !== null && !(v > 0))) errors.push(`data/${file}: квартал ${quarter} — значение не положительное число`);
+    rows[quarter] = { page: Number(cells[1]), values };
+  }
+  return rows;
+}
+
 for (const r of regions.regions) {
   const fy = r.land_rent?.first_year;
   if (fy) Object.assign(fy, { quarters: loadQuarters(fy.quarters_file) ?? {} });
+  const est = r.cadastral_value_estimate;
+  if (est) Object.assign(est, { quarters: loadUpks(est.quarters_file, est.groups.map((g) => g.key)) ?? {} });
 }
 
 const spec: SpecData = {

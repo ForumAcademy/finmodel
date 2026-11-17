@@ -224,6 +224,27 @@ export const regionSchema = z
       })
       .strict()
       .optional(),
+    /**
+     * Оценка кадастровой стоимости участка, если её нет в проекте (Москва — распоряжение ДГИ № 214856): площадь × средний
+     * УПКС кадастрового квартала (CSV quarters_file) или кадастрового района (districts) по группе вида использования.
+     */
+    cadastral_value_estimate: z
+      .object({
+        source_ids: idList,
+        valuation_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        /** CSV в data/: quarter, page, колонки групп в порядке groups. */
+        quarters_file: z.string().regex(/^[\w.-]+\.csv$/),
+        groups: z.array(z.object({ key: z.string().min(1), title: z.string().min(1) }).strict()).min(1),
+        residential_group: z.string().min(1),
+        /** Код ВРИ → группа. */
+        vri_groups: z.record(z.string().regex(/^\d{1,2}\.\d{1,2}(\.\d{1,2})?$/), z.string().min(1)),
+        /** Кадастровый район «77:01» → УПКС по группам, руб/м²; null — нет значения. */
+        districts: z.record(z.string().regex(/^\d{2}:\d{2}$/), z.array(z.number().positive().nullable())),
+        status: z.enum(["needs_verification", "verified"]),
+        note: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     vri_fee: z
       .object({
         exists: z.boolean().nullable(),
