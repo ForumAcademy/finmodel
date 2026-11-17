@@ -10,7 +10,7 @@
 | `data/parameters.yaml` | Параметры: `unit`, `kind`, `scope`, `source_ids`, `basis`, `status`, `legacy` |
 | `data/formulas.yaml` | Формулы: `expr`, `depends_on`, `lag_depends_on`, `rationale`, `rejected`, `source_ids`, `example` |
 | `data/capex_items.yaml` | Статьи бюджета: ставка, база, правило графика |
-| `data/regions.yaml` | 89 субъектов РФ, региональные нормативы и ставки (`null` — не заполнено) |
+| `data/regions.yaml` | 89 субъектов РФ, региональные нормативы и ставки (`null` — не заполнено); у Москвы также `demolition` (ставка сноса) и `social_obligations` (зоны районов, места на 1000 жителей, стоимость места) |
 | `data/msk_upks_2024_quarters.csv` | Москва, распоряжение ДГИ № 214856, таблица 1: средний УПКС по кадастровому кварталу для 11 групп видов использования, страница акта. Распознано со скана (значение — только если совпало в нескольких прочтениях); подключается из `regions.yaml` (`cadastral_value_estimate.quarters_file`), таблица 2 по районам — там же (`districts`) |
 | `data/msk_rent_273pp_quarters.csv` | Москва, 273-ПП, приложение 8: по кадастровому кварталу — стоимостные показатели Pi по назначениям и коэффициент ренты k. Подключается из `regions.yaml` (`land_rent.first_year.quarters_file`); в справочник при сборке попадают Pi «жильё», «временное проживание» и k |
 | `data/company_assumptions.yaml` | Справочник допущений компании по версиям |

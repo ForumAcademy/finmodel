@@ -121,6 +121,23 @@ items:
     index_type: investment
     legacy: {budget_row: null, cf_rows: [], amount: null, issue: "в исходнике отдельной строки нет; Бюджет!F24 «Компенсация городу» — денежный платёж (см. CITY_CASH_COMPENSATION), объекты для города — SOCIAL_OBJECTS и ROADS_UDS"}
 
+  # Обязательства по соцобъектам по нормативу региона (решение пользователя 17.11.2026): когда договора с городом ещё нет.
+  # Есть сумма по договору (CITY_CASH_COMPENSATION, CITY_OBJECTS_CONSTRUCTION) или статья SOCIAL_OBJECTS — по нормативу 0.
+  - item_id: SOCIAL_COMPENSATION
+    name: "Обязательства перед городом: компенсация за детские сады, школы и поликлиники (по нормативу)"
+    group: правообладание
+    base: формула
+    formula: F.LAND.SOCIAL_COMPENSATION
+    schedule_rule: at_milestone
+    schedule_from: rns_date
+    source_ids: [S_MSK_3135PP, S_MSK_MKE_UUPSS_22, S_MSK_NGP_EDU_2151PP, S_MSK_NGP_HEALTH_2150PP, S_MSK_NGP_HOUSING_2152PP]
+    basis: "3135-ПП: компенсация городу за места в детских садах, школах и поликлиниках для новых жителей. Платёж — к разрешению на строительство: по 3135-ПП наличие инфраструктурного договора проверяют при выдаче разрешения (решение пользователя 17.11.2026)"
+    vat_rate: 0
+    vat_source_ids: [S_NK_146, S_MSK_3135PP]
+    vat_basis: "денежная компенсация — платёж в бюджет города, не реализация; НДС нет"
+    index_type: investment  # показатели стоимости — в ценах 01.02.2025; к месяцу платежа — индекс строительных затрат
+    legacy: {budget_row: null, cf_rows: [], amount: null, issue: "в исходнике отдельной строки нет: обязательства по договору — CITY_CASH_COMPENSATION (Бюджет!F24)"}
+
   # ---------------- ПИР и ИРД ----------------
   - item_id: IRD
     name: "Получение ИРД (ППТ, ГПЗУ, ТУ)"
@@ -225,6 +242,23 @@ items:
     vat_basis: "работы и услуги — общая ставка НДС; 0,05 / 0,07 — если подрядчик на УСН (по договору, п.8 ст.164 НК РФ)"
     index_type: investment
     legacy: {budget_row: 31, cf_rows: [41, 42], amount: 141554585, issue: "комментарий «какая единица изм?»"}
+
+  # Снос существующих зданий по показателю региона (решение пользователя 17.11.2026). «Подготовка площадки» остаётся:
+  # ставка компании покрывает ограждение, вынос сетей и прочие работы; часть сноса в ней может повторяться — осторожный вариант.
+  - item_id: DEMOLITION
+    name: "Снос существующих зданий"
+    group: СМР
+    base: F.CAPEX.DEMOLITION_VOLUME
+    schedule_rule: uniform
+    schedule_from: rns_date
+    schedule_to: construction_start
+    source_ids: [S_MSK_MKE_UUPSS_22, S_PROJECT_DOCS]
+    basis: "Объём сносимых зданий, м³ × стоимость сноса 1 м³ по показателю региона (Москва — Москомэкспертиза, выпуск 22). Объём — из техпаспорта или площадь зданий × высота этажа"
+    vat_rate: TAX.VAT_RATE
+    vat_source_ids: [S_NK_164]
+    vat_basis: "работы подрядчика — общая ставка НДС; показатель Москвы уже с налогами"
+    index_type: investment
+    legacy: {budget_row: null, cf_rows: [], amount: null, issue: "в исходнике отдельной строки нет: снос входил в «Подготовку площадки» (Бюджет!F31)"}
 
   - item_id: SMR_ABOVE
     name: "СМР надземной части (в т.ч. стилобат)"

@@ -82,6 +82,8 @@ const REGION_VALUES: Partial<Record<ParameterId, (r: SpecRegion) => unknown>> = 
   "LAND.VRI_FEE_RATES": (r) => r.vri_fee.rates ?? null,
   "LAND.RENT_RULES": (r) => r.land_rent ?? null,
   "LAND.UPKS_TABLE": (r) => r.cadastral_value_estimate ?? null,
+  "LAND.SOCIAL_RULES": (r) => r.social_obligations ?? null,
+  "CAPEX.DEMOLITION_RULES": (r) => r.demolition ?? null,
 };
 
 /** Что видит формула: только чтение параметров и других формул с записью в след. */

@@ -14,7 +14,7 @@ import type { ZcycCurve } from "./zcyc";
 
 // ---------- поля ограничений ----------
 
-export type SiteFieldKey = "zone" | "maxGfa" | "density" | "maxFloors" | "maxHeight" | "builtShare" | "apartAllowed" | "landPrice" | "startDate" | "parkingPerApt" | "landTaxRate" | "riskFree";
+export type SiteFieldKey = "zone" | "maxGfa" | "density" | "maxFloors" | "maxHeight" | "builtShare" | "apartAllowed" | "demolitionGfa" | "demolitionVolume" | "landPrice" | "startDate" | "parkingPerApt" | "landTaxRate" | "riskFree";
 
 export type SiteFieldKind = "text" | "area" | "number" | "percent" | "density" | "bool" | "money" | "date";
 
@@ -40,6 +40,8 @@ export const SITE_FIELDS: readonly SiteField[] = [
   { key: "maxHeight", label: "Предельная высота", unit: "м", param: "GPZU.MAX_HEIGHT_M", kind: "number", hint: "Из ГПЗУ или регламента зоны ПЗЗ" },
   { key: "builtShare", label: "Максимальный процент застройки", unit: "%", param: "GPZU.MAX_BUILT_SHARE", kind: "percent", hint: "Из ГПЗУ или регламента зоны ПЗЗ" },
   { key: "apartAllowed", label: "Допускаются апартаменты", param: "GPZU.APART_ALLOWED", kind: "bool", hint: "Да — если ГПЗУ допускает объекты гостиничного назначения (ВРИ 4.7)" },
+  { key: "demolitionGfa", label: "Площадь зданий под снос", unit: "м²", param: "SITE.DEMOLITION_GFA", kind: "area", hint: "Суммарная площадь существующих зданий на участке, которые нужно снести: из граданализа, ГПЗУ, техпаспорта. 0 — сносить нечего" },
+  { key: "demolitionVolume", label: "Объём зданий под снос", unit: "м³", param: "SITE.DEMOLITION_VOLUME", kind: "number", hint: "Строительный объём из техпаспорта БТИ, если есть. Пусто — объём = площадь × высота этажа 3,3 м" },
   { key: "landPrice", label: "Цена участка", unit: "руб", param: "LAND.PURCHASE_PRICE", kind: "money", hint: "По предложению продавца или договору" },
   { key: "startDate", label: "Дата сделки по участку", param: "GEN.MODEL_START_DATE", kind: "date", hint: "С неё начинается расчёт вариантов; пусто — конец текущего месяца" },
   { key: "parkingPerApt", label: "Норматив машино-мест на квартиру", unit: "м/м", param: "TEP.PARKING_NORM", kind: "number", hint: "По нормативам градостроительного проектирования региона или ГПЗУ" },
@@ -56,6 +58,8 @@ export const ZOUIT_WHERE = "ГПЗУ, раздел об ограничениях
 
 export const REGULATION_FIELDS: readonly SiteFieldKey[] = ["zone", "maxGfa", "density", "maxFloors", "maxHeight", "builtShare", "apartAllowed"];
 export const DEAL_FIELDS: readonly SiteFieldKey[] = ["landPrice", "startDate"];
+/** Существующие здания на участке: площадь и объём под снос (снос — по показателю города). */
+export const DEMOLITION_FIELDS: readonly SiteFieldKey[] = ["demolitionGfa", "demolitionVolume"];
 /** Что значит пустое необязательное поле — пояснение под названием вместо «—» без объяснения. */
 export const EMPTY_NOTE: Partial<Record<SiteFieldKey, string>> = { startDate: "Пусто — расчёт начинается с конца текущего месяца." };
 /** Нормативы, которых нет в справочнике регионов: вводятся по проекту с документом. */
@@ -368,6 +372,8 @@ export function siteCalcProject(p: LandProject, today: IsoDate): CalcProject {
     if (f.key === "parkingPerApt") values[f.param] = { rule: "by_apartment_area", values: [{ max_area: null, per_apt: Number(v) }] };
     else values[f.param] = f.kind === "bool" ? v === BOOL_YES : f.kind === "text" || f.kind === "date" ? v : Number(v);
   }
+  // Округ, район, поселение по адресу — для нормативов по районам (места в детских садах и школах Москвы)
+  if (p.geo?.locality.length) values["GEN.LOCALITY"] = [...p.geo.locality];
   const start = (site.values.startDate?.value as IsoDate | undefined) ?? eomonth(today, 0);
   values["GEN.MODEL_START_DATE"] = start;
   values["GEN.VALUATION_DATE"] = start;

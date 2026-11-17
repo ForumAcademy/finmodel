@@ -180,6 +180,8 @@ function itemTotal(ctx: FormulaContext, item: Item, rows: () => MilestoneRow[]):
     return rate(ctx, item).mul(dayShares(from, to).reduce((s, d) => s.add(d.share), ZERO));
   }
   const qty = baseQty(ctx, item);
+  // Статья не в бюджете проекта и с нулевым объёмом (снос, когда сносить нечего) — 0, ставка не нужна
+  if (!item.hasRow && qty.isZero()) return ZERO;
   return rate(ctx, item).mul(qty);
 }
 
@@ -458,7 +460,10 @@ export function F_CAPEX_SMR_TOTAL(ctx: FormulaContext): Decimal {
       throw new CalcError(`«${item.name}»: у статьи группы «${item.group}» база должна быть ставка × объём (не «${item.base}»)`, "CAPEX.ITEMS");
     }
     try {
-      sum = sum.add(rate(ctx, item).mul(baseQty(ctx, item)));
+      const qty = baseQty(ctx, item);
+      // Статья не в бюджете проекта и с нулевым объёмом — 0 (как в F.CAPEX.ITEM_TOTAL)
+      if (!item.hasRow && qty.isZero()) continue;
+      sum = sum.add(rate(ctx, item).mul(qty));
     } catch (e) {
       if (e instanceof CalcError) throw new CalcError(`«${item.name}»: ${e.message}`, e.parameterId);
       throw e;
@@ -518,6 +523,17 @@ export function F_CAPEX_TOTAL(ctx: FormulaContext): Decimal {
   return total;
 }
 
+export function F_CAPEX_DEMOLITION_VOLUME(ctx: FormulaContext): Decimal {
+  // Расчёт «как в исходном Excel»: снос — внутри «Подготовки площадки» исходника
+  if (ctx.mode === "legacy") return ZERO;
+  const volume = ctx.num("SITE.DEMOLITION_VOLUME");
+  if (volume !== null) return volume;
+  const gfa = ctx.num("SITE.DEMOLITION_GFA");
+  if (gfa !== null) return gfa.mul(ctx.requireNum("SITE.DEMOLITION_STOREY_HEIGHT"));
+  ctx.message("info", "Снос зданий не учтён: не задана площадь зданий на участке. Если сносить нечего — введите 0", "SITE.DEMOLITION_GFA", "CAPEX.DEMOLITION_UNKNOWN");
+  return ZERO;
+}
+
 export const CAPEX_FORMULAS = {
   "F.CAPEX.ITEM_TOTAL": F_CAPEX_ITEM_TOTAL,
   "F.CAPEX.INDEX": F_CAPEX_INDEX,
@@ -528,5 +544,6 @@ export const CAPEX_FORMULAS = {
   "F.CAPEX.NCS_BENCH": F_CAPEX_NCS_BENCH,
   "F.CAPEX.INDEX_EFFECT": F_CAPEX_INDEX_EFFECT,
   "F.CAPEX.TOTAL": F_CAPEX_TOTAL,
+  "F.CAPEX.DEMOLITION_VOLUME": F_CAPEX_DEMOLITION_VOLUME,
 } as const;
 

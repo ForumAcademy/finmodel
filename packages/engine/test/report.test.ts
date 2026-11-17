@@ -133,6 +133,10 @@ const MSK: CalcProject = {
       "VAL.EQUITY_PREMIUM": 0.06,
       "VAL.HURDLE_IRR": 0.18,
       "MARKET.ANALOGS": [analog("ЖК 1", "бизнес", 650000, 1500), analog("ЖК 2", "бизнес", 670000, 1200), analog("ЖК 3", "бизнес", 630000, 1800)],
+      // Механика отчёта проверяется на выгодном участке: обязательства перед городом — по договору 0, зданий под снос нет
+      // (компенсация по нормативу и снос проверяются в analysis.test.ts)
+      "LAND.CITY_CASH_COMPENSATION": 0,
+      "SITE.DEMOLITION_GFA": 0,
     },
   },
 };

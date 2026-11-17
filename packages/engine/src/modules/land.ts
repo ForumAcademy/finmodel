@@ -258,6 +258,116 @@ export function F_LAND_VRI_FEE(ctx: FormulaContext): Decimal {
   return fee;
 }
 
+// ---------- обязательства перед городом по соцобъектам (Москва — 3135-ПП) ----------
+
+export type SocialRules = NonNullable<SpecRegion["social_obligations"]>;
+
+/** Соцобъект по нормативу: места, стоимость строительства, земля, итог. */
+export interface SocialNeedRow {
+  key: string;
+  title: string;
+  unit: string;
+  /** Норматив на norm_base жителей для зоны района. */
+  perBase: Decimal;
+  units: Decimal;
+  unitCost: Decimal;
+  build: Decimal;
+  landM2: Decimal;
+  upks: Decimal | null;
+  land: Decimal;
+  total: Decimal;
+}
+
+export interface SocialNeed {
+  zone: number;
+  /** Район, по которому определена зона; null — не определён (взята fallback_zone). */
+  district: string | null;
+  population: Decimal;
+  normBase: Decimal;
+  priceDate: string;
+  /** Где взят УПКС земли соцобъектов; null — не найден. */
+  upksWhere: string | null;
+  rows: SocialNeedRow[];
+}
+
+/** Слова, которые не входят в название района: «Басманный район» = «Басманный». */
+const DISTRICT_WORDS = new Set(["район", "поселение", "муниципальный", "городской", "округ"]);
+
+/** Название района для сравнения: без слов «район», «поселение», «муниципальный округ», ё → е, без регистра. */
+function districtKey(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .split(/[\s,]+/)
+    .filter((w) => w && !DISTRICT_WORDS.has(w))
+    .join(" ");
+}
+
+export function F_LAND_SOCIAL_POPULATION(ctx: FormulaContext): Decimal {
+  const rules = ctx.require<SocialRules>("LAND.SOCIAL_RULES");
+  const res = ctx.formula<GfaSplit>("F.TEP.GFA_SPLIT").res;
+  return res.div(rules.m2_per_resident);
+}
+
+export function F_LAND_SOCIAL_NEED(ctx: FormulaContext): SocialNeed {
+  const rules = ctx.require<SocialRules>("LAND.SOCIAL_RULES");
+  const population = ctx.formula<Decimal>("F.LAND.SOCIAL_POPULATION");
+  // Зона района: часть адреса совпадает с районом из списков зон
+  const locality = ctx.param<string[]>("GEN.LOCALITY") ?? [];
+  let zone: number | null = null;
+  let district: string | null = null;
+  for (const part of Array.isArray(locality) ? locality : []) {
+    const k = districtKey(String(part));
+    const hit = rules.zones.find((z) => z.districts.some((d) => districtKey(d) === k));
+    if (hit) {
+      zone = hit.zone;
+      district = String(part);
+      break;
+    }
+  }
+  if (zone === null) {
+    zone = rules.fallback_zone;
+    ctx.message("warning", `Район участка не определён по адресу — места в детских садах и школах посчитаны по зоне ${zone} (больший норматив). Найдите данные по адресу, чтобы взять норматив своего района`, "GEN.LOCALITY", "LAND.SOCIAL_ZONE_UNKNOWN");
+  }
+  // Земля под объекты: средний УПКС земли соцобъектов в квартале (распоряжение ДГИ № 214856)
+  const table = ctx.param<UpksTable>("LAND.UPKS_TABLE");
+  const quarter = ctx.param<string>("GEN.CADASTRAL_QUARTER");
+  const u = table && quarter ? upksFor(table, quarter, rules.land_group) : null;
+  const upks = u ? new Decimal(u.value) : null;
+  const needsLand = rules.objects.some((o) => o.land_m2_per_unit !== null);
+  if (needsLand && upks === null) {
+    ctx.message("warning", quarter === null ? "Стоимость земли под детский сад и школу не учтена: нет кадастрового квартала участка" : `Стоимость земли под детский сад и школу не учтена: нет средней кадастровой стоимости земли соцобъектов для квартала ${quarter}`, "GEN.CADASTRAL_QUARTER", "LAND.SOCIAL_LAND_UNKNOWN");
+  }
+  const normBase = new Decimal(rules.norm_base);
+  const rows = rules.objects.map((o): SocialNeedRow => {
+    const perBase = new Decimal(o.per_zone[String(zone)] ?? 0);
+    const units = population.mul(perBase).div(normBase).ceil();
+    const unitCost = new Decimal(o.unit_cost);
+    const build = units.mul(unitCost);
+    const landM2 = o.land_m2_per_unit === null ? ZERO : units.mul(o.land_m2_per_unit);
+    const land = upks === null ? ZERO : landM2.mul(upks);
+    return { key: o.key, title: o.title, unit: o.unit, perBase, units, unitCost, build, landM2, upks, land, total: build.add(land) };
+  });
+  return { zone, district, population, normBase, priceDate: rules.price_date, upksWhere: u?.where ?? null, rows };
+}
+
+/** Статьи бюджета с обязательствами по договору: при них норматив не считается (двойной счёт). */
+const CONTRACT_ITEMS = new Set(["CITY_CASH_COMPENSATION", "CITY_OBJECTS_CONSTRUCTION", "SOCIAL_OBJECTS"]);
+
+export function F_LAND_SOCIAL_COMPENSATION(ctx: FormulaContext): Decimal {
+  // Расчёт «как в исходном Excel» — обязательства исходника (Бюджет!F24)
+  if (ctx.mode === "legacy") return ZERO;
+  if (ctx.num("LAND.CITY_CASH_COMPENSATION") !== null || ctx.num("LAND.CITY_OBJECTS_COST") !== null) return ZERO;
+  const items = ctx.param<{ item_id?: string }[] | string>("CAPEX.ITEMS");
+  if (Array.isArray(items) && items.some((r) => CONTRACT_ITEMS.has(String(r.item_id)))) return ZERO;
+  if (ctx.param("LAND.SOCIAL_RULES") === null) {
+    ctx.message("warning", `Обязательства перед городом по соцобъектам не учтены: для региона «${ctx.region().name}» нормативов в справочнике нет. Введите сумму по договору с городом`, "LAND.CITY_CASH_COMPENSATION", "LAND.SOCIAL_RULES_MISSING");
+    return ZERO;
+  }
+  const need = ctx.formula<SocialNeed>("F.LAND.SOCIAL_NEED");
+  return need.rows.reduce((s, r) => s.add(r.total), ZERO);
+}
+
 export const LAND_FORMULAS = {
   "F.LAND.CADASTRAL_VALUE_EST": F_LAND_CADASTRAL_VALUE_EST,
   "F.LAND.CADASTRAL_VALUE_AFTER_VRI_EST": F_LAND_CADASTRAL_VALUE_AFTER_VRI_EST,
@@ -265,5 +375,8 @@ export const LAND_FORMULAS = {
   "F.LAND.TAX_OR_RENT": F_LAND_TAX_OR_RENT,
   "F.LAND.RENT_FIRST_YEAR": F_LAND_RENT_FIRST_YEAR,
   "F.LAND.VRI_FEE": F_LAND_VRI_FEE,
+  "F.LAND.SOCIAL_POPULATION": F_LAND_SOCIAL_POPULATION,
+  "F.LAND.SOCIAL_NEED": F_LAND_SOCIAL_NEED,
+  "F.LAND.SOCIAL_COMPENSATION": F_LAND_SOCIAL_COMPENSATION,
 } as const;
 

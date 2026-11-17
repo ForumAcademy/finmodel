@@ -3,7 +3,7 @@
  * вехи, план продаж и бюджет варианта, выбор лучшего по итогам полного расчёта каждого варианта.
  */
 import Decimal from "decimal.js";
-import { getParameter, spec } from "@fm/spec";
+import { getParameter, spec, type SpecRegion } from "@fm/spec";
 import type { FormulaContext } from "../context";
 import { CalcError } from "../context";
 import { eomonth, isIsoDate } from "../lib/dates";
@@ -288,6 +288,15 @@ export function F_VAR_CAPEX(ctx: FormulaContext): Record<string, unknown>[] {
     else if (from && to && first[from] === first[to]) Object.assign(row, { schedule_rule: "at_milestone", schedule_from: from });
     rows.push(row);
   }
+  // Статьи по нормативам региона (решение пользователя 17.11.2026): снос зданий и компенсация городу за соцобъекты
+  const demolition = ctx.param<NonNullable<SpecRegion["demolition"]>>("CAPEX.DEMOLITION_RULES");
+  if (demolition) {
+    const row: Record<string, unknown> = { item_id: "DEMOLITION", base: "F.CAPEX.DEMOLITION_VOLUME", rate: demolition.rate_per_m3, price_date: demolition.price_date, vat_included: demolition.vat_included };
+    if (first.rns_date === first.construction_start) Object.assign(row, { schedule_rule: "at_milestone", schedule_from: "rns_date" });
+    rows.push(row);
+  }
+  const social = ctx.param<NonNullable<SpecRegion["social_obligations"]>>("LAND.SOCIAL_RULES");
+  if (social) rows.push({ item_id: "SOCIAL_COMPENSATION", price_date: social.price_date });
   return rows;
 }
 
