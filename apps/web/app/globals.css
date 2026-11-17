@@ -441,3 +441,6 @@ svg.chart .hit:hover{fill:rgba(31,79,209,.06)}
   .lg-bottom{grid-template-columns:1fr}
 }
 .lg-res a{color:#fff;text-decoration:underline}
+.lg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.lg-dl{display:inline-flex;align-items:center;gap:10px}
+.lg-dl-err{color:var(--red);font-size:13px}
