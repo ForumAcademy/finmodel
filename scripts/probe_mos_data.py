@@ -20,7 +20,7 @@ API = "https://apidata.mos.ru/v1"
 UA = "finmodel-mos-probe/0.1"
 LAT, LON = 55.75756, 37.65373  # Лялин пер., 21 с2 — по геокодеру OpenStreetMap с сервера, 16.11.2026
 D = 0.004  # полуширина окна поиска, градусы (~300–450 м)
-WORDS = re.compile(r"культурн|наследи|охран|достопримечат|историческ|памятник|зон[аыи]", re.I)
+WORDS = re.compile(r"кадастр|стоимост|оценк|земельн|участ|ПЗЗ|землепольз|градостро|ГПЗУ|аренд", re.I)
 
 
 def key():
@@ -85,7 +85,6 @@ def site_geocode():
 
 
 def main():
-    site_geocode()
     if not KEY:
         print("Ключа DATA_MOS_API_KEY нет в ~/web/.env — запустите «Сайт на сервер» после добавления секрета")
         return 1
@@ -102,7 +101,7 @@ def main():
         print(f"[{d.get('Id')}] {d.get('Caption')} | геоданные: {d.get('ContainsGeodata')} | архив: {d.get('IsArchive')}")
     print()
     bbox = f"{LON - D},{LAT - D},{LON + D},{LAT + D}"
-    for d in found:
+    for d in found[:15]:
         if not d.get("ContainsGeodata") or d.get("IsArchive"):
             continue
         i = d.get("Id")
