@@ -75,6 +75,8 @@ describe("данные портала открытых данных Москвы
     expect(pl.tenure).toMatchObject({ value: "аренда", origin: "estimate" });
     expect(pl.cadastralNumber.basis?.url).toBe("https://data.mos.ru/opendata/1497");
     expect(pl.area.value).toBe("3410");
+    // Кадастровая стоимость — оценка: 3 410 м² × 107 210,79 (квартал 77:01:0001028, офисы — ВРИ 4.1)
+    expect(pl.cadastralValue).toMatchObject({ value: "365588793.9", origin: "estimate" });
     expect(r.problems).toEqual(["В реестре города площадь участка 3110 м², в проекте — 3410 м². Проверьте площадь: расчёт идёт от площади проекта."]);
     // Повторно — без изменений
     expect(mosdata.applyCityPlot(r.project, c, AT).changes).toEqual([]);
@@ -96,6 +98,8 @@ describe("сохранение найденного на портале", () => 
     expect(again.project.site?.zouit).toHaveLength(2);
     const two = mosdata.applyMosLookup(base, mosdata.mosLookup(P, { plots: PLOTS }, AT), AT);
     expect(two.changes).toEqual([]);
+    const none = mosdata.applyMosLookup(base, mosdata.mosLookup(P, { plots: { features: [] } }, AT), AT);
+    expect(none.project.plot.tenure).toMatchObject({ value: "собственность", origin: "estimate" });
     expect(two.project.plot.cadastralNumber.value).toBeNull();
   });
 });

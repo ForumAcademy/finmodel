@@ -4,9 +4,11 @@
  * Запрос идёт с сервера сайта по ключу (apps/web/app/api/mosdata); здесь — разбор ответа, проверка «точка внутри
  * границы» и изменения проекта.
  */
-import { getSource } from "@fm/spec";
+import Decimal from "decimal.js";
+import { getRegion, getSource, type RegionCode } from "@fm/spec";
+import { upksFor } from "./modules/land";
 import { date as fmtDate, num } from "./lib/text";
-import { applyChanges, cadastralQuarter, normalizeCadastralNumber, parseNumberRu, type ChangeSet, type GeoPoint, type LandProject, type PlotChange, type PlotFieldKey, type PlotValue, type ValueBasis } from "./plot";
+import { applyChanges, cadastralQuarter, vriCodes, normalizeCadastralNumber, parseNumberRu, type ChangeSet, type GeoPoint, type LandProject, type PlotChange, type PlotFieldKey, type PlotValue, type ValueBasis } from "./plot";
 import { siteOf, updateSite, type ZouitEntry } from "./site";
 
 export const MOS_SOURCE = "S_MOS_OPENDATA" as const;
@@ -274,7 +276,9 @@ export function applyCityPlot(p: LandProject, c: CityPlot, at: string): ChangeSe
   if (c.area && area && Math.abs(Number(c.area) - Number(area)) >= 1) {
     problems.push(`В реестре города площадь участка ${num(c.area, 0)} м², в проекте — ${num(area, 0)} м². Проверьте площадь: расчёт идёт от площади проекта.`);
   }
-  return { project: applyChanges(p, changes, at), changes, problems };
+  const withPlot = applyChanges(p, changes, at);
+  const est = cadastralValueEstimate(withPlot, at);
+  return { project: applyChanges(withPlot, est, at), changes: [...changes, ...est], problems };
 }
 
 /** Зоны охраны и территории памятников в точке — строки зон с особыми условиями (площадь на участке не известна). */
@@ -294,6 +298,44 @@ export function heritageZouit(m: MosLookup): ZouitEntry[] {
   return [...m.zones.map((n, i) => row("zones", n, i)), ...m.territories.map((n, i) => row("territories", n, i))];
 }
 
+/** Форма права, если городского участка в точке нет: земля, вероятно, частная — покупка в собственность. */
+export const PRIVATE_LAND_TENURE = "собственность";
+
+/**
+ * Оценка кадастровой стоимости в данные участка: площадь × средний УПКС квартала по группе текущего ВРИ (как
+ * F.LAND.CADASTRAL_VALUE_EST). Меняет только пустое значение или прошлую оценку; нет площади, квартала, ВРИ или
+ * таблицы региона — изменений нет.
+ */
+export function cadastralValueEstimate(p: LandProject, at: string): PlotChange[] {
+  const cur = p.plot.cadastralValue;
+  if (cur.value !== null && cur.origin !== "estimate") return [];
+  const region = p.plot.regionCode.value;
+  const quarter = p.plot.quarter.value ?? (p.plot.cadastralNumber.value ? cadastralQuarter(p.plot.cadastralNumber.value) : null);
+  const area = p.plot.area.value;
+  if (!region || !quarter || !area) return [];
+  let t;
+  try {
+    t = getRegion(region as RegionCode).cadastral_value_estimate;
+  } catch {
+    return [];
+  }
+  if (!t) return [];
+  const group = vriCodes(p.plot.vri.value).map((c) => t.vri_groups[c]).find((g): g is string => g !== undefined);
+  if (!group) return [];
+  const u = upksFor(t, quarter, group);
+  if (!u) return [];
+  const value = new Decimal(area).mul(u.value).toDecimalPlaces(2).toString();
+  const title = t.groups.find((g) => g.key === group)?.title ?? group;
+  const s = getSource("S_MSK_DGI_UPKS_2024");
+  const to: PlotValue = {
+    value,
+    origin: "estimate",
+    basis: { title: "Оценка по среднему УПКС, распоряжение ДГИ № 214856", url: s.url ?? null, date: at.slice(0, 10), note: `${num(area, 0)} м² × ${num(String(u.value), 2)} руб/м² — группа «${title}», ${u.where}. Замените стоимостью из выписки ЕГРН, когда она будет` },
+  };
+  if (cur.value === to.value && cur.origin === "estimate") return [];
+  return [{ field: "cadastralValue", from: cur, to }];
+}
+
 /** Строки зон из портала Москвы в анализе участка: id начинается с «mos-». */
 const isMosZouit = (z: ZouitEntry): boolean => z.id.startsWith("mos-");
 
@@ -310,5 +352,12 @@ export function applyMosLookup(p: LandProject, m: MosLookup, at: string): Change
   let next: LandProject = { ...p, mos: m, updatedAt: at };
   if (!sameZones) next = updateSite(next, { zouit: [...own, ...heritage] }, at);
   if (m.plots.length === 1) return applyCityPlot(next, m.plots[0] as CityPlot, at);
-  return { project: next, changes: [], problems: [] };
+  const changes: PlotChange[] = [];
+  const t = next.plot.tenure;
+  if (m.plots.length === 0 && t.value === null) {
+    changes.push({ field: "tenure", from: t, to: { value: PRIVATE_LAND_TENURE, origin: "estimate", basis: mosBasis("plots", at, "В реестре земель города в этой точке участка нет: земля, вероятно, не городская — по умолчанию покупка в собственность") } });
+  }
+  const withTenure = applyChanges(next, changes, at);
+  const est = cadastralValueEstimate(withTenure, at);
+  return { project: applyChanges(withTenure, est, at), changes: [...changes, ...est], problems: [] };
 }
