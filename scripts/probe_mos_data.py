@@ -85,11 +85,12 @@ def site_geocode():
 
 
 def main():
-    site_geocode()
     if not KEY:
         print("Ключа DATA_MOS_API_KEY нет в ~/web/.env — запустите «Сайт на сервер» после добавления секрета")
         return 1
-    st, cat = get("/datasets", **{"$top": 5000})
+    st, cat = get("/datasets")
+    if not isinstance(cat, list):
+        st, cat = get("/datasets", **{"$top": 1000})
     print(f"Каталог: ответ {st}, наборов {len(cat) if isinstance(cat, list) else '—'}")
     if not isinstance(cat, list):
         return 1
