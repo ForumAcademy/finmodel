@@ -54,7 +54,7 @@ def get(path, **params):
 def site_geocode():
     """Поиск по адресу через сам сайт на сервере (127.0.0.1:3400): ответ, время, число мест; журнал службы."""
     import subprocess, time
-    for q in ["Москва, Лялин переулок, 21 с2", "Москва, Лялин переулок, 21"]:
+    for q in ["Москва, Лялин переулок, 21 с2"]:
         url = "http://127.0.0.1:3400/api/geocode?" + urllib.parse.urlencode({"q": q})
         t0 = time.time()
         try:
@@ -70,12 +70,12 @@ def site_geocode():
             data = json.loads(body)
             info = f"мест: {len(data)}" if isinstance(data, list) else str(data)[:200]
             if isinstance(data, list) and data:
-                info += f"; первое: {data[0].get('display_name', '')[:120]}"
+                info += f"; первое: {data[0].get('display_name', '')[:120]}; части адреса: {json.dumps(data[0].get('address', {}), ensure_ascii=False)}"
         except Exception:
             info = body[:200].decode("utf-8", "ignore")
         print(f"Сайт /api/geocode «{q}»: ответ {st}, {ms} мс, {info}")
     try:
-        out = subprocess.run(["journalctl", "--user", "-u", "finmodel-web", "-n", "30", "--no-pager", "-o", "cat"],
+        out = subprocess.run(["journalctl", "--user", "-u", "finmodel-web", "-n", "5", "--no-pager", "-o", "cat"],
                              capture_output=True, text=True, timeout=20).stdout
         print("Журнал сайта (последние строки):")
         print(out[-4000:])
@@ -85,6 +85,7 @@ def site_geocode():
 
 
 def main():
+    site_geocode()
     if not KEY:
         print("Ключа DATA_MOS_API_KEY нет в ~/web/.env — запустите «Сайт на сервер» после добавления секрета")
         return 1
