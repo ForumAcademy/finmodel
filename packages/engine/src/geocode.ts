@@ -18,20 +18,38 @@ export function geocodeUrl(query: string): string {
   return `https://nominatim.openstreetmap.org/search?${q.toString()}`;
 }
 
-/** Строение, корпус, владение в конце адреса: «21 с.2», «21 стр. 2», «21к1», «вл. 3». */
-const BUILDING = /[\s,]*(?:с\.?|стр\.?|строение|к\.?|корп\.?|корпус|лит\.?|литера)\s*\d+[а-я]?\s*$/i;
+/** Строение, корпус, литера в конце адреса: «21 с2», «21 стр. 2», «21к1». */
+const BUILDING = /[\s,]*(?:с|стр|строение|к|корп|корпус|лит|литера)\.?\s*\d+[а-я]?\s*$/i;
 
 /**
- * Варианты запроса по порядку: адрес как введён; без строения и корпуса (их часто нет в OpenStreetMap); с названием
- * региона, если его нет в адресе. Повторы убраны.
+ * Адрес в записи, которую понимает геокодер OpenStreetMap: без «г.», «д.», «дом», «вл.»; строение и корпус — слитно
+ * с номером дома («21 с2», «21 к1»), как в OpenStreetMap. «г. Москва, Лялин пер., д. 21, стр. 2» → «Москва, Лялин пер., 21 с2».
+ */
+export function normalizeAddress(address: string): string {
+  return address
+    .replace(/\s+/g, " ")
+    .replace(/(^|[\s,])(?:г|гор|город)\.?\s+(?=[А-ЯЁ])/g, "$1")
+    .replace(/(^|[\s,])(?:д|дом|вл|влад|владение)\.?\s*(?=\d)/gi, "$1")
+    .replace(/,?\s*(?:стр|строение|с)\.?\s*(\d+[а-я]?)\s*$/i, " с$1")
+    .replace(/,?\s*(?:корп|корпус|к)\.?\s*(\d+[а-я]?)(?=\s|$|,| с\d)/i, " к$1")
+    .replace(/\s+,/g, ",")
+    .replace(/^[\s,]+|[\s,]+$/g, "")
+    .trim();
+}
+
+/**
+ * Варианты запроса по порядку: адрес в записи OpenStreetMap; без строения и корпуса (их часто нет в OpenStreetMap);
+ * адрес как введён. Название региона добавляется, если его нет в адресе. Повторы убраны.
  */
 export function geocodeQueries(address: string, regionCode: string | null): string[] {
   const a = address.trim().replace(/\s+/g, " ");
   if (!a) return [];
-  const region = regionCode ? regionName(regionCode) : null;
-  const withRegion = (s: string) => (region && region !== "—" && !s.toLowerCase().includes(region.toLowerCase().replace(/^г\.\s*/, "")) ? `${region.replace(/^г\.\s*/, "")}, ${s}` : s);
-  const short = a.replace(BUILDING, "").trim();
-  const list = [withRegion(a), withRegion(short)];
+  const region = regionCode ? regionName(regionCode).replace(/^г\.\s*/, "") : null;
+  const withRegion = (s: string) => (region && region !== "—" && !s.toLowerCase().includes(region.toLowerCase()) ? `${region}, ${s}` : s);
+  const norm = normalizeAddress(a);
+  let short = norm;
+  while (BUILDING.test(short)) short = short.replace(BUILDING, "").trim();
+  const list = [withRegion(norm), withRegion(short), withRegion(a)];
   return list.filter((q, i) => q && list.indexOf(q) === i);
 }
 
