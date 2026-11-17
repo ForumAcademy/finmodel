@@ -266,7 +266,7 @@ export function applyCityPlot(p: LandProject, c: CityPlot, at: string): ChangeSe
     const cur = p.plot[field];
     if (cur.origin === "source" && cur.basis?.documentId) return;
     const to: PlotValue = { value, origin, basis: mosBasis("plots", at, own ?? (extra ? `${note}. ${extra}` : note)) };
-    if (cur.value === to.value && cur.origin === to.origin && cur.basis?.url === to.basis?.url) return;
+    if (cur.value === to.value && cur.origin === to.origin && cur.basis?.url === to.basis?.url && cur.basis?.note === to.basis?.note) return;
     changes.push({ field, from: cur, to });
   };
   put("cadastralNumber", c.cadastralNumber, "source");
@@ -356,6 +356,9 @@ export function applyMosLookup(p: LandProject, m: MosLookup, at: string): Change
   let next: LandProject = { ...p, mos: m, updatedAt: at };
   if (!sameZones) next = updateSite(next, { zouit: [...own, ...heritage] }, at);
   if (m.plots.length === 1) return applyCityPlot(next, m.plots[0] as CityPlot, at);
+  // Участок уже выбран из нескольких — его данные обновляются
+  const chosen = chosenCityPlot(m, next.plot.cadastralNumber.value);
+  if (chosen) return applyCityPlot(next, chosen, at);
   const changes: PlotChange[] = [];
   const t = next.plot.tenure;
   if (m.plots.length === 0 && t.value === null) {

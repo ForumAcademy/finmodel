@@ -107,5 +107,10 @@ describe("сохранение найденного на портале", () => 
     const none = mosdata.applyMosLookup(base, mosdata.mosLookup(P, { plots: { features: [] } }, AT), AT);
     expect(none.project.plot.tenure).toMatchObject({ value: "собственность", origin: "estimate" });
     expect(two.project.plot.cadastralNumber.value).toBeNull();
+    // Выбранный из нескольких участок при обновлении остаётся и получает свежие данные
+    const picked = mosdata.applyCityPlot(base, mosdata.cityPlotsAt(PLOTS, P)[0] as mosdata.CityPlot, AT).project;
+    const refreshed = mosdata.applyMosLookup(picked, mosdata.mosLookup(P, { plots: PLOTS }, AT), AT);
+    expect(refreshed.project.plot.cadastralNumber.value).toBe("77:01:0001028:2999");
+    expect(refreshed.changes).toEqual([]);
   });
 });
