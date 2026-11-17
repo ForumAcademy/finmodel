@@ -261,16 +261,17 @@ export function applyCityPlot(p: LandProject, c: CityPlot, at: string): ChangeSe
   const changes: PlotChange[] = [];
   const problems: string[] = [];
   const note = `Участок ${c.cadastralNumber}${c.address ? `, ${c.address}` : ""}`;
-  const put = (field: PlotFieldKey, value: string | null, origin: "source" | "estimate", extra?: string) => {
+  const put = (field: PlotFieldKey, value: string | null, origin: "source" | "estimate", extra?: string, own?: string) => {
     if (value === null) return;
     const cur = p.plot[field];
     if (cur.origin === "source" && cur.basis?.documentId) return;
-    const to: PlotValue = { value, origin, basis: mosBasis("plots", at, extra ? `${note}. ${extra}` : note) };
+    const to: PlotValue = { value, origin, basis: mosBasis("plots", at, own ?? (extra ? `${note}. ${extra}` : note)) };
     if (cur.value === to.value && cur.origin === to.origin && cur.basis?.url === to.basis?.url) return;
     changes.push({ field, from: cur, to });
   };
   put("cadastralNumber", c.cadastralNumber, "source");
-  put("quarter", cadastralQuarter(c.cadastralNumber), "source");
+  // Квартал — первая часть номера того же участка; адрес не повторяется, чтобы не читалось как второй участок
+  put("quarter", cadastralQuarter(c.cadastralNumber), "source", undefined, `Первая часть кадастрового номера участка ${c.cadastralNumber}`);
   put("vri", c.vri, "source");
   if (isCityLand(c)) {
     put("tenure", CITY_LAND_TENURE, "estimate", `Земля города (${c.ownerType}${c.rented === true ? ", сейчас сдана в аренду" : ""}): участок под строительство предоставляется в аренду на торгах, ст. 39.6 ЗК РФ`);
