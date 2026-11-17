@@ -84,39 +84,65 @@ def site_geocode():
     print()
 
 
+def fetch(url, n=3_000_000):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (finmodel-probe)"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status, r.read(n).decode("utf-8", "ignore")
+    except urllib.error.HTTPError as e:
+        return e.code, ""
+    except Exception as e:
+        return type(e).__name__, ""
+
+
+def inside(pt, ring):
+    x, y = pt
+    c = False
+    for i in range(len(ring)):
+        x1, y1 = ring[i - 1][:2]
+        x2, y2 = ring[i][:2]
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1 + 1e-15) + x1:
+            c = not c
+    return c
+
+
+def covers(geom, pt):
+    t, cs = geom.get("type"), geom.get("coordinates") or []
+    polys = cs if t == "MultiPolygon" else [cs] if t == "Polygon" else []
+    return any(p and inside(pt, p[0]) for p in polys)
+
+
 def main():
+    # 1) Распоряжение ДГИ 214856 (средние УПКС) — где лежит приложение
+    for url in ["https://base.garant.ru/411053384/", "https://base.garant.ru/411053384/53f89421bbdaf741eb2d1ecc4ddb4c33/"]:
+        st, html = fetch(url)
+        links = sorted(set(re.findall(r'(?:href|src|data-url)="([^"]+)"', html)))
+        good = [l for l in links if re.search(r"pdf|411053384|files|attach|xls|zip", l, re.I)]
+        print(f"{url}: ответ {st}, длина {len(html)}; ссылки: {good[:40]}")
+        m = re.findall(r"[^<>]{0,200}(?:кадастров\w* квартал|групп\w* вид)[^<>]{0,200}", html)
+        print("  текст:", [x.strip()[:300] for x in m[:8]])
+    for url in ["https://www.mos.ru/dgi/documents/", "https://rosreestr.gov.ru/", "https://cipp.mos.ru/", "https://nspd.gov.ru/"]:
+        st, html = fetch(url, 200_000)
+        print(f"{url}: ответ {st}, длина {len(html)}")
     if not KEY:
-        print("Ключа DATA_MOS_API_KEY нет в ~/web/.env — запустите «Сайт на сервер» после добавления секрета")
+        print("Ключа нет")
         return 1
-    st, cat = get("/datasets")
-    if isinstance(cat, dict):
-        print(f"Каталог — объект, поля: {list(cat.keys())[:20]}")
-        cat = next((v for k, v in cat.items() if isinstance(v, list)), cat)
-    print(f"Каталог: ответ {st}, наборов {len(cat) if isinstance(cat, list) else '—'}")
-    if not isinstance(cat, list):
-        return 1
-    found = [d for d in cat if WORDS.search(str(d.get("Caption", "")))]
-    print(f"Похожих наборов: {len(found)}\n")
-    for d in found:
-        print(f"[{d.get('Id')}] {d.get('Caption')} | геоданные: {d.get('ContainsGeodata')} | архив: {d.get('IsArchive')}")
-    print()
     bbox = f"{LON - D},{LAT - D},{LON + D},{LAT + D}"
-    for d in found[:15]:
-        if not d.get("ContainsGeodata") or d.get("IsArchive"):
-            continue
-        i = d.get("Id")
-        st, fc = get(f"/datasets/{i}/features", bbox=bbox)
-        feats = fc.get("features", []) if isinstance(fc, dict) else []
-        print(f"== [{i}] {d.get('Caption')}: ответ {st}, объектов рядом с участком: {len(feats)}")
-        for f in feats[:5]:
-            g = f.get("geometry") or {}
-            attrs = (f.get("properties") or {}).get("Attributes") or f.get("properties") or {}
-            keys = list(attrs.keys())[:25]
-            short = {k: (str(v)[:80]) for k, v in attrs.items() if k in keys[:12]}
-            print(f"   {g.get('type')}: {json.dumps(short, ensure_ascii=False)}")
-        if feats:
-            a = (feats[0].get("properties") or {}).get("Attributes") or feats[0].get("properties") or {}
-            print(f"   поля: {', '.join(list(a.keys()))}")
+    # 2) Участки города (1497): какой содержит точку, все его поля
+    st, fc = get("/datasets/1497/features", bbox=bbox)
+    feats = fc.get("features", []) if isinstance(fc, dict) else []
+    hit = [f for f in feats if covers(f.get("geometry") or {}, (LON, LAT))]
+    print(f"\n[1497] участков рядом {len(feats)}, содержат точку: {len(hit)}")
+    for f in hit[:3]:
+        print("   ", str((f.get("properties") or {}).get("attributes"))[:3000])
+    if feats and not hit:
+        print("   пример:", str((feats[0].get("properties") or {}).get("attributes"))[:3000])
+    # 3) ПЗЗ (61641), реестр ГПЗУ (3012): поля и первые строки
+    for i in (61641, 3012):
+        st, rows = get(f"/datasets/{i}/rows", **{"$top": 2})
+        print(f"\n[{i}] строки: ответ {st}: {json.dumps(rows, ensure_ascii=False)[:2500] if rows else '-'}")
+        st, cnt = get(f"/datasets/{i}/count")
+        print(f"   записей: {cnt}")
     return 0
 
 
