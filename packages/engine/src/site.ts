@@ -30,15 +30,16 @@ export interface SiteField {
 
 const PERCENT = 100;
 /** 1 тыс. м²/га = 1000 м² / 10 000 м² = 0,1 м²/м². */
-const DENSITY_TO_M2 = new Decimal(1000).div(10000);
+const THOUSAND = 1000;
+const DENSITY_TO_M2 = new Decimal(THOUSAND).div(10000);
 
 export const SITE_FIELDS: readonly SiteField[] = [
-  { key: "zone", label: "Территориальная зона", param: "SITE.ZONE", kind: "text", hint: "Индекс зоны по карте ПЗЗ, например Ж1" },
+  { key: "zone", label: "Территориальная зона", param: "SITE.ZONE", kind: "text", hint: "Москва — карта ПЗЗ Москвы (портал ГИС ОГД, вход по учётной записи mos.ru): найдите участок по адресу или кадастровому номеру и нажмите на территориальную зону, в карточке — индекс зоны (например, Ж1 или номер зоны). Московская область — Геопортал Подмосковья, слой ПЗЗ. Также — ГПЗУ" },
   { key: "maxGfa", label: "Предельная наземная площадь", unit: "м²", param: "GPZU.MAX_GFA_ABOVE", kind: "area", hint: "Суммарная поэтажная площадь в габаритах наружных стен из ГПЗУ" },
-  { key: "density", label: "Предельная плотность застройки", unit: "тыс. м²/га", param: "SITE.MAX_DENSITY", kind: "density", hint: "Из регламента зоны ПЗЗ или ГПЗУ (для Москвы — в тыс. м²/га)" },
-  { key: "maxFloors", label: "Предельная этажность", unit: "эт.", param: "GPZU.MAX_FLOORS", kind: "number", hint: "Из ГПЗУ или регламента зоны ПЗЗ; если задана только высота — пересчитайте в этажи" },
-  { key: "maxHeight", label: "Предельная высота", unit: "м", param: "GPZU.MAX_HEIGHT_M", kind: "number", hint: "Из ГПЗУ или регламента зоны ПЗЗ" },
-  { key: "builtShare", label: "Максимальный процент застройки", unit: "%", param: "GPZU.MAX_BUILT_SHARE", kind: "percent", hint: "Из ГПЗУ или регламента зоны ПЗЗ" },
+  { key: "density", label: "Предельная плотность застройки", unit: "тыс. м²/га", param: "SITE.MAX_DENSITY", kind: "density", hint: "Москва — карта ПЗЗ Москвы (портал ГИС ОГД, вход по учётной записи mos.ru): найдите участок по адресу или кадастровому номеру и нажмите на территориальную зону, в карточке — плотность в тыс. м²/га (прочерк — не установлена). Московская область — Геопортал Подмосковья. Также — ГПЗУ, раздел 2" },
+  { key: "maxFloors", label: "Предельная этажность", unit: "эт.", param: "GPZU.MAX_FLOORS", kind: "number", hint: "ГПЗУ, раздел 2. В ПЗЗ Москвы обычно задана только высота (карта ПЗЗ Москвы, карточка зоны) — тогда пересчитайте её в этажи по высоте этажа. Московская область — Геопортал Подмосковья" },
+  { key: "maxHeight", label: "Предельная высота", unit: "м", param: "GPZU.MAX_HEIGHT_M", kind: "number", hint: "Москва — карта ПЗЗ Москвы (портал ГИС ОГД, вход по учётной записи mos.ru): найдите участок по адресу или кадастровому номеру и нажмите на территориальную зону, в карточке — предельная высота, м (прочерк — не установлена). Московская область — Геопортал Подмосковья. Также — ГПЗУ, раздел 2" },
+  { key: "builtShare", label: "Максимальный процент застройки", unit: "%", param: "GPZU.MAX_BUILT_SHARE", kind: "percent", hint: "Москва — карта ПЗЗ Москвы (портал ГИС ОГД, вход по учётной записи mos.ru): найдите участок по адресу или кадастровому номеру и нажмите на территориальную зону, в карточке — процент застройки (прочерк — не установлен). Московская область — Геопортал Подмосковья. Также — ГПЗУ, раздел 2" },
   { key: "apartAllowed", label: "Допускаются апартаменты", param: "GPZU.APART_ALLOWED", kind: "bool", hint: "Да — если ГПЗУ допускает объекты гостиничного назначения (ВРИ 4.7)" },
   { key: "demolitionGfa", label: "Площадь зданий под снос", unit: "м²", param: "SITE.DEMOLITION_GFA", kind: "area", hint: "Суммарная площадь существующих зданий на участке, которые нужно снести: из граданализа, ГПЗУ, техпаспорта. 0 — сносить нечего" },
   { key: "demolitionVolume", label: "Объём зданий под снос", unit: "м³", param: "SITE.DEMOLITION_VOLUME", kind: "number", hint: "Строительный объём из техпаспорта БТИ, если есть. Пусто — объём = площадь × высота этажа 3,3 м" },
@@ -121,6 +122,9 @@ export function parseSite(key: SiteFieldKey, text: string): ParsedSite {
   const range = getParameter(f.param).range;
   if (range && (stored.lt(range[0]) || stored.gt(range[1]))) {
     const show = (x: number) => siteText(key, String(x));
+    const thousands = d.div(THOUSAND).mul(DENSITY_TO_M2);
+    if (f.kind === "density" && thousands.gte(range[0]) && thousands.lte(range[1]))
+      return { error: `Плотность вводится в тысячах м² на гектар: «${t}» — это, скорее всего, ${num(d.div(THOUSAND), 2)} тыс. м²/га. Введите ${num(d.div(THOUSAND), 2)}. Если в документе указана общая площадь (м²), а не плотность, — введите её в поле «Предельная наземная площадь».` };
     return { error: `${f.label} ${siteText(key, stored.toString())}${f.unit ? ` ${f.unit}` : ""} вне допустимого диапазона ${show(range[0])}–${show(range[1])}. Проверьте единицы.` };
   }
   if (f.kind === "number" && f.param === "GPZU.MAX_FLOORS" && !d.isInteger()) return { error: "Этажность — целое число." };

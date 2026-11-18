@@ -82,25 +82,28 @@ export function ExpertFields({ form, onChange, placeholder, unit, numeric }: { f
   );
 }
 
-const NSPD = "nspd.gov.ru";
-const NSPD_URL = "https://nspd.gov.ru/map";
+/** Слова в «Где взять данные», которые показываются ссылкой на первоисточник. */
+const WHERE_LINKS: Record<string, string> = {
+  "nspd.gov.ru": "https://nspd.gov.ru/map",
+  "карта ПЗЗ Москвы": "https://gisogd.mos.ru/",
+  "Геопортал Подмосковья": "https://rgis.mosreg.ru/",
+};
+const WHERE_RE = new RegExp(`(${Object.keys(WHERE_LINKS).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`);
 
-/** Обязательная пометка «Где взять данные» у поля ручного ввода; адрес карты НСПД — ссылкой. */
+/** Обязательная пометка «Где взять данные» у поля ручного ввода; адреса карт — ссылками. */
 export function WhereToFind({ text, className = "where" }: { text: string; className?: string }) {
-  const parts = text.split(NSPD);
   return (
     <div className={className}>
       <b>Где взять данные:</b>{" "}
-      {parts.map((t, i) => (
-        <span key={i}>
-          {i > 0 && (
-            <a href={NSPD_URL} target="_blank" rel="noreferrer">
-              {NSPD}
-            </a>
-          )}
-          {t}
-        </span>
-      ))}
+      {text.split(WHERE_RE).map((t, i) =>
+        WHERE_LINKS[t] ? (
+          <a key={i} href={WHERE_LINKS[t]} target="_blank" rel="noreferrer">
+            {t}
+          </a>
+        ) : (
+          <span key={i}>{t}</span>
+        ),
+      )}
       {text.endsWith(".") ? "" : "."}
     </div>
   );
