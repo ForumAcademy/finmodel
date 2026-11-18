@@ -1,0 +1,38 @@
+name: Проверка карты ПЗЗ
+
+# Открывается ли карта ПЗЗ Москвы (ИАИС ОГД) с сервера в России и какие адреса
+# данных она использует. Только чтение; на сервере ничего не устанавливает.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/probe_pzz.py
+      - .github/workflows/probe-pzz.yml
+
+permissions:
+  contents: read
+
+jobs:
+  russia:
+    name: С сервера в России (Хостленд)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверка через SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+        run: |
+          set -o pipefail
+          # Ключ, скопированный из консоли Windows, может прийти с \r, пробелами
+          # или склеенным в одну строку: собираем его заново из base64-части.
+          install -m 600 /dev/null key
+          python3 -c 'import os,re,textwrap; k=os.environ["SSH_KEY"]; m=re.search(r"-----BEGIN ([A-Z ]+)-----(.*?)-----END", k, re.S); b=re.sub(r"\s+", "", m.group(2)); print(f"-----BEGIN {m.group(1)}-----"); print("\n".join(textwrap.wrap(b, 70))); print(f"-----END {m.group(1)}-----")' > key
+          ssh-keygen -y -f key > /dev/null && echo "ключ прочитан"
+          ssh -i key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+            "$USER_NAME@$HOST" 'python3 -' < scripts/probe_pzz.py | tee out.txt
+          rm -f key
+      - name: Итог
+        run: cat out.txt >> "$GITHUB_STEP_SUMMARY"
