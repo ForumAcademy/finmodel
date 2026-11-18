@@ -327,6 +327,7 @@ describe("участок проекта: ограничения и аналог�
   it("ввод ограничений: проценты — в %, плотность — в тыс. м²/га, этажность — целое", () => {
     expect(parseSite("builtShare", "40")).toEqual({ value: "0.4" });
     expect(parseSite("density", "25")).toEqual({ value: "2.5" });
+    expect(parseSite("density", "15000").error).toContain("15 тыс. м²/га. Введите 15.");
     expect(siteText("density", "2.5")).toBe("25");
     expect(parseSite("maxFloors", "24,5").error).toBe("Этажность — целое число.");
     expect(parseSite("startDate", "30.09.2026")).toEqual({ value: "2026-09-30" });
