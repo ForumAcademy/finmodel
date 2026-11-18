@@ -343,6 +343,7 @@ tr.chgd td{background:var(--yel-bg)}
 .answer b{font-size:15px;display:block}
 .answer .small{margin-top:4px;color:var(--ink2)}
 .ftab td.v{white-space:nowrap;font-weight:600}
+.ftab td.v.long{white-space:normal;max-width:420px;overflow-wrap:anywhere;font-weight:500;text-align:left}
 .ftab td.act{text-align:right;width:1%}
 .ftab .org{border:0;background:none;padding:0;color:var(--ink2);font-weight:500}
 .ftab .org.basis{color:var(--muted)}
