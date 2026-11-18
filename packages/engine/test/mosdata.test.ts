@@ -143,3 +143,33 @@ describe("после ручной правки", () => {
   });
 });
 
+
+describe("несколько участков в проекте", () => {
+  it("отмеченные участки складываются: номера, площадь, кадастровая стоимость; площадь больше введённой — сообщение", () => {
+    const list = mosdata.cityPlotsAt(PLOTS, P);
+    const base = mosdata.applyMosLookup(make(), mosdata.mosLookup(P, { plots: PLOTS }, AT), AT).project;
+    const r = mosdata.applyCityPlots(base, list, AT);
+    const pl = r.project.plot;
+    expect(pl.cadastralNumber.value).toBe("77:01:0001028:2999, 77:01:0001028:2");
+    expect(pl.quarter.value).toBe("77:01:0001028");
+    expect(pl.area).toMatchObject({ value: "3903", origin: "source" });
+    // (3 110 + 793) м² × 107 210,79 руб/м² — оба участка в одном квартале, ВРИ 4.1
+    expect(pl.cadastralValue).toMatchObject({ value: "418443713.37", origin: "estimate" });
+    expect(r.problems).toContain("Площадь отмеченных участков 3 903 м² больше введённой ранее 3 410 м². В расчёт взята сумма площадей; проверьте, все ли участки входят в проект.");
+    expect(mosdata.chosenCityPlots(r.project.mos as mosdata.MosLookup, pl.cadastralNumber.value)).toHaveLength(2);
+    // Обновление с портала сохраняет оба участка
+    expect(mosdata.applyMosLookup(r.project, r.project.mos as mosdata.MosLookup, AT).changes).toEqual([]);
+    // Снова один участок — площадь его
+    const one = mosdata.applyCityPlots(r.project, [list[0] as mosdata.CityPlot], AT).project.plot;
+    expect(one.area.value).toBe("3110");
+    expect(one.cadastralNumber.value).toBe("77:01:0001028:2999");
+  });
+
+  it("введённая кадастровая стоимость меньше оценки отмеченных участков — сообщение, введённая остаётся", () => {
+    const base = mosdata.applyMosLookup(make(), mosdata.mosLookup(P, { plots: PLOTS }, AT), AT).project;
+    const own = plot.applyChanges(base, plot.manualChange(base, "cadastralValue", "326576186.2", { title: "Карта НСПД" }), AT);
+    const r = mosdata.applyCityPlots(own, mosdata.cityPlotsAt(PLOTS, P), AT);
+    expect(r.project.plot.cadastralValue).toMatchObject({ value: "326576186.2", origin: "expert" });
+    expect(r.problems.some((t) => t.startsWith("Оценка кадастровой стоимости отмеченных участков 418 443 713 руб больше введённой 326 576 186 руб"))).toBe(true);
+  });
+});
