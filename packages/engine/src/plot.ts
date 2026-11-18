@@ -9,6 +9,7 @@ import { date as fmtDate, num } from "./lib/text";
 import { siteField, type SiteData, type SiteFieldKey } from "./site";
 import type { GeoLookup } from "./geocode";
 import type { MosLookup } from "./mosdata";
+import type { ProjectOffer } from "./offer";
 
 // ---------- происхождение значения (задание, раздел 5) ----------
 
@@ -163,11 +164,12 @@ export function emptyPlot(): Plot {
 
 // ---------- документы проекта ----------
 
-export type DocumentKind = "egrn" | "gpzu" | "ppt" | "deal" | "tep" | "estimate" | "bank" | "excel" | "other";
+export type DocumentKind = "egrn" | "offer" | "gpzu" | "ppt" | "deal" | "tep" | "estimate" | "bank" | "excel" | "other";
 
 /** Документы проекта (задание, раздел 6): что каждый подтверждает. */
 export const DOCUMENT_KINDS: readonly { kind: DocumentKind; title: string; confirms: string }[] = [
   { kind: "egrn", title: "Выписка ЕГРН", confirms: "Кадастровый номер, адрес, площадь, категория земель, ВРИ, кадастровая стоимость, право" },
+  { kind: "offer", title: "Инвестиционное предложение", confirms: "Кадастровый номер, площадь, ВРИ, право, цена, плотность; для ЦОДа — мощность по техусловиям" },
   { kind: "gpzu", title: "ГПЗУ", confirms: "Предельные параметры застройки, процент застройки" },
   { kind: "ppt", title: "ППТ", confirms: "Параметры застройки, если участок в проекте планировки" },
   { kind: "deal", title: "Предложение или договор по участку", confirms: "Цена и дата сделки" },
@@ -190,6 +192,34 @@ export interface ProjectDocument {
 
 export function documentTitle(kind: DocumentKind): string {
   return DOCUMENT_KINDS.find((d) => d.kind === kind)?.title ?? OTHER_DOCUMENT_TITLE;
+}
+
+// ---------- назначение проекта ----------
+
+/**
+ * Назначение проекта (решение пользователя 18.11.2026): жилое — как раньше; коммерческое — вид объекта, первым ЦОД.
+ * Нет поля в проекте — жилое (проекты, созданные до 18.11.2026).
+ */
+export type ProjectPurpose = "residential" | "datacenter";
+export type PurposeUse = "residential" | "commercial";
+
+export const PURPOSE_USES: readonly { use: PurposeUse; title: string }[] = [
+  { use: "residential", title: "Жилое" },
+  { use: "commercial", title: "Коммерческое" },
+];
+
+/** Виды коммерческих объектов. Офисы и склады добавляются сюда же. */
+export const COMMERCIAL_OBJECTS: readonly { purpose: Exclude<ProjectPurpose, "residential">; title: string; short: string }[] = [
+  { purpose: "datacenter", title: "ЦОД (центр обработки данных)", short: "ЦОД" },
+];
+
+export const purposeOf = (p: Pick<LandProject, "purpose">): ProjectPurpose => p.purpose ?? "residential";
+export const purposeUse = (purpose: ProjectPurpose): PurposeUse => (purpose === "residential" ? "residential" : "commercial");
+
+/** «Жилое» или «Коммерческое · ЦОД». */
+export function purposeTitle(purpose: ProjectPurpose): string {
+  const object = COMMERCIAL_OBJECTS.find((o) => o.purpose === purpose);
+  return object ? `Коммерческое · ${object.short}` : "Жилое";
 }
 
 // ---------- проект ----------
@@ -235,6 +265,10 @@ export interface LandProject {
   history: HistoryEntry[];
   /** Анализ участка: ограничения, аналоги, свои варианты; нет — ещё не заполнялся. */
   site?: SiteData;
+  /** Назначение: жилое или вид коммерческого объекта; нет — жилое. */
+  purpose?: ProjectPurpose;
+  /** Инвестиционное предложение: что из него распознано (мощность, цена и т. п.); нет — не загружалось. */
+  offer?: ProjectOffer;
 }
 
 // ---------- кадастровый номер и регион ----------
@@ -358,6 +392,7 @@ export function projectTitle(p: LandProject): string {
 /** Подпись под названием: «Москва · 77:05:0004012:1873 · 3,20 га». */
 export function projectSubtitle(p: LandProject): string {
   const parts = [regionName(p.plot.regionCode.value)];
+  if (p.purpose && p.purpose !== "residential") parts.unshift(purposeTitle(p.purpose));
   if (p.plot.cadastralNumber.value) parts.push(p.plot.cadastralNumber.value);
   if (p.plot.area.value) parts.push(areaHa(p.plot.area.value));
   return parts.join(" · ");
@@ -551,8 +586,15 @@ export interface NewProjectForm {
   regionCode: string;
   /** Выписка ЕГРН, если загружена. */
   egrn: { data: EgrnPlot; document: ProjectDocument } | null;
-  /** Прочие документы (готовая финмодель в Excel). */
+  /** Прочие документы (готовая финмодель в Excel, инвестиционное предложение). */
   documents: ProjectDocument[];
+  /** Назначение; не указано — жилое. */
+  purpose?: ProjectPurpose;
+  /**
+   * Поля участка из инвестиционного предложения, если оно загружено: номер, адрес и площадь из него заменяют ввод
+   * при проверке формы. Сами значения берёт в проект `offer.applyOffer` после создания.
+   */
+  offerPlot?: EgrnPlot | null;
 }
 
 export type NewProjectField = "cadastralNumber" | "area" | "location" | "regionCode" | "egrn";
@@ -571,10 +613,14 @@ function regionUnavailable(kn: string): string {
 }
 
 /** Регион нового проекта: по выписке, по номеру, по адресу или выбранный вручную. */
-export function suggestedRegion(form: Pick<NewProjectForm, "cadastralNumber" | "address" | "egrn">): { region: ProjectRegion; how: string } | null {
+export function suggestedRegion(form: Pick<NewProjectForm, "cadastralNumber" | "address" | "egrn" | "offerPlot">): { region: ProjectRegion; how: string } | null {
   const e = form.egrn?.data;
   const fromEgrn = (e?.regionCode ? PROJECT_REGIONS.find((r) => r.code === e.regionCode) : undefined) ?? (e?.address ? regionByAddress(e.address) : null);
   if (fromEgrn) return { region: fromEgrn, how: "по выписке ЕГРН" };
+  const o = form.offerPlot;
+  const offerKn = o?.cadastralNumber ? regionByCadastral(o.cadastralNumber) : null;
+  const fromOffer = (o?.address ? regionByAddress(o.address) : null) ?? offerKn;
+  if (fromOffer) return { region: fromOffer, how: "по инвестиционному предложению" };
   const kn = normalizeCadastralNumber(form.cadastralNumber);
   const byKn = kn ? regionByCadastral(kn) : null;
   if (byKn) return { region: byKn, how: "по кадастровому номеру" };
@@ -595,7 +641,11 @@ export function createProject(form: NewProjectForm, id: string, at: string, assu
   if (kn && egrn?.cadastralNumber && egrn.cadastralNumber !== kn) {
     errors.push({ field: "egrn", text: `Номер в выписке ${egrn.cadastralNumber} не совпадает с введённым ${kn}. Загрузите выписку по этому участку или исправьте номер.` });
   }
-  const anyKn = kn ?? egrn?.cadastralNumber ?? null;
+  const offerPlot = form.offerPlot ?? null;
+  if (kn && offerPlot?.cadastralNumber && offerPlot.cadastralNumber !== kn) {
+    errors.push({ field: "egrn", text: `Номер в предложении ${offerPlot.cadastralNumber} не совпадает с введённым ${kn}. Загрузите документ по этому участку или исправьте номер.` });
+  }
+  const anyKn = kn ?? egrn?.cadastralNumber ?? offerPlot?.cadastralNumber ?? null;
 
   const areaText = form.area.trim();
   const area = areaText ? parseNumberRu(areaText) : null;
@@ -605,8 +655,8 @@ export function createProject(form: NewProjectForm, id: string, at: string, assu
     errors.push({ field: "area", text: `Площадь ${num(Number(area))} м² вне допустимого диапазона ${num(range[0])}–${num(range[1])} м². Проверьте единицы: площадь вводится в м².` });
   }
   if (!anyKn) {
-    if (!areaText && !egrn?.area) errors.push({ field: "area", text: "Без кадастрового номера нужна площадь участка в м²." });
-    if (!form.address.trim() && !form.point) errors.push({ field: "location", text: "Без кадастрового номера укажите адрес участка или точку на карте." });
+    if (!areaText && !egrn?.area && !offerPlot?.area) errors.push({ field: "area", text: "Без кадастрового номера нужна площадь участка в м²." });
+    if (!form.address.trim() && !form.point && !offerPlot?.address) errors.push({ field: "location", text: "Без кадастрового номера укажите адрес участка или точку на карте." });
   }
 
   const suggested = suggestedRegion(form);
@@ -641,6 +691,7 @@ export function createProject(form: NewProjectForm, id: string, at: string, assu
     point: form.point,
     documents,
     history: [],
+    ...(form.purpose && form.purpose !== "residential" ? { purpose: form.purpose } : {}),
   };
   if (!form.egrn) return { project: base, errors: [] };
   const withDoc = { ...base, documents: [form.egrn.document, ...documents] };

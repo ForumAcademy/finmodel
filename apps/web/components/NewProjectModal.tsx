@@ -2,16 +2,16 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { plot } from "@fm/engine";
-import { EGRN_ACCEPT, foundSummary, type EgrnResult } from "@fm/egrn-import";
-import { readEgrn } from "@/lib/egrn";
+import { offer, plot } from "@fm/engine";
+import { foundSummary, PLOT_DOCUMENT_ACCEPT, type PlotDocument } from "@fm/egrn-import";
+import { readPlotDoc } from "@/lib/egrn";
 import { getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
 import { Modal, WhereToFind } from "./ui";
 import { MapPicker, pointText } from "./MapPicker";
 
 interface Loaded {
   file: File;
-  result: EgrnResult;
+  read: PlotDocument;
   doc: plot.ProjectDocument;
 }
 
@@ -27,6 +27,10 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
   const [point, setPoint] = useState<plot.GeoPoint | null>(null);
   const [region, setRegion] = useState("");
   const [egrn, setEgrn] = useState<Loaded | null>(null);
+  const [use, setUse] = useState<plot.PurposeUse>("residential");
+  const [object, setObject] = useState<Exclude<plot.ProjectPurpose, "residential">>("datacenter");
+  /** Назначение выбрано вручную — подсказка из документа его не меняет. */
+  const [useTouched, setUseTouched] = useState(false);
   const [reading, setReading] = useState(false);
   const [excel, setExcel] = useState<{ file: File; doc: plot.ProjectDocument } | null>(null);
   const [errors, setErrors] = useState<plot.NewProjectResult["errors"]>([]);
@@ -34,18 +38,28 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
   const egrnInput = useRef<HTMLInputElement>(null);
   const excelInput = useRef<HTMLInputElement>(null);
 
-  const egrnForm = egrn && egrn.result.found.length ? { data: egrn.result.data, document: egrn.doc } : null;
-  const suggested = useMemo(() => plot.suggestedRegion({ cadastralNumber: kn, address: mode === "address" ? address : "", egrn: egrnForm }), [kn, address, mode, egrnForm]);
-  const withoutKn = !kn.trim() && !egrnForm?.data.cadastralNumber;
+  const egrnRead = egrn?.read.kind === "egrn" ? egrn.read.result : null;
+  const offerRead = egrn?.read.kind === "offer" ? egrn.read.result : null;
+  const offerFound = offerRead ? offer.offerFound(offerRead) : [];
+  const egrnForm = egrn && egrnRead?.found.length ? { data: egrnRead.data, document: egrn.doc } : null;
+  const offerPlot = offerRead ? offerRead.plot : null;
+  const suggested = useMemo(() => plot.suggestedRegion({ cadastralNumber: kn, address: mode === "address" ? address : "", egrn: egrnForm, offerPlot }), [kn, address, mode, egrnForm, offerPlot]);
+  const withoutKn = !kn.trim() && !egrnForm?.data.cadastralNumber && !offerPlot?.cadastralNumber;
+  const purpose: plot.ProjectPurpose = use === "residential" ? "residential" : object;
   const err = (f: plot.NewProjectField) => errors.filter((e) => e.field === f).map((e) => <div key={e.text} className="err">{e.text}</div>);
 
   async function onEgrn(file: File | undefined) {
     if (!file) return;
     setReading(true);
     try {
-      setEgrn({ file, result: await readEgrn(file), doc: docOf("egrn", file) });
+      const read = await readPlotDoc(file);
+      setEgrn({ file, read, doc: docOf(read.kind, file) });
+      if (read.kind === "offer" && read.result.purposeHint && !useTouched) {
+        setUse("commercial");
+        setObject(read.result.purposeHint === "residential" ? "datacenter" : read.result.purposeHint);
+      }
     } catch {
-      setEgrn({ file, result: { data: {}, found: [], problems: [`Файл «${file.name}» не удалось прочитать. Проверьте, что это выписка ЕГРН в XML, PDF или ZIP, или введите данные вручную.`] }, doc: docOf("egrn", file) });
+      setEgrn({ file, read: { kind: "egrn", result: { data: {}, found: [], problems: [`Файл «${file.name}» не удалось прочитать. Проверьте, что это выписка ЕГРН (XML, PDF или ZIP) или инвестиционное предложение в PDF с текстом, а не сканом, или введите данные вручную.`] } }, doc: docOf("egrn", file) });
     } finally {
       setReading(false);
     }
@@ -63,14 +77,17 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
       regionCode: region,
       egrn: egrnForm,
       documents: [...(egrn && !egrnForm ? [egrn.doc] : []), ...(excel ? [excel.doc] : [])],
+      purpose,
+      offerPlot,
     };
     const r = plot.createProject(form, id, at, (await getReference()).at(-1)?.version);
     setErrors(r.errors);
     if (!r.project) return;
+    const project = offerRead && egrn ? offer.applyOffer(r.project, offerRead, egrn.doc.id, at).project : r.project;
     setSaving(true);
     if (egrn) await saveFile(egrn.doc.id, egrn.file);
     if (excel) await saveFile(excel.doc.id, excel.file);
-    await saveProject(r.project);
+    await saveProject(project);
     router.push(`/projects/${id}`);
   }
 
@@ -90,6 +107,35 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
       }
     >
       <div className="frm">
+        <div className="choice">
+          <span style={{ color: "var(--ink2)" }}>Назначение</span>
+          {plot.PURPOSE_USES.map((u) => (
+            <label key={u.use}>
+              <input
+                type="radio"
+                checked={use === u.use}
+                onChange={() => {
+                  setUse(u.use);
+                  setUseTouched(true);
+                }}
+              />{" "}
+              {u.title}
+            </label>
+          ))}
+        </div>
+        {use === "commercial" && (
+          <label>
+            Что строим
+            <select value={object} onChange={(e) => setObject(e.target.value as typeof object)}>
+              {plot.COMMERCIAL_OBJECTS.map((o) => (
+                <option key={o.purpose} value={o.purpose}>
+                  {o.title}
+                </option>
+              ))}
+            </select>
+            <span className="hint">Пока доступен ЦОД. Жилые шаги (варианты застройки, рынок квартир) для него не показываются.</span>
+          </label>
+        )}
         <label>
           Кадастровый номер участка
           <input value={kn} onChange={(e) => setKn(e.target.value)} placeholder="77:05:0004012:1873" />
@@ -102,38 +148,44 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Например, участок на Каширском шоссе" />
         </label>
 
-        <div className={`drop ${egrn ? (egrn.result.found.length ? "ok" : "bad") : ""}`}>
+        <div className={`drop ${egrn ? ((egrnRead?.found.length ?? offerFound.length) ? "ok" : "bad") : ""}`}>
           {egrn ? (
             <>
-              <b>{egrn.file.name}</b>
-              {egrn.result.found.length > 0 && (
+              <b>{egrn.file.name}</b> — {egrn.read.kind === "offer" ? offer.OFFER_TITLE.toLowerCase() : "выписка ЕГРН"}
+              {egrnRead && egrnRead.found.length > 0 && (
                 <div>
-                  {foundSummary(egrn.result)}: {[egrn.result.data.cadastralNumber, plot.areaHa(egrn.result.data.area ?? null), suggested?.how === "по выписке ЕГРН" ? suggested.region.name : null].filter((x) => x && x !== "—").join(", ")}
+                  {foundSummary(egrnRead)}: {[egrnRead.data.cadastralNumber, plot.areaHa(egrnRead.data.area ?? null), suggested?.how === "по выписке ЕГРН" ? suggested.region.name : null].filter((x) => x && x !== "—").join(", ")}
                 </div>
               )}
-              {egrn.result.problems.map((p) => (
+              {egrnRead?.problems.map((p) => (
                 <div key={p} className="small">
                   {p}
                 </div>
               ))}
+              {offerRead && (
+                <div>
+                  {offerFound.length ? `Нашлось: ${offerFound.join(", ")}.` : "Цифры в документе не нашлись: возможно, это скан. Введите данные вручную, документ сохранится в проекте."}
+                  {offerRead.purposeHint === "datacenter" && !useTouched && <div className="small">Документ про ЦОД — назначение выбрано «Коммерческое · ЦОД».</div>}
+                </div>
+              )}
               <button className="btn sm" style={{ marginTop: 8 }} onClick={() => egrnInput.current?.click()}>
                 Заменить файл
               </button>
             </>
           ) : (
             <>
-              Выписка ЕГРН: площадь, адрес, ВРИ, кадастровая стоимость и право возьмём из неё
+              Документ по участку: выписка ЕГРН или инвестиционное предложение. Номер, площадь, ВРИ, право, цену и мощность возьмём из него
               <br />
               <button className="btn sm" style={{ marginTop: 8 }} onClick={() => egrnInput.current?.click()} disabled={reading}>
-                {reading ? "Читаем выписку…" : "Выбрать файл"}
+                {reading ? "Читаем документ…" : "Выбрать файл"}
               </button>
               <div className="hint" style={{ marginTop: 6 }}>
-                XML, ZIP или PDF из личного кабинета Росреестра или Госуслуг
+                Выписка — XML, ZIP или PDF из личного кабинета Росреестра или Госуслуг; предложение — PDF с текстом (не скан)
               </div>
             </>
           )}
           {err("egrn")}
-          <input ref={egrnInput} type="file" accept={EGRN_ACCEPT} hidden onChange={(e) => void onEgrn(e.target.files?.[0])} />
+          <input ref={egrnInput} type="file" accept={PLOT_DOCUMENT_ACCEPT} hidden onChange={(e) => void onEgrn(e.target.files?.[0])} />
         </div>
 
         {withoutKn && (

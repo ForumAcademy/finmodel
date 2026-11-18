@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import { parseEgrnText, parseEgrnXml, readEgrnFile } from "../src";
+import { looksLikeOffer, parseEgrnText, parseEgrnXml, parseOfferText, readEgrnFile, readPlotDocument } from "../src";
 
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
 const noPdf = async () => {
@@ -80,5 +80,45 @@ describe("выписка ЕГРН в PDF (текст)", () => {
     expect(r.problems[0]).toMatch(/не похож на выписку ЕГРН/);
     const empty = parseEgrnText("Договор аренды");
     expect(empty.problems[0]).toMatch(/не нашлись данные участка/);
+  });
+});
+
+describe("инвестиционное предложение (PDF)", () => {
+  const text = fixture("offer_datacenter_pdf.txt").toString("utf-8");
+
+  it("распознаётся как предложение, а не выписка", () => {
+    expect(looksLikeOffer(text)).toBe(true);
+    expect(looksLikeOffer(fixture("extract_land_pdf.txt").toString("utf-8"))).toBe(false);
+  });
+
+  it("поля участка и данные предложения: Рябиновая, 28а, под ЦОД", () => {
+    const r = parseOfferText(text);
+    expect(r.plot).toEqual({
+      cadastralNumber: "77:07:0012004:4155",
+      address: "Москва, ул. Рябиновая, 28а",
+      area: "53000",
+      vri: "размещение объектов связи, радиовещания, телевидения, информатики, космического обеспечения, закладки кабельных и проводных линий связи и линейно-кабельных сооружений (6.8)",
+      rights: ["Аренда до 2073 года"],
+    });
+    expect(r.offer).toEqual({
+      gridPowerMw: "39",
+      potentialPowerMw: "50",
+      voltage: "ВН",
+      densityThM2Ha: "15",
+      ppmAreaM2: "79500",
+      priceRub: "5000000000",
+      priceVat: "без НДС",
+      dealScheme: "покупка юридического лица",
+      leaseUntilYear: "2073",
+    });
+    expect(r.purposeHint).toBe("datacenter");
+  });
+
+  it("PDF с признаками предложения читается как предложение", async () => {
+    const pdf = Uint8Array.from(Buffer.from("%PDF-1.4"));
+    const d = await readPlotDocument("predlozhenie.pdf", pdf, async () => text);
+    expect(d.kind).toBe("offer");
+    const e = await readPlotDocument("vypiska.pdf", pdf, async () => fixture("extract_land_pdf.txt").toString("utf-8"));
+    expect(e.kind).toBe("egrn");
   });
 });

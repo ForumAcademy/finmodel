@@ -1,5 +1,5 @@
 /** Чтение выписки ЕГРН из файла в браузере: текст PDF достаёт pdf.js, поля распознаёт @fm/egrn-import. */
-import { readEgrnFile, type EgrnResult } from "@fm/egrn-import";
+import { readEgrnFile, readPlotDocument, type EgrnResult, type PlotDocument } from "@fm/egrn-import";
 
 async function pdfText(bytes: Uint8Array): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
@@ -15,6 +15,11 @@ async function pdfText(bytes: Uint8Array): Promise<string> {
 
 export async function readEgrn(file: File): Promise<EgrnResult> {
   return readEgrnFile(file.name, new Uint8Array(await file.arrayBuffer()), pdfText);
+}
+
+/** Документ по участку: выписка ЕГРН или инвестиционное предложение — что именно, решает пакет по тексту. */
+export async function readPlotDoc(file: File): Promise<PlotDocument> {
+  return readPlotDocument(file.name, new Uint8Array(await file.arrayBuffer()), pdfText);
 }
 
 export async function download(name: string, blob: Blob) {
