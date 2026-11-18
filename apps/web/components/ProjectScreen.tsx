@@ -275,7 +275,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
         }
         const houses = r.candidates.filter((c) => c.house);
         // Несколько разных домов — пусть финансист выберет; иначе берём первый (дом, если есть).
-        if (houses.length > 1) setGeoChoices({ query: r.query, candidates: houses });
+        if (houses.length > 1 && !geocode.sameHouse(houses)) setGeoChoices({ query: r.query, candidates: houses });
         else await applyFound(proj, r.query, r.candidates[0] as geocode.GeoCandidate);
       } finally {
         setGeoBusy(false);
