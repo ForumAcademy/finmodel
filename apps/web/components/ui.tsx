@@ -134,6 +134,9 @@ export interface FieldItem {
   onEdit: () => void;
 }
 
+/** Значение длиннее — переносится по строкам, чтобы таблица не уезжала за край экрана (длинный список ВРИ). */
+const LONG_VALUE = 40;
+
 export function FieldTable({ items, missTitle }: { items: readonly FieldItem[]; missTitle?: string }) {
   const miss = items.filter((i) => i.missing);
   const rest = items.filter((i) => !i.missing);
@@ -178,7 +181,7 @@ export function FieldTable({ items, missTitle }: { items: readonly FieldItem[]; 
                       {i.label}
                       {i.note && <div className="small muted">{i.note}</div>}
                     </td>
-                    <td className="v">{i.value || "—"}</td>
+                    <td className={`v${i.value.length > LONG_VALUE ? " long" : ""}`}>{i.value || "—"}</td>
                     <td className="l">{i.origin}</td>
                     <td className="act">
                       <button className="btn sm" onClick={i.onEdit}>
