@@ -8,7 +8,7 @@ import Decimal from "decimal.js";
 import { getRegion, getSource, type RegionCode } from "@fm/spec";
 import { upksFor } from "./modules/land";
 import { date as fmtDate, num } from "./lib/text";
-import { applyChanges, cadastralQuarter, vriCodes, normalizeCadastralNumber, parseNumberRu, type ChangeSet, type GeoPoint, type LandProject, type PlotChange, type PlotFieldKey, type PlotValue, type ValueBasis } from "./plot";
+import { applyChanges, cadastralQuarter, plotField, vriCodes, normalizeCadastralNumber, parseNumberRu, type ChangeSet, type GeoPoint, type LandProject, type PlotChange, type PlotFieldKey, type PlotValue, type ValueBasis } from "./plot";
 import { siteOf, updateSite, type ZouitEntry } from "./site";
 
 export const MOS_SOURCE = "S_MOS_OPENDATA" as const;
@@ -265,6 +265,11 @@ export function applyCityPlot(p: LandProject, c: CityPlot, at: string): ChangeSe
     if (value === null) return;
     const cur = p.plot[field];
     if (cur.origin === "source" && cur.basis?.documentId) return;
+    // Введено вручную и отличается от портала — остаётся введённое, финансист получает сообщение
+    if (cur.origin === "expert" && cur.value !== null && cur.value !== value) {
+      problems.push(`${plotField(field).label}: на портале Москвы «${value}», в проекте введено «${cur.value}». Оставлено введённое; чтобы взять значение портала, очистите поле.`);
+      return;
+    }
     const to: PlotValue = { value, origin, basis: mosBasis("plots", at, own ?? (extra ? `${note}. ${extra}` : note)) };
     if (cur.value === to.value && cur.origin === to.origin && cur.basis?.url === to.basis?.url && cur.basis?.note === to.basis?.note) return;
     changes.push({ field, from: cur, to });
@@ -367,4 +372,15 @@ export function applyMosLookup(p: LandProject, m: MosLookup, at: string): Change
   const withTenure = applyChanges(next, changes, at);
   const est = cadastralValueEstimate(withTenure, at);
   return { project: applyChanges(withTenure, est, at), changes: [...changes, ...est], problems: [] };
+}
+
+/**
+ * После ручной правки данных участка: если изменён кадастровый номер и он есть среди участков портала — данные этого
+ * участка; оценка кадастровой стоимости пересчитывается по новой площади, кварталу и виду использования.
+ */
+export function afterManualEdit(p: LandProject, fields: readonly PlotFieldKey[], at: string): ChangeSet & { project: LandProject } {
+  const c = p.mos && fields.includes("cadastralNumber") ? chosenCityPlot(p.mos, p.plot.cadastralNumber.value) : null;
+  if (c) return applyCityPlot(p, c, at);
+  const est = cadastralValueEstimate(p, at);
+  return { project: applyChanges(p, est, at), changes: est, problems: [] };
 }

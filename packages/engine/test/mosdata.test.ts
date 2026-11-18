@@ -114,3 +114,32 @@ describe("сохранение найденного на портале", () => 
     expect(refreshed.changes).toEqual([]);
   });
 });
+
+describe("после ручной правки", () => {
+  it("площадь исправлена вручную — оценка кадастровой стоимости пересчитана", () => {
+    const c = mosdata.cityPlotsAt(PLOTS, P)[0] as mosdata.CityPlot;
+    const p = mosdata.applyCityPlot(make(), c, AT).project;
+    const edited = plot.applyChanges(p, plot.manualChange(p, "area", "3110", { title: "Введено вручную" }), AT);
+    const r = mosdata.afterManualEdit(edited, ["area"], AT);
+    // 3 110 м² × 107 210,79 руб/м²
+    expect(r.project.plot.cadastralValue).toMatchObject({ value: "333425556.9", origin: "estimate" });
+  });
+
+  it("номер участка введён вручную и есть на портале — данные участка подставлены", () => {
+    const base = mosdata.applyMosLookup(make(), mosdata.mosLookup(P, { plots: PLOTS }, AT), AT).project;
+    const edited = plot.applyChanges(base, plot.cadastralNumberChanges(base, "77:01:0001028:2", { title: "Введено вручную" }).changes, AT);
+    const r = mosdata.afterManualEdit(edited, ["cadastralNumber", "quarter"], AT);
+    expect(r.project.plot.cadastralNumber).toMatchObject({ value: "77:01:0001028:2", origin: "source" });
+    expect(r.project.plot.vri.value).toBe("деловое управление (4.1)");
+    expect(r.project.plot.cadastralValue.origin).toBe("estimate");
+  });
+
+  it("введённое вручную не заменяется значением портала", () => {
+    const p = make();
+    const own = plot.applyChanges(p, plot.manualChange(p, "vri", "многоэтажная жилая застройка (2.6)", { title: "Введено вручную" }), AT);
+    const r = mosdata.applyCityPlot(own, mosdata.cityPlotsAt(PLOTS, P)[0] as mosdata.CityPlot, AT);
+    expect(r.project.plot.vri).toMatchObject({ value: "многоэтажная жилая застройка (2.6)", origin: "expert" });
+    expect(r.problems.some((t) => t.startsWith("Вид разрешённого использования: на портале Москвы"))).toBe(true);
+  });
+});
+

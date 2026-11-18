@@ -363,10 +363,15 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
 
   async function save() {
     const at = nowIso();
-    await persist(plot.applyChanges(p, pending, at));
+    const fields = pending.map((c) => c.field);
+    // После ручной правки: данные участка портала по новому номеру, оценка кадастровой стоимости — заново
+    const r = mosdata.afterManualEdit(plot.applyChanges(p, pending, at), fields, at);
+    await persist(r.project);
     setPending([]);
-    setProblems([]);
+    setProblems(r.problems);
     flash("Изменения сохранены");
+    // Адрес изменён — найти участок по новому адресу (и данные Москвы по новой точке)
+    if (fields.includes("address") && r.project.plot.address.value) void findPlace(r.project);
   }
 
   const toggleMenu = () => {
