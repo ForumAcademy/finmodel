@@ -4,7 +4,8 @@
  * финансист вводит вручную со ссылкой на документ.
  */
 import { unzipSync } from "fflate";
-import { plot, text } from "@fm/engine";
+import { plot, text, type offer } from "@fm/engine";
+import { looksLikeOffer, parseOfferText } from "./offer";
 import { attrAt, findAll, parseXml, textAt, type XmlNode } from "./xml";
 
 export { parseXml } from "./xml";
@@ -239,4 +240,26 @@ function unreadable(fileName: string): EgrnResult {
 export function foundSummary(r: EgrnResult): string {
   const n = r.found.length;
   return `Найдено ${n} ${text.plural(n, ["поле", "поля", "полей"])} участка из ${plot.PLOT_FIELDS.length}`;
+}
+
+// ---------- документ по участку: выписка или инвестиционное предложение ----------
+
+export { looksLikeOffer, parseOfferText };
+
+/** Что за документ загружен в начале проекта и что в нём нашлось. */
+export type PlotDocument = { kind: "egrn"; result: EgrnResult } | { kind: "offer"; result: offer.OfferParsed };
+
+export const PLOT_DOCUMENT_ACCEPT = EGRN_ACCEPT;
+
+/**
+ * Документ по участку (решение пользователя 18.11.2026): выписка ЕГРН (XML, PDF, ZIP) или инвестиционное
+ * предложение (PDF). PDF с признаками предложения — предложение, остальное — выписка.
+ */
+export async function readPlotDocument(fileName: string, bytes: Uint8Array, pdfText: (bytes: Uint8Array) => Promise<string>): Promise<PlotDocument> {
+  if (isPdf(bytes)) {
+    const t = await pdfText(bytes);
+    if (looksLikeOffer(t)) return { kind: "offer", result: parseOfferText(t) };
+    return { kind: "egrn", result: parseEgrnText(t) };
+  }
+  return { kind: "egrn", result: await readEgrnFile(fileName, bytes, pdfText) };
 }

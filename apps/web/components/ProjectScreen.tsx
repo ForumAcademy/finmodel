@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { book, geocode, mosdata, plot, projectFile, site, summary, text } from "@fm/engine";
+import { book, geocode, mosdata, offer, plot, projectFile, site, summary, text } from "@fm/engine";
 import { EGRN_ACCEPT } from "@fm/egrn-import";
-import { download, readEgrn } from "@/lib/egrn";
+import { download, readPlotDoc } from "@/lib/egrn";
 import { saveProjectFile } from "@/lib/files";
 import { findByAddress, findMosData } from "@/lib/geocode";
 import { getFile, getProject, getReference, newId, nowIso, saveFile, saveProject } from "@/lib/store";
@@ -29,6 +29,11 @@ const STEPS: readonly { sec: ProjectSection; num: string; title: string; short: 
   { sec: "market", num: "3", title: "Рынок", short: "Рынок" },
   { sec: "variants", num: "4", title: "Варианты", short: "Варианты" },
   { sec: "model", num: "5", title: "Финмодель", short: "Финмодель", later: true },
+];
+/** Меню коммерческого проекта (ЦОД): жилые шаги не показываются; расчёт ЦОДа — следующая часть работы. */
+const DC_STEPS: readonly (typeof STEPS)[number][] = [
+  { sec: "plot", num: "1", title: "Участок", short: "Участок" },
+  { sec: "model", num: "2", title: "Расчёт ЦОДа", short: "ЦОД", later: true },
 ];
 const today = () => nowIso().slice(0, 10);
 
@@ -76,6 +81,43 @@ function plotItem(p: LandProject, field: plot.PlotField, onEdit: (k: PlotFieldKe
     where: field.where,
     onEdit: () => onEdit(field.key),
   };
+}
+
+/** Что взято из инвестиционного предложения сверх полей участка: мощность, цена, плотность. */
+function OfferBlock({ p }: { p: LandProject }) {
+  const o = p.offer;
+  if (!o) return null;
+  const rows = offer.offerRows(o.data);
+  const basis: plot.ValueBasis = { title: offer.OFFER_TITLE, documentId: o.documentId, date: p.documents.find((d) => d.id === o.documentId)?.uploadedAt.slice(0, 10) ?? null };
+  return (
+    <>
+      <h3 className="h3">Из инвестиционного предложения</h3>
+      {rows.length ? (
+        <div className="tw">
+          <table className="t">
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.label}>
+                  <td>{r.label}</td>
+                  <td className="l">{r.value}</td>
+                  <td className="l">
+                    <OriginTag origin="source" /> <BasisLink p={p} basis={basis} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="small muted">В предложении не нашлись мощность, цена и плотность. Если они там есть, введите их вручную.</p>
+      )}
+      <p className="small muted">
+        {plot.purposeOf(p) === "residential"
+          ? "Цена перенесена на вкладку «Сделка», плотность — в шаг «Что можно построить»: там их можно изменить."
+          : "Цена перенесена на вкладку «Сделка», там её можно изменить. Мощность и плотность понадобятся для расчёта ЦОДа."}
+      </p>
+    </>
+  );
 }
 
 // ---------- изменение поля ----------
@@ -339,7 +381,17 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
     if (!file) return;
     setReading(true);
     try {
-      const r = await readEgrn(file).catch(() => null);
+      const read = await readPlotDoc(file).catch(() => null);
+      if (read?.kind === "offer") {
+        const doc: plot.ProjectDocument = { id: newId(), kind: "offer", fileName: file.name, size: file.size, uploadedAt: nowIso() };
+        await saveFile(doc.id, file);
+        const a = offer.applyOffer({ ...p, documents: [...p.documents, doc] }, read.result, doc.id, nowIso());
+        await persist(a.project.documents.some((d) => d.id === doc.id) ? a.project : { ...a.project, documents: [...a.project.documents, doc] });
+        setProblems(a.problems);
+        flash(offer.offerFound(read.result).length ? "Инвестиционное предложение сохранено, данные взяты в проект" : "Предложение сохранено, но цифры в нём не нашлись — введите вручную");
+        return;
+      }
+      const r = read?.kind === "egrn" ? read.result : null;
       const doc = await addDocument(file, "egrn");
       if (!r || !r.found.length) {
         setProblems(r?.problems ?? [`Файл «${file.name}» не удалось прочитать. Проверьте, что это выписка ЕГРН в XML, PDF или ZIP, или введите данные вручную.`]);
@@ -394,8 +446,12 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
   const docCount = plot.DOCUMENT_KINDS.filter((k) => p.documents.some((d) => d.kind === k.kind)).length;
   const counted = !!site.siteOf(p).snapshot?.best;
   /** Отметка шага в меню: сколько ввести, ✓ или «этап 6». */
+  const isDc = plot.purposeOf(p) !== "residential";
+  const steps = isDc ? DC_STEPS : STEPS;
+  // Коммерческий проект: жилых шагов нет, всё, кроме расчёта, — шаг «Участок».
+  const at = isDc && sec !== "model" ? "plot" : sec;
   const badge = (m: (typeof STEPS)[number]) => {
-    if (m.later) return <span className="chip gry st">этап 6</span>;
+    if (m.later) return <span className="chip gry st">{isDc ? "скоро" : "этап 6"}</span>;
     if (m.sec === "summary") return todo > 0 ? <span className="chip yel st">{todo}</span> : null;
     if (m.sec === "variants") return counted ? <span className="stok st">✓</span> : null;
     const n = summary.todoCount(todoList, m.sec as summary.TodoSection);
@@ -427,8 +483,8 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
             {collapsed ? "»" : "« Свернуть меню"}
           </button>
           <div className="grp">
-            {STEPS.map((m) => (
-              <Link key={m.sec} className={`it top1 ${m.later ? "later" : ""} ${sec === m.sec ? "on" : ""}`} href={href(p.id, m.sec)}>
+            {steps.map((m) => (
+              <Link key={m.sec} className={`it top1 ${m.later ? "later" : ""} ${at === m.sec ? "on" : ""}`} href={href(p.id, m.sec)}>
                 <span className="num">{m.num}</span>
                 <span>{collapsed ? m.short : m.title}</span>
                 {!collapsed && badge(m)}
@@ -439,16 +495,16 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
         <main className="main">
           {/* Узкий экран: меню слева скрыто, шаги — строкой над содержимым */}
           <nav className="mnav">
-            {STEPS.map((m) => (
-              <Link key={m.sec} className={sec === m.sec ? "on" : ""} href={href(p.id, m.sec)}>
+            {steps.map((m) => (
+              <Link key={m.sec} className={at === m.sec ? "on" : ""} href={href(p.id, m.sec)}>
                 {m.num === "★" ? m.title : `${m.num}. ${m.short}`}
               </Link>
             ))}
           </nav>
-          {sec === "summary" || sec === "site" || sec === "market" || sec === "variants" ? (
+          {at === "summary" || at === "site" || at === "market" || at === "variants" ? (
             <AnalysisArea
               p={p}
-              sec={sec}
+              sec={at}
               tab={rawTab}
               versions={versions}
               href={(s, t) => href(p.id, s, t)}
@@ -456,7 +512,16 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
               refInfo={ref ? { text: ref.text, updateTo: ref.updateTo, onUpdate: () => setUpdating(true) } : null}
               onSave={save2}
             />
-          ) : sec === "model" ? (
+          ) : at === "model" && isDc ? (
+            <>
+              <div className="mhead">
+                <h2>2. Расчёт ЦОДа</h2>
+              </div>
+              <div className="card empty">
+                Расчёт ЦОДа готовится: из мощности по техусловиям — мощность под серверы и число стоек, стоимость строительства, выручка от сдачи стоек и цена продажи готового ЦОДа, налоги, денежный поток, окупаемость. Сейчас можно заполнить участок и загрузить инвестиционное предложение.
+              </div>
+            </>
+          ) : at === "model" ? (
             <>
               <div className="mhead">
                 <h2>5. Финмодель выбранного варианта</h2>
@@ -605,6 +670,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       </button>
                     </div>
                   )}
+                  {p.offer && <OfferBlock p={p} />}
                   <h3 className="h3">Название и точка на карте</h3>
                   <ProjectTab key={JSON.stringify(p.point)} p={p} onSave={save2} />
                 </>
@@ -627,7 +693,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                         {[...plot.DOCUMENT_KINDS, ...(p.documents.some((d) => d.kind === "other") ? [{ kind: "other" as const, title: plot.OTHER_DOCUMENT_TITLE, confirms: "—" }] : [])].map((k) => {
                           const docs = p.documents.filter((d) => d.kind === k.kind);
                           const upload = () => {
-                            if (k.kind === "egrn") egrnInput.current?.click();
+                            if (k.kind === "egrn" || k.kind === "offer") egrnInput.current?.click();
                             else {
                               setDocKind(k.kind);
                               docInput.current?.click();

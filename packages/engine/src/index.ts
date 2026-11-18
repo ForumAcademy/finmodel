@@ -46,6 +46,7 @@ export * as analysis from "./analysis";
 export * as zcyc from "./zcyc";
 export * as geocode from "./geocode";
 export * as mosdata from "./mosdata";
+export * as offer from "./offer";
 export * as reference from "./reference";
 export * as dataGuide from "./where";
 export * as book from "./book";

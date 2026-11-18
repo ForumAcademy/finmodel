@@ -85,6 +85,8 @@ const projectSchema = z.object({
   documents: z.array(z.object({ id: z.string().min(1), kind: z.enum(kinds), fileName: z.string(), size: z.number(), uploadedAt: z.string() })),
   history: z.array(z.object({ at: z.string(), field: z.enum([...fieldKeys, ...siteKeys, "assumptionsVersion"]), from: z.string(), to: z.string(), basis: z.string() })),
   site: siteSchema.optional(),
+  purpose: z.enum(["residential", "datacenter"]).optional(),
+  offer: z.object({ documentId: z.string(), data: z.record(z.string(), z.string()) }).optional(),
 });
 
 const fileSchema = z.object({
@@ -173,6 +175,7 @@ export function openProject(file: ProjectFile, mode: OpenMode, local: readonly A
   const files = file.files.filter((f) => ids.has(f.id)).map((f) => ({ ...f, id: ids.get(f.id) as string }));
 
   const project: LandProject = { ...src, plot, documents };
+  if (src.offer) project.offer = { ...src.offer, documentId: ids.get(src.offer.documentId) ?? src.offer.documentId };
   delete project.assumptionsSnapshot;
   if (mode === "replace" && existing) Object.assign(project, { id: existing.id, createdAt: existing.createdAt });
   if (mode === "copy") Object.assign(project, { id: newId(), name: `${projectTitle(src)} (копия)`, createdAt: at, updatedAt: at, archived: false });
