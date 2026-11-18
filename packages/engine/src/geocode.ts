@@ -173,3 +173,14 @@ export function geoText(g: GeoLookup): string {
   const where = g.locality.length ? g.locality.join(", ") : regionName(g.regionCode);
   return `${where}. Найдено по адресу в OpenStreetMap ${fmtDate(g.fetchedAt.slice(0, 10))}`;
 }
+
+/** Подпись места без строения и корпуса в номере дома: «28А с2, Рябиновая улица, …» → «28А, Рябиновая улица, …». */
+const withoutBuilding = (label: string): string => {
+  const [head = "", ...rest] = label.split(",");
+  return [head.replace(/\s+(?:с|стр|к|корп)\.?\s*\d+[а-яa-z]?$/i, "").trim(), ...rest.map((x) => x.trim())].join(", ");
+};
+
+/** Все найденные дома — строения или корпуса одного дома: точка участка у них одна, выбирать не нужно. */
+export function sameHouse(list: readonly GeoCandidate[]): boolean {
+  return list.length > 0 && list.every((c) => withoutBuilding(c.label) === withoutBuilding((list[0] as GeoCandidate).label));
+}

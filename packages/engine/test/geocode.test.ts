@@ -108,3 +108,11 @@ describe("поиск участка по адресу", () => {
     expect(r.problems).toHaveLength(2);
   });
 });
+
+describe("строения одного дома", () => {
+  const c = (label: string) => ({ point: { lat: 55.7, lon: 37.4 }, label, regionCode: "77", locality: [], house: true });
+  it("28А с2 и 28А с3 — один дом, 28А и 30 — разные", () => {
+    expect(geocode.sameHouse([c("28А с2, Рябиновая улица, Москва"), c("28А с3, Рябиновая улица, Москва"), c("28А, Рябиновая улица, Москва")])).toBe(true);
+    expect(geocode.sameHouse([c("28А с2, Рябиновая улица, Москва"), c("30, Рябиновая улица, Москва")])).toBe(false);
+  });
+});
