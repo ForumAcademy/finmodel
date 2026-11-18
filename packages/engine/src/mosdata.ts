@@ -236,15 +236,36 @@ export function mosBasis(key: MosDatasetKey, at: string, note: string): ValueBas
   return { title: `${s.title.split(" — ")[0]}, набор ${MOS_DATASETS[key]}`, url: datasetUrl(key), date: at.slice(0, 10), note };
 }
 
-/** Строка «Данные Москвы» для экрана. */
-export function mosText(m: MosLookup, chosen: CityPlot | null = null): string {
-  const plots = chosen ? `Участок ${cityPlotText(chosen)}` : m.plots.length ? `Городских участков в этой точке: ${m.plots.length}` : "Городских участков в этой точке нет";
+/** Строка «Данные Москвы» для экрана; выбранные участки — список или один. */
+export function mosText(m: MosLookup, chosen: readonly CityPlot[] | CityPlot | null = null): string {
+  const list = chosen === null ? [] : Array.isArray(chosen) ? chosen : [chosen as CityPlot];
+  const total = list.reduce((s, c) => s.plus(c.area ?? 0), new Decimal(0));
+  const plots =
+    list.length > 1
+      ? `Участки: ${list.map((c) => cityPlotText(c)).join("; ")}. Всего ${num(total, 0)} м²`
+      : list.length === 1
+        ? `Участок ${cityPlotText(list[0] as CityPlot)}`
+        : m.plots.length
+          ? `Городских участков в этой точке: ${m.plots.length}`
+          : "Городских участков в этой точке нет";
   const heritage = m.zones.length || m.territories.length ? `, участок в зоне охраны памятников` : "";
   return `${plots}${heritage}. Портал открытых данных Москвы, ${fmtDate(m.fetchedAt.slice(0, 10))}.`;
 }
 
-/** Выбранный в проекте городской участок: тот, чей кадастровый номер стоит в проекте; иначе null. */
-export const chosenCityPlot = (m: MosLookup, cadastralNumber: string | null): CityPlot | null => m.plots.find((c) => c.cadastralNumber === cadastralNumber) ?? null;
+/** Номера участков в поле «Кадастровый номер»: один или несколько через запятую. */
+export const cadastralNumbers = (v: string | null): string[] => (v ? v.split(/[,;]\s*/).map((x) => x.trim()).filter(Boolean) : []);
+
+/** Выбранные в проекте городские участки: те, чьи номера стоят в проекте (крупный первым). */
+export const chosenCityPlots = (m: MosLookup, cadastralNumber: string | null): CityPlot[] => {
+  const nums = cadastralNumbers(cadastralNumber);
+  return m.plots.filter((c) => nums.includes(c.cadastralNumber));
+};
+
+/** Выбранный городской участок, если он один; иначе null. */
+export const chosenCityPlot = (m: MosLookup, cadastralNumber: string | null): CityPlot | null => {
+  const list = chosenCityPlots(m, cadastralNumber);
+  return list.length === 1 ? (list[0] as CityPlot) : null;
+};
 
 /** Городская земля: собственность города или неразграниченная. */
 export const isCityLand = (c: CityPlot): boolean => /город|неразграничен/i.test(c.ownerType ?? "");
@@ -254,19 +275,33 @@ export const CITY_LAND_TENURE = "аренда";
 
 /**
  * Взять данные городского участка: номер, квартал, вид использования — «из источника»; форма права для городской
- * земли — оценка «аренда». Значения из документа проекта не меняются. Площадь не меняется: если она отличается
- * от проекта — сообщение.
+ * земли — оценка «аренда». Значения из документа проекта и введённые вручную не меняются. Площадь одного участка
+ * не меняется: если она отличается от проекта — сообщение.
  */
 export function applyCityPlot(p: LandProject, c: CityPlot, at: string): ChangeSet & { project: LandProject } {
+  return applyCityPlots(p, [c], at);
+}
+
+/**
+ * Взять данные одного или нескольких городских участков. Несколько — участки складываются: номера через запятую,
+ * площадь — сумма площадей из реестра (заменяет введённую: финансист сам отметил участки), вид использования — все
+ * разные виды; квартал — общий, а если участки в разных кварталах — квартал крупного участка (для оценки после
+ * смены вида использования).
+ */
+export function applyCityPlots(p: LandProject, picked: readonly CityPlot[], at: string): ChangeSet & { project: LandProject } {
   const changes: PlotChange[] = [];
   const problems: string[] = [];
-  const note = `Участок ${c.cadastralNumber}${c.address ? `, ${c.address}` : ""}`;
-  const put = (field: PlotFieldKey, value: string | null, origin: "source" | "estimate", extra?: string, own?: string) => {
+  if (!picked.length) return { project: p, changes, problems };
+  const list = [...picked].sort((a, b) => Number(b.area ?? 0) - Number(a.area ?? 0));
+  const many = list.length > 1;
+  const first = list[0] as CityPlot;
+  const note = many ? `Участки ${list.map((c) => c.cadastralNumber).join(", ")}` : `Участок ${first.cadastralNumber}${first.address ? `, ${first.address}` : ""}`;
+  const put = (field: PlotFieldKey, value: string | null, origin: "source" | "estimate", extra?: string, own?: string, force = false) => {
     if (value === null) return;
     const cur = p.plot[field];
     if (cur.origin === "source" && cur.basis?.documentId) return;
     // Введено вручную и отличается от портала — остаётся введённое, финансист получает сообщение
-    if (cur.origin === "expert" && cur.value !== null && cur.value !== value) {
+    if (!force && cur.origin === "expert" && cur.value !== null && cur.value !== value) {
       problems.push(`${plotField(field).label}: на портале Москвы «${value}», в проекте введено «${cur.value}». Оставлено введённое; чтобы взять значение портала, очистите поле.`);
       return;
     }
@@ -274,19 +309,37 @@ export function applyCityPlot(p: LandProject, c: CityPlot, at: string): ChangeSe
     if (cur.value === to.value && cur.origin === to.origin && cur.basis?.url === to.basis?.url && cur.basis?.note === to.basis?.note) return;
     changes.push({ field, from: cur, to });
   };
-  put("cadastralNumber", c.cadastralNumber, "source");
+  put("cadastralNumber", list.map((c) => c.cadastralNumber).join(", "), "source");
+  const quarters = [...new Set(list.map((c) => cadastralQuarter(c.cadastralNumber)).filter((q): q is string => q !== null))];
   // Квартал — первая часть номера того же участка; адрес не повторяется, чтобы не читалось как второй участок
-  put("quarter", cadastralQuarter(c.cadastralNumber), "source", undefined, `Первая часть кадастрового номера участка ${c.cadastralNumber}`);
-  put("vri", c.vri, "source");
-  if (isCityLand(c)) {
-    put("tenure", CITY_LAND_TENURE, "estimate", `Земля города (${c.ownerType}${c.rented === true ? ", сейчас сдана в аренду" : ""}): участок под строительство предоставляется в аренду на торгах, ст. 39.6 ЗК РФ`);
+  const qNote = quarters.length > 1 ? `Участки в разных кварталах (${quarters.join(", ")}); взят квартал крупного участка ${first.cadastralNumber}` : `Первая часть кадастрового номера ${many ? "участков" : "участка"} ${list.map((c) => c.cadastralNumber).join(", ")}`;
+  put("quarter", cadastralQuarter(first.cadastralNumber), "source", undefined, qNote);
+  const vris = [...new Set(list.map((c) => c.vri).filter((v): v is string => v !== null))];
+  put("vri", vris.length ? vris.join("; ") : null, "source");
+  const city = list.find(isCityLand);
+  if (city) {
+    put("tenure", CITY_LAND_TENURE, "estimate", `Земля города (${city.ownerType}${city.rented === true ? ", сейчас сдана в аренду" : ""}): участок под строительство предоставляется в аренду на торгах, ст. 39.6 ЗК РФ`);
   }
   const area = p.plot.area.value;
-  if (c.area && area && Math.abs(Number(c.area) - Number(area)) >= 1) {
-    problems.push(`В реестре города площадь участка ${num(c.area, 0)} м², в проекте — ${num(area, 0)} м². Проверьте площадь: расчёт идёт от площади проекта.`);
+  if (many) {
+    const sum = list.reduce((s, c) => s.plus(c.area ?? 0), new Decimal(0));
+    if (area && sum.gt(area)) problems.push(`Площадь отмеченных участков ${num(sum, 0)} м² больше введённой ранее ${num(new Decimal(area), 0)} м². В расчёт взята сумма площадей; проверьте, все ли участки входят в проект.`);
+    put("area", sum.toString(), "source", undefined, `Сумма площадей участков из реестра города: ${list.map((c) => num(new Decimal(c.area ?? 0), 0)).join(" + ")} = ${num(sum, 0)} м²`, true);
+    const noArea = list.filter((c) => !c.area).map((c) => c.cadastralNumber);
+    if (noArea.length) problems.push(`В реестре города нет площади участков ${noArea.join(", ")}: площадь проекта посчитана без них. Проверьте площадь.`);
+  } else if (first.area && p.plot.area.origin === "source" && p.plot.area.basis?.url === datasetUrl("plots")) {
+    // Площадь была суммой отмеченных участков — теперь участок один, площадь — его
+    put("area", first.area, "source", undefined, `Площадь участка ${first.cadastralNumber} из реестра города`);
+  } else if (first.area && area && Math.abs(Number(first.area) - Number(area)) >= 1) {
+    problems.push(`В реестре города площадь участка ${num(first.area, 0)} м², в проекте — ${num(area, 0)} м². Проверьте площадь: расчёт идёт от площади проекта.`);
   }
   const withPlot = applyChanges(p, changes, at);
-  const est = cadastralValueEstimate(withPlot, at);
+  const curValue = withPlot.plot.cadastralValue;
+  if (many && curValue.value !== null && curValue.origin !== "estimate") {
+    const e = estimateCadastralValue(withPlot, list);
+    if (e && e.value.gt(curValue.value)) problems.push(`Оценка кадастровой стоимости отмеченных участков ${num(e.value, 0)} руб больше введённой ${num(new Decimal(curValue.value), 0)} руб. Проверьте, стоимость каких участков введена.`);
+  }
+  const est = cadastralValueEstimate(withPlot, at, list);
   return { project: applyChanges(withPlot, est, at), changes: [...changes, ...est], problems };
 }
 
@@ -310,36 +363,57 @@ export function heritageZouit(m: MosLookup): ZouitEntry[] {
 /** Форма права, если городского участка в точке нет: земля, вероятно, частная — покупка в собственность. */
 export const PRIVATE_LAND_TENURE = "собственность";
 
+/** Таблица средней кадастровой стоимости 1 м² региона проекта; нет — null. */
+function upksTable(p: LandProject) {
+  const region = p.plot.regionCode.value;
+  if (!region) return null;
+  try {
+    return getRegion(region as RegionCode).cadastral_value_estimate ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Оценка кадастровой стоимости в данные участка: площадь × средний УПКС квартала по группе текущего ВРИ (как
- * F.LAND.CADASTRAL_VALUE_EST). Меняет только пустое значение или прошлую оценку; нет площади, квартала, ВРИ или
- * таблицы региона — изменений нет.
+ * Оценка кадастровой стоимости: площадь × средний УПКС квартала по группе ВРИ (как F.LAND.CADASTRAL_VALUE_EST).
+ * Несколько участков — оценка каждого по его площади, кварталу и ВРИ, затем сумма. Нет данных — null.
  */
-export function cadastralValueEstimate(p: LandProject, at: string): PlotChange[] {
+export function estimateCadastralValue(p: LandProject, parts: readonly CityPlot[] = []): { value: Decimal; note: string } | null {
+  const t = upksTable(p);
+  if (!t) return null;
+  const one = (area: string | null, quarter: string | null, vri: string | null) => {
+    if (!area || !quarter) return null;
+    const group = vriCodes(vri).map((c) => t.vri_groups[c]).find((g): g is string => g !== undefined);
+    if (!group) return null;
+    const u = upksFor(t, quarter, group);
+    if (!u) return null;
+    const title = t.groups.find((g) => g.key === group)?.title ?? group;
+    return { value: new Decimal(area).mul(u.value), note: `${num(area, 0)} м² × ${num(String(u.value), 2)} руб/м² — группа «${title}», ${u.where}` };
+  };
+  if (parts.length > 1) {
+    const rows = parts.map((c) => ({ c, r: one(c.area, cadastralQuarter(c.cadastralNumber), c.vri) }));
+    if (rows.some((x) => x.r === null)) return null;
+    const value = rows.reduce((sum, x) => sum.plus((x.r as { value: Decimal }).value), new Decimal(0));
+    return { value, note: rows.map((x) => `${x.c.cadastralNumber}: ${(x.r as { note: string }).note}`).join("; ") + `. Сумма по ${parts.length} участкам` };
+  }
+  const quarter = p.plot.quarter.value ?? (p.plot.cadastralNumber.value ? cadastralQuarter(p.plot.cadastralNumber.value) : null);
+  return one(p.plot.area.value, quarter, p.plot.vri.value);
+}
+
+/**
+ * Оценка кадастровой стоимости в данные участка. Меняет только пустое значение или прошлую оценку; нет площади,
+ * квартала, ВРИ или таблицы региона — изменений нет. Участки проекта — отмеченные на портале (если их несколько).
+ */
+export function cadastralValueEstimate(p: LandProject, at: string, parts?: readonly CityPlot[]): PlotChange[] {
   const cur = p.plot.cadastralValue;
   if (cur.value !== null && cur.origin !== "estimate") return [];
-  const region = p.plot.regionCode.value;
-  const quarter = p.plot.quarter.value ?? (p.plot.cadastralNumber.value ? cadastralQuarter(p.plot.cadastralNumber.value) : null);
-  const area = p.plot.area.value;
-  if (!region || !quarter || !area) return [];
-  let t;
-  try {
-    t = getRegion(region as RegionCode).cadastral_value_estimate;
-  } catch {
-    return [];
-  }
-  if (!t) return [];
-  const group = vriCodes(p.plot.vri.value).map((c) => t.vri_groups[c]).find((g): g is string => g !== undefined);
-  if (!group) return [];
-  const u = upksFor(t, quarter, group);
-  if (!u) return [];
-  const value = new Decimal(area).mul(u.value).toDecimalPlaces(2).toString();
-  const title = t.groups.find((g) => g.key === group)?.title ?? group;
+  const est = estimateCadastralValue(p, parts ?? (p.mos ? chosenCityPlots(p.mos, p.plot.cadastralNumber.value) : []));
+  if (!est) return [];
   const s = getSource("S_MSK_DGI_UPKS_2024");
   const to: PlotValue = {
-    value,
+    value: est.value.toDecimalPlaces(2).toString(),
     origin: "estimate",
-    basis: { title: "Оценка по средней кадастровой стоимости 1 м² в квартале, распоряжение ДГИ Москвы № 214856", url: s.url ?? null, date: at.slice(0, 10), note: `${num(area, 0)} м² × ${num(String(u.value), 2)} руб/м² — группа «${title}», ${u.where}. Замените стоимостью из выписки ЕГРН, когда она будет` },
+    basis: { title: "Оценка по средней кадастровой стоимости 1 м² в квартале, распоряжение ДГИ Москвы № 214856", url: s.url ?? null, date: at.slice(0, 10), note: `${est.note}. Замените стоимостью из выписки ЕГРН, когда она будет` },
   };
   if (cur.value === to.value && cur.origin === "estimate") return [];
   return [{ field: "cadastralValue", from: cur, to }];
@@ -362,8 +436,8 @@ export function applyMosLookup(p: LandProject, m: MosLookup, at: string): Change
   if (!sameZones) next = updateSite(next, { zouit: [...own, ...heritage] }, at);
   if (m.plots.length === 1) return applyCityPlot(next, m.plots[0] as CityPlot, at);
   // Участок уже выбран из нескольких — его данные обновляются
-  const chosen = chosenCityPlot(m, next.plot.cadastralNumber.value);
-  if (chosen) return applyCityPlot(next, chosen, at);
+  const chosen = chosenCityPlots(m, next.plot.cadastralNumber.value);
+  if (chosen.length) return applyCityPlots(next, chosen, at);
   const changes: PlotChange[] = [];
   const t = next.plot.tenure;
   if (m.plots.length === 0 && t.value === null) {
@@ -379,8 +453,8 @@ export function applyMosLookup(p: LandProject, m: MosLookup, at: string): Change
  * участка; оценка кадастровой стоимости пересчитывается по новой площади, кварталу и виду использования.
  */
 export function afterManualEdit(p: LandProject, fields: readonly PlotFieldKey[], at: string): ChangeSet & { project: LandProject } {
-  const c = p.mos && fields.includes("cadastralNumber") ? chosenCityPlot(p.mos, p.plot.cadastralNumber.value) : null;
-  if (c) return applyCityPlot(p, c, at);
+  const list = p.mos && fields.includes("cadastralNumber") ? chosenCityPlots(p.mos, p.plot.cadastralNumber.value) : [];
+  if (list.length) return applyCityPlots(p, list, at);
   const est = cadastralValueEstimate(p, at);
   return { project: applyChanges(p, est, at), changes: est, problems: [] };
 }

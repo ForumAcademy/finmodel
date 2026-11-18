@@ -201,6 +201,8 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
   const [mosError, setMosError] = useState<string | null>(null);
   const mosAuto = useRef(false);
   const [mosPick, setMosPick] = useState(false);
+  /** Отмеченные в списке участки портала (номера); null — как в проекте. */
+  const [mosSel, setMosSel] = useState<string[] | null>(null);
 
   useEffect(() => {
     getProject(id).then(setProject, () => setProject(null));
@@ -235,14 +237,15 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
     }
   }, []);
 
-  const takeCityPlot = useCallback(
-    async (proj: LandProject, c: mosdata.CityPlot) => {
-      const r = mosdata.applyCityPlot(proj, c, nowIso());
+  const takeCityPlots = useCallback(
+    async (proj: LandProject, list: mosdata.CityPlot[]) => {
+      const r = mosdata.applyCityPlots(proj, list, nowIso());
       await saveProject(r.project);
       setProject(r.project);
       setProblems(r.problems);
       setMosPick(false);
-      flash(`Взяты данные участка ${c.cadastralNumber}`);
+      setMosSel(null);
+      flash(list.length > 1 ? `Взяты участки: ${list.length}, площади сложены` : `Взяты данные участка ${list[0]?.cadastralNumber ?? ""}`);
     },
     [flash],
   );
@@ -307,7 +310,9 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
   }
   const p = project;
   const view = pending.length ? plot.applyChanges(p, pending, p.updatedAt) : p;
-  const mosChosen = p.mos ? mosdata.chosenCityPlot(p.mos, view.plot.cadastralNumber.value) : null;
+  const mosChosenList = p.mos ? mosdata.chosenCityPlots(p.mos, view.plot.cadastralNumber.value) : [];
+  const mosChosen = mosChosenList.length ? mosChosenList : null;
+  const marked = mosSel ?? mosChosenList.map((c) => c.cadastralNumber);
   // Всё найдено и выбрано — блоки поиска сворачиваются в одну серую строку
   const isMoscow = view.plot.regionCode.value === MOSCOW;
   const foundDone = Boolean(p.geo) && !geoBusy && !mosBusy && !geoChoices && (!isMoscow || (Boolean(p.mos) && !mosPick && (p.mos?.plots.length ?? 0) <= 1) || (Boolean(mosChosen) && !mosPick));
@@ -510,7 +515,7 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                       </button>
                       {p.mos && p.mos.plots.length > 1 && (
                         <button className="lnk" onClick={() => setMosPick(true)}>
-                          Выбрать другой участок
+                          Изменить выбор участков
                         </button>
                       )}
                     </div>
@@ -532,22 +537,30 @@ export function ProjectScreen({ id, sec, tab: rawTab }: { id: string; sec: Proje
                           <>
                             {" "}
                             <button className="btn sm" onClick={() => setMosPick(true)}>
-                              Выбрать другой участок
+                              Изменить выбор участков
                             </button>
                           </>
                         )}
                         {p.mos && p.mos.plots.length > 1 && (!mosChosen || mosPick) && (
                           <>
-                            {" "}В этой точке несколько городских участков. Выберите тот, что под проект:
-                            <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                            {" "}В этой точке несколько городских участков. Отметьте один или несколько, что входят в проект: площади и кадастровые стоимости сложатся.
+                            <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none" }}>
                               {p.mos.plots.map((c) => (
                                 <li key={c.cadastralNumber}>
-                                  <button className="btn sm" style={{ margin: "3px 0" }} onClick={() => void takeCityPlot(p, c)} disabled={mosChosen?.cadastralNumber === c.cadastralNumber}>
+                                  <label style={{ display: "flex", gap: 8, alignItems: "center", margin: "3px 0", cursor: "pointer" }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={marked.includes(c.cadastralNumber)}
+                                      onChange={(e) => setMosSel(e.target.checked ? [...marked, c.cadastralNumber] : marked.filter((x) => x !== c.cadastralNumber))}
+                                    />
                                     {mosdata.cityPlotText(c)}
-                                  </button>
+                                  </label>
                                 </li>
                               ))}
                             </ul>
+                            <button className="btn sm pri" style={{ marginTop: 6 }} disabled={!marked.length} onClick={() => p.mos && void takeCityPlots(p, p.mos.plots.filter((c) => marked.includes(c.cadastralNumber)))}>
+                              {marked.length > 1 ? `Взять отмеченные (${marked.length})` : "Взять отмеченный"}
+                            </button>
                           </>
                         )}
                         {p.mos && (p.mos.zones.length > 0 || p.mos.territories.length > 0) && (
