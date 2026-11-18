@@ -85,7 +85,7 @@ export function ExpertFields({ form, onChange, placeholder, unit, numeric }: { f
 /** Слова в «Где взять данные», которые показываются ссылкой на первоисточник. */
 const WHERE_LINKS: Record<string, string> = {
   "nspd.gov.ru": "https://nspd.gov.ru/map",
-  "карта ПЗЗ Москвы": "https://isogd.mos.ru/isogd-portal/gis/none/none",
+  "карта ПЗЗ Москвы": "https://gisogd.mos.ru/",
   "Геопортал Подмосковья": "https://rgis.mosreg.ru/",
 };
 const WHERE_RE = new RegExp(`(${Object.keys(WHERE_LINKS).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`);
