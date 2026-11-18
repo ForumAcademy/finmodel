@@ -237,7 +237,7 @@ function DemolitionPick({ p, onSave }: { p: LandProject; onSave: Save }) {
   return (
     <div className="check">
       <div>
-        <b>Здания по адресу.</b> Отметьте здания, которые нужно снести: площадь каждого = площадь контура × этажность, площади сложатся. Этажности нет — введите её. Контуры — адресный реестр Москвы, этажность — OpenStreetMap.
+        <b>Здания по адресу.</b> Отметьте здания, которые нужно снести: площадь каждого = площадь контура × этажность, площади сложатся. Этажности нет — посмотрите в карточке здания на Яндекс Картах (ссылка у здания) или на фото и введите. Контуры — адресный реестр Москвы, этажность — OpenStreetMap.
         <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none" }}>
           {list.map((b) => {
             const on = b.unom in marks;
@@ -259,6 +259,11 @@ function DemolitionPick({ p, onSave }: { p: LandProject; onSave: Save }) {
                   />
                   {mosdata.buildingText(b)}
                 </label>
+                {b.levels === null && (
+                  <a className="small" href={mosdata.buildingMapUrl(b)} target="_blank" rel="noreferrer">
+                    сколько этажей — на Яндекс Картах
+                  </a>
+                )}
                 {on && (
                   <label className="small" style={{ display: "flex", gap: 4, alignItems: "center" }}>
                     этажей

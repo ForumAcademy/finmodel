@@ -337,6 +337,9 @@ export function buildingText(b: CityBuilding): string {
   return parts.join(", ");
 }
 
+/** Здание на Яндекс Картах по адресу: в карточке дома часто указана этажность, есть панорама — чтобы посчитать этажи. */
+export const buildingMapUrl = (b: CityBuilding): string => `https://yandex.ru/maps/?text=${encodeURIComponent(`Москва, ${b.address}`)}`;
+
 /** Отмеченное здание и его этажность (из OpenStreetMap или введённая). */
 export interface BuildingPick {
   unom: string;

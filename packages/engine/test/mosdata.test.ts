@@ -200,6 +200,7 @@ describe("здания под снос: адресный реестр Москв
     expect(list.map((b) => b.address)).toEqual(["Рябиновая улица, дом 28А, строение 1", "Рябиновая улица, дом 28А, строение 2", "Рябиновая улица, дом 28А, строение 10"]);
     expect(list[0]).toMatchObject({ atPoint: true, levels: null, cadastralNumber: "77:07:0012004:111", plotNumbers: ["77:07:0012004:10"] });
     expect(list[1]).toMatchObject({ levels: 2, levelsUrl: "https://www.openstreetmap.org/way/184735411" });
+    expect(mosdata.buildingMapUrl(list[0] as mosdata.CityBuilding)).toBe(`https://yandex.ru/maps/?text=${encodeURIComponent("Москва, Рябиновая улица, дом 28А, строение 1")}`);
     expect(mosdata.buildingText(list[1] as mosdata.CityBuilding)).toBe("Рябиновая улица, дом 28А, строение 2, контур 139 м², 2 эт. по OpenStreetMap");
   });
 
