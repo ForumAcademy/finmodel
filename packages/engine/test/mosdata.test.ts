@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mosdata, plot } from "../src";
+import { mosdata, plot, site } from "../src";
 
 const AT = "2026-11-17T07:00:00.000Z";
 const P = { lat: 55.75756, lon: 37.65373 };
@@ -171,5 +171,54 @@ describe("несколько участков в проекте", () => {
     const r = mosdata.applyCityPlots(own, mosdata.cityPlotsAt(PLOTS, P), AT);
     expect(r.project.plot.cadastralValue).toMatchObject({ value: "326576186.2", origin: "expert" });
     expect(r.problems.some((t) => t.startsWith("Оценка кадастровой стоимости отмеченных участков 418 443 713 руб больше введённой 326 576 186 руб"))).toBe(true);
+  });
+});
+
+describe("здания под снос: адресный реестр Москвы (60562) и этажность OpenStreetMap", () => {
+  const R = { lat: 55.6935, lon: 37.4177 };
+  const rect = (lon: number, lat: number) => [[[lon, lat], [lon + 0.0002, lat], [lon + 0.0002, lat + 0.0001], [lon, lat + 0.0001], [lon, lat]]];
+  /** Поля — как в ответе портала 18.11.2026 (Рябиновая ул., 28А); границы — прямоугольники для проверки площади. */
+  const bld = (n: string, unom: number, lon: number, lat: number, house = "28А", street = "Рябиновая улица") => ({
+    geometry: { type: "MultiPolygon", coordinates: [rect(lon, lat)] },
+    properties: { attributes: { UNOM: unom, OBJ_TYPE_PUBLIC: "здание", SIMPLE_ADDRESS: `${street}, дом ${house}, строение ${n}`, P7: street, L1_VALUE: house, L2_VALUE: "", L3_VALUE: n, KAD_N: [{ is_deleted: 0, KAD_N: `77:07:0012004:11${n}` }], KAD_ZU: [{ is_deleted: 0, KAD_ZU: "77:07:0012004:10" }] } },
+  });
+  const BUILDINGS = { features: [bld("2", 2119250, R.lon + 0.001, R.lat), bld("1", 3100754, R.lon - 0.0001, R.lat - 0.00005), bld("10", 2119258, R.lon + 0.0005, R.lat), bld("5", 999, R.lon - 0.001, R.lat, "30", "Рябиновая улица")] };
+  const OSM = { elements: [{ id: 184735411, center: { lat: R.lat + 0.00005, lon: R.lon + 0.0011 }, tags: { "building:levels": "2" } }, { id: 1, center: { lat: 0, lon: 0 }, tags: { "building:levels": "этаж" } }] };
+  const ryab = () => {
+    const p = { ...make(), geo: { query: "q", label: "28А с1, Рябиновая улица, район Очаково-Матвеевское, Москва, Россия", point: R, regionCode: "77", locality: [], house: true, fetchedAt: AT } };
+    return mosdata.applyMosLookup(p, mosdata.mosLookup(R, { plots: { features: [] }, buildings: BUILDINGS, osm: OSM }, AT), AT).project;
+  };
+
+  it("площадь контура в м²: 0,0002° × 0,0001° на широте 55,69° ≈ 139 м²", () => {
+    const list = mosdata.buildingsAt(BUILDINGS, OSM, R);
+    expect(list.find((b) => b.unom === "3100754")?.footprint).toBe("139");
+  });
+
+  it("здания одного дома, по номеру строения; этажность — у здания OpenStreetMap внутри контура; чужой дом отброшен", () => {
+    const p = ryab();
+    const list = p.mos?.buildings ?? [];
+    expect(list.map((b) => b.address)).toEqual(["Рябиновая улица, дом 28А, строение 1", "Рябиновая улица, дом 28А, строение 2", "Рябиновая улица, дом 28А, строение 10"]);
+    expect(list[0]).toMatchObject({ atPoint: true, levels: null, cadastralNumber: "77:07:0012004:111", plotNumbers: ["77:07:0012004:10"] });
+    expect(list[1]).toMatchObject({ levels: 2, levelsUrl: "https://www.openstreetmap.org/way/184735411" });
+    expect(mosdata.buildingText(list[1] as mosdata.CityBuilding)).toBe("Рябиновая улица, дом 28А, строение 2, контур 139 м², 2 эт. по OpenStreetMap");
+  });
+
+  it("отмеченные здания: контур × этажность, сумма — оценка с источником; отметки запоминаются", () => {
+    const p = ryab();
+    expect(mosdata.applyDemolitionPick(p, [], AT)).toEqual({ error: "Отметьте хотя бы одно здание." });
+    expect(mosdata.applyDemolitionPick(p, [{ unom: "3100754", levels: 0 }], AT)).toMatchObject({ error: expect.stringMatching(/^Введите этажность здания «Рябиновая улица, дом 28А, строение 1»/) });
+    const r = mosdata.applyDemolitionPick(p, [{ unom: "3100754", levels: 3 }, { unom: "2119250", levels: 2 }], AT);
+    if ("error" in r) throw new Error(r.error);
+    const v = site.siteValue(r.project, "demolitionGfa");
+    expect(v.value).toBe("695");
+    expect(v.origin).toBe("estimate");
+    expect(v.basis?.url).toBe("https://data.mos.ru/opendata/60562");
+    expect(v.basis?.note).toMatch(/^Рябиновая улица, дом 28А, строение 1: 139 м² × 3 эт\. = 417 м² \(этажность введена\); Рябиновая улица, дом 28А, строение 2: 139 м² × 2 эт\. = 278 м² \(этажность по OpenStreetMap\)\. Итого 695 м²/);
+    expect(site.siteOf(r.project).demolitionPick).toEqual([{ unom: "3100754", levels: 3 }, { unom: "2119250", levels: 2 }]);
+  });
+
+  it("запрос этажности — в окне запроса к порталу; ответ без зданий — пусто", () => {
+    expect(mosdata.osmLevelsQuery(P)).toBe('[out:json][timeout:25];way[building]["building:levels"](55.755560,37.651730,55.759560,37.655730);out tags center;');
+    expect(mosdata.buildingsAt(null, null, P)).toEqual([]);
   });
 });

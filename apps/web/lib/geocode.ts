@@ -36,7 +36,7 @@ export async function findMosData(point: plot.GeoPoint, at: string): Promise<Mos
     const r = await fetch(`/api/mosdata?lat=${point.lat}&lon=${point.lon}`, { cache: "no-store" });
     const json: unknown = await r.json();
     if (!r.ok) return { error: (json as { error?: string } | null)?.error ?? "Портал открытых данных Москвы недоступен" };
-    return { lookup: mosdata.mosLookup(point, json as Partial<Record<mosdata.MosDatasetKey, unknown>>, at) };
+    return { lookup: mosdata.mosLookup(point, json as Partial<Record<mosdata.MosDatasetKey, unknown>> & { osm?: unknown }, at) };
   } catch {
     return { error: "Портал открытых данных Москвы недоступен. Повторите позже." };
   }

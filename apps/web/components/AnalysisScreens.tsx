@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { analysis, book, plot, site, siteView, summary, text, zcyc } from "@fm/engine";
+import { analysis, book, mosdata, plot, site, siteView, summary, text, zcyc } from "@fm/engine";
 import { newId, nowIso } from "@/lib/store";
 import { loadZcyc } from "@/lib/zcyc";
+import { findMosData } from "@/lib/geocode";
 import { ReportBlock } from "./Report";
 import { Chip, ExpertFields, FieldTable, Modal, OriginTag, WhereToFind, type FieldItem } from "./ui";
 
@@ -159,6 +160,127 @@ export function SiteFields({ p, keys, required, onSave }: { p: LandProject; keys
   );
 }
 
+/**
+ * Здания у участка из адресного реестра Москвы: отметить одно или несколько, этажность — из OpenStreetMap или ввести;
+ * площадь под снос = контур × этажность, сумма (расчёт — в ядре, mosdata.applyDemolitionPick).
+ */
+function DemolitionPick({ p, onSave }: { p: LandProject; onSave: Save }) {
+  const list = p.mos?.buildings ?? null;
+  const picked = site.siteOf(p).demolitionPick ?? [];
+  const [open, setOpen] = useState(picked.length === 0);
+  const [marks, setMarks] = useState<Record<string, string>>(() => Object.fromEntries(picked.map((x) => [x.unom, String(x.levels)])));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (p.plot.regionCode.value !== "77" || !p.point) return null;
+  const point = p.point;
+
+  const load = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const at = nowIso();
+      const r = await findMosData(point, at);
+      if ("error" in r) return setError(r.error);
+      const a = mosdata.applyMosLookup(p, r.lookup, at);
+      await onSave(a.project, "Данные Москвы обновлены");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (list === null) {
+    return (
+      <div className="check">
+        <div>
+          <b>Здания по адресу.</b> {error ?? "Сервис может найти здания участка в адресном реестре Москвы и сложить их площади."}
+        </div>
+        <button className="btn sm" onClick={() => void load()} disabled={busy}>
+          {busy ? "Ищем…" : "Найти здания"}
+        </button>
+      </div>
+    );
+  }
+  if (list.length === 0) {
+    return (
+      <div className="check">
+        <div>
+          <b>Здания по адресу.</b> {error ?? "В адресном реестре Москвы зданий у участка нет. Если сносить нечего — введите 0."}
+        </div>
+        <button className="btn sm" onClick={() => void load()} disabled={busy}>
+          {busy ? "Ищем…" : "Искать заново"}
+        </button>
+      </div>
+    );
+  }
+  const chosen = Object.keys(marks);
+  const take = async () => {
+    const picks = chosen.map((unom) => ({ unom, levels: Number(marks[unom]?.trim()) }));
+    const r = mosdata.applyDemolitionPick(p, picks, nowIso());
+    if ("error" in r) return setError(r.error);
+    setError(null);
+    setOpen(false);
+    await onSave(r.project, picks.length > 1 ? `Площадь под снос: сложены площади зданий (${picks.length})` : "Площадь под снос взята по зданию");
+  };
+  if (!open && picked.length) {
+    const names = picked.map((x) => list.find((b) => b.unom === x.unom)?.address ?? x.unom);
+    return (
+      <div className="check ok">
+        <div>
+          <b>Под снос:</b> {names.join("; ")}.{" "}
+          <button className="lnk" onClick={() => setOpen(true)}>
+            Изменить выбор зданий
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="check">
+      <div>
+        <b>Здания по адресу.</b> Отметьте здания, которые нужно снести: площадь каждого = площадь контура × этажность, площади сложатся. Этажности нет — введите её. Контуры — адресный реестр Москвы, этажность — OpenStreetMap.
+        <ul style={{ margin: "6px 0 0", paddingLeft: 0, listStyle: "none" }}>
+          {list.map((b) => {
+            const on = b.unom in marks;
+            return (
+              <li key={b.unom} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", margin: "3px 0" }}>
+                <label style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={!b.footprint}
+                    onChange={(e) =>
+                      setMarks((m) => {
+                        const n = { ...m };
+                        if (e.target.checked) n[b.unom] = b.levels !== null ? String(b.levels) : "";
+                        else delete n[b.unom];
+                        return n;
+                      })
+                    }
+                  />
+                  {mosdata.buildingText(b)}
+                </label>
+                {on && (
+                  <label className="small" style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    этажей
+                    <input style={{ width: 56, border: "1px solid var(--line)", borderRadius: 7, padding: "3px 6px", background: "#fff" }} inputMode="numeric" value={marks[b.unom] ?? ""} onChange={(e) => setMarks((m) => ({ ...m, [b.unom]: e.target.value }))} />
+                  </label>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {error && <div className="err">{error}</div>}
+        <button className="btn sm pri" style={{ marginTop: 6 }} disabled={!chosen.length} onClick={() => void take()}>
+          {chosen.length > 1 ? `Взять отмеченные (${chosen.length})` : "Взять отмеченное"}
+        </button>
+      </div>
+      <button className="btn sm" onClick={() => void load()} disabled={busy}>
+        {busy ? "Ищем…" : "Обновить"}
+      </button>
+    </div>
+  );
+}
+
 /** Ответ шага одной фразой — сверху экрана. */
 function Answer({ h }: { h: siteView.Headline }) {
   return (
@@ -283,6 +405,7 @@ export function SiteSection({ p, tab, state, onSave, tabHref }: { p: LandProject
           />
           <h3 className="h3">Здания на участке</h3>
           <p className="small muted">Что нужно снести перед стройкой. Стоимость сноса = объём зданий × стоимость сноса 1 м³ из нормативов региона (Москва — показатель Москомэкспертизы).</p>
+          <DemolitionPick p={p} onSave={onSave} />
           <SiteFields p={p} keys={site.DEMOLITION_FIELDS} required={{ demolitionGfa: "Без неё снос не учтён. Если сносить нечего — введите 0." }} onSave={onSave} />
           <h3 className="h3">Зоны с ограничениями</h3>
           <p className="small muted">Охранные зоны сетей, санитарно-защитные, водоохранные. Площадь зон, где строить нельзя, вычитается из площади под застройку.</p>

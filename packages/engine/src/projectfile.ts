@@ -58,6 +58,7 @@ const siteSchema = z.object({
   selectedVariant: nstr,
   snapshot: z.object({ at: z.string(), best: nstr, bestTitle: nstr, netProfit: nstr, npv: z.string().optional(), variants: z.number() }).nullable(),
   curve: z.object({ date: z.string(), points: z.array(z.object({ term: z.number(), yield: z.number() })), loadedAt: z.string() }).nullable().optional(),
+  demolitionPick: z.array(z.object({ unom: z.string(), levels: z.number() })).optional(),
 });
 
 const projectSchema = z.object({
@@ -77,6 +78,22 @@ const projectSchema = z.object({
     .object({
       point: z.object({ lat: z.number(), lon: z.number() }),
       plots: z.array(z.object({ cadastralNumber: z.string(), address: z.string().nullable(), area: z.string().nullable(), ownerType: z.string().nullable(), rented: z.boolean().nullable(), vri: z.string().nullable() })),
+      buildings: z
+        .array(
+          z.object({
+            unom: z.string(),
+            address: z.string(),
+            street: nstr,
+            house: nstr,
+            cadastralNumber: nstr,
+            plotNumbers: z.array(z.string()),
+            footprint: nstr,
+            levels: z.number().nullable(),
+            levelsUrl: nstr,
+            atPoint: z.boolean(),
+          }),
+        )
+        .optional(),
       zones: z.array(z.string()),
       territories: z.array(z.string()),
       fetchedAt: z.string(),

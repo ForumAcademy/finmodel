@@ -1,7 +1,8 @@
 import { mosdata } from "@fm/engine";
 
 /**
- * Данные портала открытых данных Москвы по точке участка: городские участки, зоны охраны и территории памятников.
+ * Данные портала открытых данных Москвы по точке участка: городские участки, зоны охраны и территории памятников,
+ * здания адресного реестра; к ним — этажность зданий из OpenStreetMap (Overpass; не ответил — без этажности).
  * Запрос — от имени сайта с ключом API портала (DATA_MOS_API_KEY в ~/web/.env на сервере); ключ в ответ и в журнал
  * не попадает. Ответы портала передаются без изменений; разбор — в ядре. Ответ на точку запоминается на сутки.
  */
@@ -11,6 +12,19 @@ const API = "https://apidata.mos.ru";
 const TTL_MS = 24 * 3600 * 1000;
 const CACHE_MAX = 300;
 const KEYS = Object.keys(mosdata.MOS_DATASETS) as mosdata.MosDatasetKey[];
+
+const OVERPASS = "https://overpass-api.de/api/interpreter";
+const UA = "finmodel-ocenka/1.0 (+https://ocenka.orientirgpz.com)";
+
+/** Этажность зданий у точки из OpenStreetMap; ошибка — null (этажность введёт финансист). */
+async function loadOsm(p: { lat: number; lon: number }): Promise<unknown> {
+  try {
+    const r = await fetch(OVERPASS, { method: "POST", cache: "no-store", headers: { "User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ data: mosdata.osmLevelsQuery(p) }).toString(), signal: AbortSignal.timeout(30_000) });
+    return r.ok ? await r.json() : null;
+  } catch {
+    return null;
+  }
+}
 
 const cache = new Map<string, { at: number; body: unknown }>();
 
@@ -32,8 +46,8 @@ export async function GET(req: Request): Promise<Response> {
   const hit = cache.get(id);
   if (hit && Date.now() - hit.at < TTL_MS) return Response.json(hit.body);
   try {
-    const parts = await Promise.all(KEYS.map((k) => load(k, { lat, lon }, apiKey)));
-    const body = Object.fromEntries(KEYS.map((k, i) => [k, parts[i]]));
+    const [parts, osm] = await Promise.all([Promise.all(KEYS.map((k) => (k === "buildings" ? load(k, { lat, lon }, apiKey).catch(() => null) : load(k, { lat, lon }, apiKey)))), loadOsm({ lat, lon })]);
+    const body = { ...Object.fromEntries(KEYS.map((k, i) => [k, parts[i]])), osm };
     if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
     cache.set(id, { at: Date.now(), body });
     return Response.json(body);

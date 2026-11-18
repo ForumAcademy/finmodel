@@ -1,6 +1,7 @@
 /**
  * Данные портала открытых данных Москвы (data.mos.ru, источник S_MOS_OPENDATA) по точке участка: городские
- * земельные участки (набор 1497), зоны охраны (613) и территории (614) объектов культурного наследия.
+ * земельные участки (набор 1497), зоны охраны (613) и территории (614) объектов культурного наследия, здания
+ * адресного реестра (60562) — для площади под снос; этажность зданий — OpenStreetMap (S_OSM_BUILDINGS).
  * Запрос идёт с сервера сайта по ключу (apps/web/app/api/mosdata); здесь — разбор ответа, проверка «точка внутри
  * границы» и изменения проекта.
  */
@@ -9,12 +10,12 @@ import { getRegion, getSource, type RegionCode } from "@fm/spec";
 import { upksFor } from "./modules/land";
 import { date as fmtDate, num } from "./lib/text";
 import { applyChanges, cadastralQuarter, plotField, vriCodes, normalizeCadastralNumber, parseNumberRu, type ChangeSet, type GeoPoint, type LandProject, type PlotChange, type PlotFieldKey, type PlotValue, type ValueBasis } from "./plot";
-import { siteOf, updateSite, type ZouitEntry } from "./site";
+import { applySiteChange, siteOf, siteValue, updateSite, type ZouitEntry } from "./site";
 
 export const MOS_SOURCE = "S_MOS_OPENDATA" as const;
 
 /** Наборы портала, которые читает сервис. */
-export const MOS_DATASETS = { plots: 1497, zones: 613, territories: 614 } as const;
+export const MOS_DATASETS = { plots: 1497, zones: 613, territories: 614, buildings: 60562 } as const;
 export type MosDatasetKey = keyof typeof MOS_DATASETS;
 
 /** Страница набора на портале — ссылка в основании значения. */
@@ -205,10 +206,191 @@ export function cityPlotText(c: CityPlot): string {
   return parts.join(", ");
 }
 
+// ---------- здания адресного реестра (набор 60562) — площадь под снос ----------
+
+export const OSM_BUILDINGS_SOURCE = "S_OSM_BUILDINGS" as const;
+
+/** Здание из адресного реестра объектов недвижимости Москвы. */
+export interface CityBuilding {
+  /** Номер здания в реестре (УНОМ). */
+  unom: string;
+  /** Адрес, как в реестре: «Рябиновая улица, дом 28А, строение 1». */
+  address: string;
+  /** Улица и дом без корпуса и строения — для сравнения с адресом проекта. */
+  street: string | null;
+  house: string | null;
+  /** Кадастровый номер здания (если есть в реестре). */
+  cadastralNumber: string | null;
+  /** Участки, на которых стоит здание, по реестру. */
+  plotNumbers: string[];
+  /** Площадь контура здания на земле, м², по границе в реестре; null — границы нет. */
+  footprint: string | null;
+  /** Этажность по OpenStreetMap; null — не указана. */
+  levels: number | null;
+  /** Здание на карте OpenStreetMap, откуда этажность. */
+  levelsUrl: string | null;
+  /** Точка участка внутри контура здания. */
+  atPoint: boolean;
+}
+
+/** Средний радиус Земли, м (IUGG, как в WGS 84): перевод градусов контура в метры для площади. */
+const EARTH_RADIUS_M = 6371008.8;
+const RAD = Math.PI / 180;
+
+/** Площадь контура в м²: градусы → метры около широты контура (для зданий ошибка меньше 0,1 %), формула площади Гаусса. */
+function ringArea(ring: Ring, lat0: number): number {
+  const k = Math.cos(lat0 * RAD);
+  let s = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i] as [number, number];
+    const [xj, yj] = ring[j] as [number, number];
+    s += xj * k * yi - xi * k * yj;
+  }
+  return (Math.abs(s) / 2) * (EARTH_RADIUS_M * RAD) ** 2;
+}
+
+/** Площадь границы объекта, м²: внешние контуры минус дыры; границы нет — null. */
+export function footprintArea(f: MosFeature): number | null {
+  const first = f.polygons[0]?.[0]?.[0];
+  if (!first) return null;
+  const lat0 = first[1];
+  return f.polygons.reduce((sum, [outer, ...holes]) => sum + (outer ? ringArea(outer, lat0) : 0) - holes.reduce((h, r) => h + ringArea(r, lat0), 0), 0);
+}
+
+const listOf = (v: unknown, key: string): string[] =>
+  Array.isArray(v) ? v.filter((x) => x && typeof x === "object" && (x as Record<string, unknown>).is_deleted !== 1).map((x) => str((x as Record<string, unknown>)[key])).filter((x): x is string => x !== null) : [];
+
+/** Здания OpenStreetMap с этажностью: центр и число этажей (тег building:levels). */
+export function osmLevels(json: unknown): { id: number; center: GeoPoint; levels: number }[] {
+  const list = (json as { elements?: unknown } | null)?.elements;
+  if (!Array.isArray(list)) return [];
+  const out: { id: number; center: GeoPoint; levels: number }[] = [];
+  for (const e of list as { id?: unknown; center?: { lat?: unknown; lon?: unknown }; tags?: Record<string, unknown> }[]) {
+    const lv = String(e?.tags?.["building:levels"] ?? "").trim();
+    const lat = Number(e?.center?.lat);
+    const lon = Number(e?.center?.lon);
+    if (!/^\d+$/.test(lv) || Number(lv) < 1 || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    out.push({ id: Number(e.id), center: { lat, lon }, levels: Number(lv) });
+  }
+  return out;
+}
+
+/** Адрес запроса этажности зданий к OpenStreetMap (Overpass): здания с этажностью в том же окне, что и запрос к порталу. */
+export function osmLevelsQuery(p: GeoPoint): string {
+  const [w, s, e, n] = bbox(p).split(",");
+  return `[out:json][timeout:25];way[building]["building:levels"](${s},${w},${n},${e});out tags center;`;
+}
+
+/** Здания реестра из ответа портала; этажность — у здания OpenStreetMap, чей центр внутри контура. По адресу. */
+export function buildingsAt(json: unknown, osm: unknown, p: GeoPoint): CityBuilding[] {
+  const levels = osmLevels(osm);
+  const out: CityBuilding[] = [];
+  for (const f of parseFeatures(json)) {
+    const a = f.attrs;
+    const unom = str(a.UNOM);
+    const address = str(a.SIMPLE_ADDRESS) ?? str(a.ADDRESS);
+    if (!unom || !address || out.some((b) => b.unom === unom)) continue;
+    const area = footprintArea(f);
+    const osmHit = levels.find((l) => contains(f, l.center));
+    const kn = listOf(a.KAD_N, "KAD_N").map((x) => normalizeCadastralNumber(x)).filter((x): x is string => Boolean(x));
+    const housePart = [str(a.L1_VALUE), a.L2_VALUE ? `к${str(a.L2_VALUE)}` : null].filter(Boolean).join(" ");
+    out.push({
+      unom,
+      address,
+      street: str(a.P7),
+      house: housePart || null,
+      cadastralNumber: kn[0] ?? null,
+      plotNumbers: listOf(a.KAD_ZU, "KAD_ZU").map((x) => normalizeCadastralNumber(x)).filter((x): x is string => Boolean(x)),
+      footprint: area && area > 0 ? String(Math.round(area)) : null,
+      levels: osmHit?.levels ?? null,
+      levelsUrl: osmHit ? `https://www.openstreetmap.org/way/${osmHit.id}` : null,
+      atPoint: contains(f, p),
+    });
+  }
+  return out.sort((x, y) => x.address.localeCompare(y.address, "ru", { numeric: true }));
+}
+
+const norm = (s: string | null | undefined): string => (s ?? "").toLowerCase().replace(/ё/g, "е").replace(/[\s.,]+/g, "");
+
+/** Улица и дом найденного по адресу места: «28А с1, Рябиновая улица, …» → дом «28А», улица «Рябиновая улица». */
+function houseOfLabel(label: string | undefined): { house: string; street: string } | null {
+  const [head, street] = (label ?? "").split(",").map((x) => x.trim());
+  if (!head || !street || !/^\d/.test(head)) return null;
+  return { house: head.replace(/\s+(?:с|стр)\.?\s*\d+[а-яa-z]?$/i, ""), street };
+}
+
+/**
+ * Здания участка: на участках проекта или городских участках в точке (по реестру), в том же доме, что адрес проекта
+ * (все строения), или здание, в котором стоит точка участка.
+ */
+export function projectBuildings(p: LandProject, m: MosLookup): CityBuilding[] {
+  const plots = new Set([...cadastralNumbers(p.plot.cadastralNumber.value), ...m.plots.map((c) => c.cadastralNumber)]);
+  const h = houseOfLabel(p.geo?.label);
+  return (m.buildings ?? []).filter((b) => b.atPoint || b.plotNumbers.some((n) => plots.has(n)) || (h !== null && norm(b.house) === norm(h.house) && norm(b.street) === norm(h.street)));
+}
+
+/** Строка здания для выбора: адрес, контур, этажность и откуда она. */
+export function buildingText(b: CityBuilding): string {
+  const parts = [b.address];
+  parts.push(b.footprint ? `контур ${num(b.footprint, 0)} м²` : "контура в реестре нет");
+  if (b.levels !== null) parts.push(`${b.levels} эт. по OpenStreetMap`);
+  return parts.join(", ");
+}
+
+/** Отмеченное здание и его этажность (из OpenStreetMap или введённая). */
+export interface BuildingPick {
+  unom: string;
+  levels: number;
+}
+
+/** Площадь зданий под снос: контур × этажность по каждому, сумма. Здания без контура — в ошибках. */
+export function demolitionEstimate(list: readonly CityBuilding[], picks: readonly BuildingPick[]): { value: Decimal; note: string } | { error: string } {
+  if (!picks.length) return { error: "Отметьте хотя бы одно здание." };
+  const rows: string[] = [];
+  let sum = new Decimal(0);
+  for (const pk of picks) {
+    const b = list.find((x) => x.unom === pk.unom);
+    if (!b) return { error: "Отмеченного здания нет в данных Москвы. Обновите данные." };
+    if (!b.footprint) return { error: `У здания «${b.address}» нет контура в реестре: площадь не посчитать. Введите площадь вручную.` };
+    if (!Number.isInteger(pk.levels) || pk.levels < 1) return { error: `Введите этажность здания «${b.address}»: целое число этажей, от 1.` };
+    const area = new Decimal(b.footprint).mul(pk.levels);
+    sum = sum.plus(area);
+    const lv = b.levels === pk.levels && b.levelsUrl ? "этажность по OpenStreetMap" : "этажность введена";
+    rows.push(`${b.address}: ${num(b.footprint, 0)} м² × ${pk.levels} эт. = ${num(area, 0)} м² (${lv})`);
+  }
+  return { value: sum, note: `${rows.join("; ")}. Итого ${num(sum, 0)} м²` };
+}
+
+/**
+ * Площадь зданий под снос из отмеченных зданий — оценка: площадь контура здания по границе в адресном реестре Москвы ×
+ * этажность (OpenStreetMap или введена). Отметки запоминаются, чтобы показать их снова.
+ */
+export function applyDemolitionPick(p: LandProject, picks: readonly BuildingPick[], at: string): { project: LandProject } | { error: string } {
+  const list = p.mos ? projectBuildings(p, p.mos) : [];
+  const e = demolitionEstimate(list, picks);
+  if ("error" in e) return e;
+  const osm = picks.some((pk) => list.find((b) => b.unom === pk.unom)?.levelsUrl);
+  const to: PlotValue = {
+    value: e.value.toDecimalPlaces(2).toString(),
+    origin: "estimate",
+    basis: {
+      title: `Оценка: контур здания × этажность. Контуры — ${getSource(MOS_SOURCE).title.split(" — ")[0]}, набор ${MOS_DATASETS.buildings}${osm ? "; этажность — OpenStreetMap" : ""}`,
+      url: datasetUrl("buildings"),
+      date: at.slice(0, 10),
+      note: `${e.note}. Площадь по контуру на земле больше площади помещений из техпаспорта на толщину стен; замените площадью из техпаспорта или выписки ЕГРН, когда они будут`,
+    },
+  };
+  const c = { field: "demolitionGfa" as const, from: siteValue(p, "demolitionGfa"), to };
+  const next = applySiteChange(p, c, at);
+  return { project: updateSite(next, { demolitionPick: [...picks] }, at) };
+}
+
 /** Что нашлось на портале Москвы по точке; хранится в проекте. */
 export interface MosLookup {
   point: GeoPoint;
   plots: CityPlot[];
+  /** Здания адресного реестра у участка; нет поля — проект найден до 18.11.2026, нужно обновить данные Москвы. */
+  buildings?: CityBuilding[];
   /** Зоны охраны объектов культурного наследия, в которых лежит точка. */
   zones: string[];
   /** Территории объектов культурного наследия, в которых лежит точка. */
@@ -226,9 +408,9 @@ function namesAt(json: unknown, p: GeoPoint): string[] {
   return [...new Set(names)];
 }
 
-/** Разбор трёх ответов портала по точке. */
-export function mosLookup(p: GeoPoint, raw: Partial<Record<MosDatasetKey, unknown>>, at: string): MosLookup {
-  return { point: p, plots: cityPlotsAt(raw.plots, p), zones: namesAt(raw.zones, p), territories: namesAt(raw.territories, p), fetchedAt: at };
+/** Разбор ответов портала по точке; osm — ответ OpenStreetMap с этажностью зданий (нет — этажность вводится). */
+export function mosLookup(p: GeoPoint, raw: Partial<Record<MosDatasetKey, unknown>> & { osm?: unknown }, at: string): MosLookup {
+  return { point: p, plots: cityPlotsAt(raw.plots, p), buildings: buildingsAt(raw.buildings, raw.osm, p), zones: namesAt(raw.zones, p), territories: namesAt(raw.territories, p), fetchedAt: at };
 }
 
 export function mosBasis(key: MosDatasetKey, at: string, note: string): ValueBasis {
@@ -432,7 +614,8 @@ export function applyMosLookup(p: LandProject, m: MosLookup, at: string): Change
   const heritage = heritageZouit(m);
   const own = site.zouit.filter((z) => !isMosZouit(z));
   const sameZones = JSON.stringify(site.zouit.filter(isMosZouit).map((z) => z.name)) === JSON.stringify(heritage.map((z) => z.name));
-  let next: LandProject = { ...p, mos: m, updatedAt: at };
+  const kept: MosLookup = m.buildings ? { ...m, buildings: projectBuildings(p, m) } : m;
+  let next: LandProject = { ...p, mos: kept, updatedAt: at };
   if (!sameZones) next = updateSite(next, { zouit: [...own, ...heritage] }, at);
   if (m.plots.length === 1) return applyCityPlot(next, m.plots[0] as CityPlot, at);
   // Участок уже выбран из нескольких — его данные обновляются

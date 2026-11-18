@@ -40,7 +40,7 @@ export const SITE_FIELDS: readonly SiteField[] = [
   { key: "maxHeight", label: "Предельная высота", unit: "м", param: "GPZU.MAX_HEIGHT_M", kind: "number", hint: "Из ГПЗУ или регламента зоны ПЗЗ" },
   { key: "builtShare", label: "Максимальный процент застройки", unit: "%", param: "GPZU.MAX_BUILT_SHARE", kind: "percent", hint: "Из ГПЗУ или регламента зоны ПЗЗ" },
   { key: "apartAllowed", label: "Допускаются апартаменты", param: "GPZU.APART_ALLOWED", kind: "bool", hint: "Да — если ГПЗУ допускает объекты гостиничного назначения (ВРИ 4.7)" },
-  { key: "demolitionGfa", label: "Площадь зданий под снос", unit: "м²", param: "SITE.DEMOLITION_GFA", kind: "area", hint: "Суммарная площадь существующих зданий на участке, которые нужно снести: из граданализа, ГПЗУ, техпаспорта. 0 — сносить нечего" },
+  { key: "demolitionGfa", label: "Площадь зданий под снос", unit: "м²", param: "SITE.DEMOLITION_GFA", kind: "area", hint: "Суммарная площадь существующих зданий на участке, которые нужно снести: из граданализа, ГПЗУ, техпаспорта. В Москве — отметьте здания по адресу в блоке «Здания по адресу» на вкладке «Ограничения», площади сложатся. 0 — сносить нечего" },
   { key: "demolitionVolume", label: "Объём зданий под снос", unit: "м³", param: "SITE.DEMOLITION_VOLUME", kind: "number", hint: "Строительный объём из техпаспорта БТИ, если есть. Пусто — объём = площадь × высота этажа 3,3 м" },
   { key: "landPrice", label: "Цена участка", unit: "руб", param: "LAND.PURCHASE_PRICE", kind: "money", hint: "По предложению продавца или договору" },
   { key: "startDate", label: "Дата сделки по участку", param: "GEN.MODEL_START_DATE", kind: "date", hint: "С неё начинается расчёт вариантов; пусто — конец текущего месяца" },
@@ -278,6 +278,8 @@ export interface SiteData {
   snapshot: AnalysisSnapshot | null;
   /** Кривая бескупонной доходности ОФЗ Мосбиржи на дату оценки; null — не загружена. */
   curve: ZcycCurve | null;
+  /** Здания под снос, отмеченные в данных Москвы, и их этажность; площадь — в поле demolitionGfa. */
+  demolitionPick?: { unom: string; levels: number }[];
 }
 
 export function emptySite(): SiteData {
